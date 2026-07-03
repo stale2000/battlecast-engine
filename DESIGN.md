@@ -180,13 +180,13 @@ Design rules for tools:
   in-process
 - CI gate: `tsc -b` clean, `vitest run` green
 
-## Licensing note (needs Bartosz's decision before publishing)
+## Licensing
 
-BattleCast's LICENSE is proprietary, all rights reserved - fine for extraction
-since the same author owns both. But *publishing* needs a choice: MIT/Apache-2.0
-for the code, and the monster/spell/hero data derives from the 5.2 SRD, which is
-CC-BY-4.0 and requires Wizards of the Coast attribution in the README and
-package. Placeholder LICENSE ships as proprietary until decided.
+Code is MIT (decided 2026-07-03). BattleCast's own LICENSE is proprietary,
+which is fine for the extraction since the same author owns both repos. The
+monster/spell/hero data derives from the 5.2 SRD, which is CC-BY-4.0 - the
+Wizards of the Coast attribution lives in LICENSE and README and must ship
+with the package.
 
 ## Roadmap after v0.1
 

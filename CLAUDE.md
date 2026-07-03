@@ -38,10 +38,10 @@ npm run mcp       # run the MCP server from dist/
 Tests in `tests/` are mostly ported from BattleCast and pin rules behavior -
 they protect future re-syncs. New feature work needs new tests.
 
-## Before publishing to npm
+## Licensing
 
-The LICENSE is a proprietary placeholder. Bartosz must pick a public license
-(MIT or Apache-2.0 recommended) and keep the CC-BY-4.0 SRD attribution.
+Code is MIT. The LICENSE file also carries the CC-BY-4.0 SRD 5.2 attribution
+for the data files - keep both intact when touching LICENSE or README.
 
 ## Owner
 

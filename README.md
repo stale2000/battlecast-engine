@@ -94,6 +94,6 @@ and the roadmap.
 
 ## License and SRD attribution
 
-Code license: not yet chosen for public release (see LICENSE).
+Code is MIT licensed (see LICENSE).
 Monster, spell, and class data derive from the Dungeons & Dragons 5.2 System
 Reference Document, released under CC-BY-4.0 by Wizards of the Coast.
