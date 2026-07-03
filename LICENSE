@@ -1,0 +1,15 @@
+battlecast-engine
+Copyright (c) 2026 Bartosz Jedrzejewski. All rights reserved.
+
+This software and its associated source code, assets, and documentation
+(the "Software") are the proprietary work of Bartosz Jedrzejewski.
+
+NOTE: This is a placeholder carried over from BattleCast. Before publishing
+this package, choose a public license for the code (MIT or Apache-2.0
+recommended) and keep the SRD attribution below.
+
+Portions of the data files derive from the Dungeons & Dragons 5.2 System
+Reference Document ("SRD 5.2") by Wizards of the Coast LLC, available at
+https://www.dndbeyond.com/srd and licensed under the Creative Commons
+Attribution 4.0 International License (CC-BY-4.0),
+https://creativecommons.org/licenses/by/4.0/legalcode.

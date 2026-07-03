@@ -1,0 +1,51 @@
+{
+  "name": "battlecast-engine",
+  "version": "0.1.0",
+  "description": "D&D 5e (2024 SRD) rules engine and combat state engine with a built-in MCP server. Extracted from battlecast.gg.",
+  "type": "module",
+  "license": "SEE LICENSE IN LICENSE",
+  "author": "Bartosz Jedrzejewski",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "battlecast-engine": "./dist/mcp/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "DESIGN.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -b --pretty false",
+    "mcp": "node dist/mcp/cli.js mcp"
+  },
+  "keywords": [
+    "dnd",
+    "5e",
+    "srd",
+    "combat",
+    "simulator",
+    "rules-engine",
+    "mcp",
+    "model-context-protocol"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.0",
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.4"
+  }
+}

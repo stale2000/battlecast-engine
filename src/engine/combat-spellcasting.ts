@@ -1,0 +1,863 @@
+/**
+ * Hero spell + ability execution.
+ *
+ * Phase 4d refactor: extracted from the original monolithic combat.ts.
+ * This is the casting "dispatcher" - given a spell action and a target
+ * (or target list), pick the right resolver:
+ *
+ *   autoDarts            -> applyAutoDarts        (Magic Missile)
+ *   heal                 -> applyHealing          (Cure Wounds, Healing Word, Mass Cure)
+ *   buff                 -> applyBuffFromSpell    (Bless, Hex, Hunter's Mark, Rage)
+ *   savingThrow + targets -> resolveAoE          (Fireball, Sacred Flame)
+ *   attackBonus + target  -> resolveAttack        (Fire Bolt, Guiding Bolt)
+ *
+ * Includes slot/resource consumption and concentration-aura attachment
+ * for ongoing-effect spells (Moonbeam, Spirit Guardians, etc.).
+ *
+ * There is an ESM cycle: combat-spellcasting imports applyDamage /
+ * pushLog / resolveAttack / getAliveCreatures from combat.ts; combat.ts
+ * re-exports executeSpell / applyHealing / applyAutoDarts /
+ * applyBuffFromSpell back from this module. Same lazy-binding pattern
+ * as the other Phase 4 modules - all cross-module calls happen inside
+ * function bodies, never at module init.
+ */
+import { ActiveBuff, Condition, Creature, MonsterAction } from '../types/monster.js';
+import { BASE_DURATIONS } from '../types/animation.js';
+import { rollDice, abilityModifier, maxDiceTotal } from './dice.js';
+import { creatureDistance } from './combat-geometry.js';
+import {
+  addBuff, dropConcentratedBuffsFrom,
+  hasResource, consumeResource,
+  attachConcentrationAura, rollSaveWithBuffs, getSpellSaveDcBonus,
+} from './combat-buffs.js';
+import { resolveAoE } from './combat-aoe.js';
+import {
+  applyDamage, gainHp, pushLog, resolveAttack, getAliveCreatures,
+  getEffectiveSaveModifier, resolveSpellReflection,
+  type BattleState,
+} from './combat.js';
+
+function hasBoonOfSpellRecall(caster: Creature): boolean {
+  const heroLevel = caster.monsterData.heroLevel ?? 0;
+  return heroLevel >= 19 && (caster.monsterData.heroClass === 'Bard' || caster.monsterData.heroClass === 'Wizard');
+}
+
+function shouldPreserveSpellSlot(caster: Creature, slotLevel: number): boolean {
+  if (!hasBoonOfSpellRecall(caster) || slotLevel < 1 || slotLevel > 4) return false;
+  return rollDice('1d4').total === slotLevel;
+}
+
+function isLifeDomainCleric(caster: Creature, minLevel: number): boolean {
+  return caster.monsterData.heroClass === 'Cleric' && (caster.monsterData.heroLevel ?? 0) >= minLevel;
+}
+
+function rollHealingTotal(caster: Creature, action: MonsterAction, slotLevelUsed: number | null): number {
+  const shouldMaximizeDice = isLifeDomainCleric(caster, 17);
+  let amount = shouldMaximizeDice
+    ? maxDiceTotal(action.heal!.dice)
+    : rollDice(action.heal!.dice).total;
+  if (action.heal!.addCastingMod && action.castingAbility) {
+    amount += abilityModifier(caster.monsterData.abilities[action.castingAbility]);
+  }
+  if (slotLevelUsed !== null && isLifeDomainCleric(caster, 3)) {
+    amount += 2 + slotLevelUsed;
+  }
+  return amount;
+}
+
+function capHealingTotalForAction(action: MonsterAction, target: Creature, amount: number): number {
+  const maxFraction = action.heal?.maxTargetHpFraction;
+  if (maxFraction === undefined) return amount;
+  const cap = Math.floor(target.maxHp * maxFraction);
+  return Math.max(0, Math.min(amount, cap - target.currentHp));
+}
+
+function clearHealingSpellConditions(
+  state: BattleState,
+  caster: Creature,
+  target: Creature,
+  action: MonsterAction,
+): void {
+  const clears = action.heal?.clearsConditions ?? [];
+  for (const condition of clears) {
+    if (!target.conditions.includes(condition)) continue;
+    target.conditions = target.conditions.filter(c => c !== condition);
+    target.conditionTimers = target.conditionTimers.filter(t => t.condition !== condition);
+    state.events.push({
+      kind: 'condition',
+      creatureId: target.id,
+      condition,
+      applied: false,
+      durationMs: BASE_DURATIONS.condition,
+    });
+    pushLog(state, {
+      round: state.round,
+      turn: state.turnIndex,
+      actor: caster.displayName,
+      action: action.name,
+      details: `${target.displayName} is no longer ${condition}.`,
+      type: 'condition',
+    });
+  }
+}
+
+function applyLifeDomainBlessedHealer(
+  state: BattleState,
+  caster: Creature,
+  slotLevelUsed: number | null,
+  healedAnotherCreature: boolean,
+): void {
+  if (slotLevelUsed === null || !healedAnotherCreature || !isLifeDomainCleric(caster, 6)) return;
+  applyHealing(state, caster, 2 + slotLevelUsed, caster, 'Blessed Healer');
+}
+
+function applyLandAidHeal(state: BattleState, caster: Creature, action: MonsterAction): void {
+  if (!action.landAidHealDice) return;
+  const range = action.range?.normal ?? 60;
+  const target = getAliveCreatures(state)
+    .filter(c => c.team === caster.team && c.currentHp < c.maxHp && creatureDistance(caster, c) <= range)
+    .sort((a, b) => (a.currentHp / a.maxHp) - (b.currentHp / b.maxHp))[0];
+  if (!target) return;
+  const amount = rollHealingTotal(caster, { ...action, heal: { dice: action.landAidHealDice, addCastingMod: false } }, null);
+  applyHealing(state, target, amount, caster, `${action.name} Heal`);
+}
+
+const LAY_ON_HANDS_POISON_CLEANSE: Condition[] = ['poisoned'];
+const RESTORING_TOUCH_CONDITIONS: Condition[] = [
+  'poisoned', 'blinded', 'charmed', 'deafened', 'frightened', 'paralyzed', 'stunned',
+];
+
+function clearableLayOnHandsConditions(source: Creature, target: Creature): Condition[] {
+  if (source.monsterData.heroClass !== 'Paladin') return [];
+  const paladinLevel = source.monsterData.heroLevel ?? 0;
+  const candidates = paladinLevel >= 14 ? RESTORING_TOUCH_CONDITIONS : LAY_ON_HANDS_POISON_CLEANSE;
+  return candidates.filter(condition => target.conditions.includes(condition));
+}
+
+function clearConditionsWithLayOnHands(state: BattleState, source: Creature, target: Creature, spellName: string): void {
+  if (spellName !== 'Lay on Hands') return;
+  if (source.monsterData.heroClass !== 'Paladin') return;
+
+  const paladinLevel = source.monsterData.heroLevel ?? 0;
+  for (const condition of clearableLayOnHandsConditions(source, target)) {
+    if (!hasResource(source, 'lay-on-hands', 5)) return;
+    consumeResource(source, 'lay-on-hands', 5);
+    target.conditions = target.conditions.filter(c => c !== condition);
+    target.conditionTimers = target.conditionTimers.filter(timer => timer.condition !== condition);
+    state.events.push({
+      kind: 'condition',
+      creatureId: target.id,
+      condition,
+      applied: false,
+      durationMs: BASE_DURATIONS.condition,
+    });
+    const actionName = condition === 'poisoned' && paladinLevel < 14 ? 'Lay on Hands Cleanse' : 'Restoring Touch';
+    source.stats.actionUsage[actionName] = (source.stats.actionUsage[actionName] || 0) + 1;
+    pushLog(state, {
+      round: state.round,
+      turn: state.turnIndex,
+      actor: source.displayName,
+      action: actionName,
+      details: `${source.displayName} spends 5 Lay on Hands points to remove ${condition} from ${target.displayName}.`,
+      type: 'condition',
+    });
+  }
+}
+
+function layOnHandsCanHelp(source: Creature, target: Creature, resourceKey: string): boolean {
+  if (!hasResource(source, resourceKey, 1)) return false;
+  if (target.currentHp < target.maxHp) return true;
+  return clearableLayOnHandsConditions(source, target).length > 0 && hasResource(source, resourceKey, 5);
+}
+
+/**
+ * Heal a creature. Clamps at maxHp; restoring a downed creature to 1 HP
+ * requires specific "revive" spells we don't simulate - Healing Word /
+ * Cure Wounds only work on conscious allies.
+ */
+export function applyHealing(state: BattleState, target: Creature, amount: number, source: Creature, spellName: string): void {
+  if (!target.isAlive) return;  // permanently dead - no in-combat revive
+  const blockingEffect = target.ongoingEffects?.find(effect =>
+    effect.noHealing && (!effect.condition || target.conditions.includes(effect.condition))
+  );
+  const healingBlocked = !!blockingEffect;
+  if (healingBlocked) {
+    pushLog(state, {
+      round: state.round, turn: state.turnIndex,
+      actor: source.displayName, action: spellName,
+      details: `${target.displayName} can't regain Hit Points while affected by ${blockingEffect!.key}.`,
+      type: 'info'
+    });
+    return;
+  }
+  const before = target.currentHp;
+  // Revive trigger fires for both dying heroes AND stabilised-unconscious
+  // heroes (3-success outcome). SRD: any positive healing on a 0-HP creature
+  // sets HP to the heal amount AND wakes them up. The previous gate on
+  // `target.dying` only covered the dying case, leaving stabilised heroes
+  // stuck unconscious after a Healing Word.
+  const wasUnconsciousAtZero = (target.dying === true)
+    || (target.currentHp === 0 && target.conditions.includes('unconscious'));
+  if (wasUnconsciousAtZero) {
+    target.dying = false;
+    target.deathSaves = undefined;
+    target.conditions = target.conditions.filter(c => c !== 'unconscious');
+    target.conditionTimers = target.conditionTimers.filter(t => t.condition !== 'unconscious');
+    // Revive is a life-state transition (set HP to the heal amount and wake
+    // the creature), not an additive heal, so it stays a direct write.
+    target.currentHp = Math.min(target.maxHp, amount);
+    target.stats.timesRevived = (target.stats.timesRevived ?? 0) + 1;
+    source.stats.alliesRevived = (source.stats.alliesRevived ?? 0) + 1;
+  } else {
+    gainHp(target, amount);
+  }
+  const healed = target.currentHp - before;
+  if (healed > 0 && target.ongoingEffects?.length) {
+    target.ongoingEffects = target.ongoingEffects.filter(effect => !effect.key.toLowerCase().includes('infernal wound'));
+  }
+  pushLog(state, {
+    round: state.round, turn: state.turnIndex,
+    actor: source.displayName, action: spellName,
+    details: wasUnconsciousAtZero
+      ? `${source.displayName} revives ${target.displayName} with ${spellName} - ${target.displayName} is back at ${target.currentHp}/${target.maxHp} HP.`
+      : `${source.displayName} heals ${target.displayName} for ${healed} HP (${target.currentHp}/${target.maxHp}).`,
+    type: 'heal'
+  });
+  state.events.push({
+    kind: 'heal', creatureId: target.id, amount: healed,
+    creatureHpBefore: before, creatureHpAfter: target.currentHp,
+    durationMs: BASE_DURATIONS.heal,
+  });
+  if (wasUnconsciousAtZero) {
+    state.events.push({
+      kind: 'stabilise', creatureId: target.id, hpAfter: target.currentHp,
+      durationMs: BASE_DURATIONS.stabilise,
+    });
+    state.events.push({
+      kind: 'condition', creatureId: target.id, condition: 'unconscious',
+      applied: false, durationMs: 0,
+    });
+  }
+  clearConditionsWithLayOnHands(state, source, target, spellName);
+}
+
+export function applyTemporaryHp(state: BattleState, target: Creature, amount: number, source: Creature, actionName: string): void {
+  if (!target.isAlive) return;
+  const before = target.temporaryHp ?? 0;
+  target.temporaryHp = Math.max(before, amount);
+  const gained = target.temporaryHp - before;
+  pushLog(state, {
+    round: state.round,
+    turn: state.turnIndex,
+    actor: source.displayName,
+    action: actionName,
+    details: gained > 0
+      ? `${source.displayName} grants ${target.displayName} ${gained} temporary HP (${target.temporaryHp} total).`
+      : `${target.displayName} keeps ${before} temporary HP; ${actionName} would not improve it.`,
+    type: 'special',
+  });
+  state.events.push({
+    kind: 'message',
+    text: `${target.displayName} gains ${gained > 0 ? gained : 0} temporary HP`,
+    durationMs: BASE_DURATIONS.message,
+  });
+}
+
+function powerWordTargets(
+  state: BattleState,
+  caster: Creature,
+  action: MonsterAction,
+  primaryTarget: Creature | null,
+): Creature[] {
+  if (!action.powerWord || !primaryTarget) return [];
+  const targets = [primaryTarget];
+  const secondaryRange = action.powerWord.secondaryRange;
+  const isWordsOfCreation = caster.monsterData.heroClass === 'Bard' && (caster.monsterData.heroLevel ?? 0) >= 20;
+  if (!secondaryRange || !isWordsOfCreation) return targets;
+
+  const wantsAlly = action.powerWord.kind === 'heal';
+  const secondary = getAliveCreatures(state)
+    .filter(c => c.id !== primaryTarget.id)
+    .filter(c => wantsAlly ? c.team === primaryTarget.team : c.team !== caster.team)
+    .filter(c => creatureDistance(primaryTarget, c) <= secondaryRange)
+    .sort((a, b) => wantsAlly
+      ? (a.currentHp / a.maxHp) - (b.currentHp / b.maxHp)
+      : a.currentHp - b.currentHp
+    )[0];
+  if (secondary) targets.push(secondary);
+  return targets;
+}
+
+function clearPowerWordHealConditions(
+  state: BattleState,
+  caster: Creature,
+  target: Creature,
+  action: MonsterAction,
+): void {
+  const clears = action.powerWord?.clearsConditions ?? [];
+  for (const condition of clears) {
+    if (!target.conditions.includes(condition)) continue;
+    target.conditions = target.conditions.filter(c => c !== condition);
+    target.conditionTimers = target.conditionTimers.filter(t => t.condition !== condition);
+    state.events.push({ kind: 'condition', creatureId: target.id, condition, applied: false, durationMs: BASE_DURATIONS.condition });
+    pushLog(state, {
+      round: state.round,
+      turn: state.turnIndex,
+      actor: caster.displayName,
+      action: action.name,
+      details: `${target.displayName} is no longer ${condition}.`,
+      type: 'condition',
+    });
+  }
+  if (target.conditions.includes('prone') && !target.reactionUsed) {
+    target.reactionUsed = true;
+    target.conditions = target.conditions.filter(c => c !== 'prone');
+    target.conditionTimers = target.conditionTimers.filter(t => t.condition !== 'prone');
+    state.events.push({ kind: 'condition', creatureId: target.id, condition: 'prone', applied: false, durationMs: BASE_DURATIONS.condition });
+    pushLog(state, {
+      round: state.round,
+      turn: state.turnIndex,
+      actor: caster.displayName,
+      action: action.name,
+      details: `${target.displayName} uses its Reaction to stand from Prone.`,
+      type: 'condition',
+    });
+  }
+}
+
+function executePowerWord(
+  state: BattleState,
+  caster: Creature,
+  action: MonsterAction,
+  primaryTarget: Creature | null,
+): boolean {
+  if (!action.powerWord || !primaryTarget) return false;
+  const targets = powerWordTargets(state, caster, action, primaryTarget);
+  if (targets.length === 0) return false;
+
+  for (const target of targets) {
+    if (action.powerWord.kind === 'heal') {
+      applyHealing(state, target, target.maxHp, caster, action.name);
+      clearPowerWordHealConditions(state, caster, target, action);
+      continue;
+    }
+
+    const threshold = action.powerWord.killThresholdHp ?? 100;
+    const damageType = action.powerWord.fallbackDamageType ?? 'psychic';
+    const damage = target.currentHp <= threshold
+      ? target.currentHp + target.maxHp
+      : rollDice(action.powerWord.fallbackDamage ?? '12d12').total;
+    state.events.push({
+      kind: 'attack',
+      attackerId: caster.id,
+      targetId: target.id,
+      actionName: action.name,
+      attackType: 'psychic',
+      durationMs: BASE_DURATIONS.attack,
+    });
+    const details = target.currentHp <= threshold
+      ? `${caster.displayName} speaks ${action.name}; ${target.displayName} has ${target.currentHp} HP and is compelled to die.`
+      : `${caster.displayName} speaks ${action.name}; ${target.displayName} has more than ${threshold} HP and takes ${damage} ${damageType} damage.`;
+    pushLog(state, {
+      round: state.round,
+      turn: state.turnIndex,
+      actor: caster.displayName,
+      action: action.name,
+      details,
+      damage,
+      type: 'damage',
+    });
+    const before = target.currentHp;
+    const hitEvent = {
+      kind: 'hit' as const,
+      targetId: target.id,
+      damage,
+      damageType,
+      critical: false,
+      targetHpBefore: before,
+      targetHpAfter: before,
+      durationMs: BASE_DURATIONS.hit,
+    };
+    state.events.push(hitEvent);
+    applyDamage(state, target, damage, damageType, caster, false, true);
+    hitEvent.targetHpAfter = target.currentHp;
+  }
+  return true;
+}
+
+/**
+ * Magic Missile style auto-hit darts. Each dart deals its own damage roll
+ * (no attack roll, no save). Caller supplies targets (array, possibly
+ * same creature multiple times). Shows as `autoDartDamage` with
+ * `autoDartDamageType` on the action.
+ */
+export function applyAutoDarts(state: BattleState, caster: Creature, action: MonsterAction, targets: Creature[]): void {
+  const damageType = action.autoDartDamageType ?? 'force';
+  const diceExpr = action.autoDartDamage ?? '1d4+1';
+  const reflectionCache = new Map<string, Creature | null>();
+  const resolvedTargets = targets
+    .map(target => {
+      if (!target.isAlive) return null;
+      if (!reflectionCache.has(target.id)) {
+        const reflection = action.name === 'Magic Missile'
+          ? resolveSpellReflection(state, caster, target, 'magicMissile', action.name)
+          : 'none';
+        reflectionCache.set(target.id,
+          reflection === 'unaffected' ? null :
+          reflection === 'reflected' ? caster :
+          target
+        );
+      }
+      return reflectionCache.get(target.id) ?? null;
+    })
+    .filter((target): target is Creature => !!target);
+
+  for (const target of resolvedTargets) {
+    if (!target.isAlive) continue;
+    const dmg = rollDice(diceExpr).total;
+    pushLog(state, {
+      round: state.round, turn: state.turnIndex,
+      actor: caster.displayName, action: action.name,
+      details: `${caster.displayName}'s ${action.name} hits ${target.displayName} for ${dmg} ${damageType} damage.`,
+      damage: dmg, type: 'damage',
+    });
+    const beforeHp = target.currentHp;
+    state.events.push({ kind: 'hit', targetId: target.id, damage: dmg, damageType, critical: false, targetHpBefore: beforeHp, targetHpAfter: beforeHp, durationMs: BASE_DURATIONS.hit });
+    // Single-target spell save: damage is magical.
+    applyDamage(state, target, dmg, damageType, caster, false, true);
+    const ev = state.events[state.events.length - (target.isAlive ? 1 : 2)] as { kind: 'hit'; targetHpAfter: number };
+    if (ev.kind === 'hit') ev.targetHpAfter = target.currentHp;
+  }
+}
+
+/**
+ * Attach a buff to a target. Translates the static BuffTemplate on the
+ * action into a runtime ActiveBuff with caster/round data. Drops the
+ * caster's prior concentration if this new spell requires concentration.
+ */
+export function applyBuffFromSpell(
+  state: BattleState,
+  caster: Creature,
+  target: Creature,
+  action: MonsterAction,
+  options: { skipConcentrationDrop?: boolean } = {},
+): void {
+  if (!action.buff) return;
+  const tmpl = action.buff;
+  const duration = action.durationRounds ?? 10;
+  const endRound = state.round + duration;
+  // Concentration: cast of a new concentration spell ends any old one.
+  if (tmpl.requiresConcentration && !options.skipConcentrationDrop) {
+    dropConcentratedBuffsFrom(state, caster.id);
+    caster.concentratingOn = tmpl.key;
+  }
+  if (tmpl.requiresConcentration && options.skipConcentrationDrop) {
+    caster.concentratingOn = tmpl.key;
+  }
+  const existingMaxHpBonus = target.activeBuffs.find(b => b.key === tmpl.key)?.maxHpBonus ?? 0;
+  const buff: ActiveBuff = {
+    name: tmpl.name, key: tmpl.key, casterId: caster.id,
+    appliedRound: state.round, endRound,
+    requiresConcentration: tmpl.requiresConcentration,
+    attackBonus: tmpl.attackBonus,
+    attackBonusDice: tmpl.attackBonusDice,
+    saveBonusDice: tmpl.saveBonusDice,
+    acBonus: tmpl.acBonus,
+    maxHpBonus: tmpl.maxHpBonus,
+    damageRider: tmpl.damageRider,
+    bonusActionDamage: tmpl.bonusActionDamage,
+    bonusActionDamageType: tmpl.bonusActionDamageType,
+    bonusActionDamageRange: tmpl.bonusActionDamageRange,
+    endsWhenTargetDies: tmpl.endsWhenTargetDies,
+    resistPhysical: tmpl.resistPhysical,
+    resistDamageTypes: tmpl.resistDamageTypes,
+    resistAllDamageExcept: tmpl.resistAllDamageExcept,
+    rageDamageBonus: tmpl.rageDamageBonus,
+    conditionalRider: tmpl.conditionalRider,
+    reactiveDamage: tmpl.reactiveDamage,
+    preventDeath: tmpl.preventDeath,
+    advantageForAttackerId: tmpl.advantageForAttackerId,
+    advantageForAllAttackers: tmpl.advantageForAllAttackers,
+    attackDisadvantage: tmpl.attackDisadvantage,
+    saveDisadvantage: tmpl.saveDisadvantage,
+    speedPenalty: tmpl.speedPenalty,
+    preventsOpportunityAttacks: tmpl.preventsOpportunityAttacks,
+    attackBonusForAllAttackers: tmpl.attackBonusForAllAttackers,
+    spellAttackAdvantage: tmpl.spellAttackAdvantage,
+    spellSaveDcBonus: tmpl.spellSaveDcBonus,
+    expiresOnSourceTurnStart: tmpl.expiresOnSourceTurnStart,
+  };
+  addBuff(target, buff);
+  if (tmpl.maxHpBonus && tmpl.maxHpBonus > existingMaxHpBonus) {
+    const increase = tmpl.maxHpBonus - existingMaxHpBonus;
+    target.maxHp += increase;
+    applyHealing(state, target, increase, caster, tmpl.name);
+  }
+  pushLog(state, {
+    round: state.round, turn: state.turnIndex,
+    actor: caster.displayName, action: tmpl.name,
+    details: `${caster.displayName} casts ${tmpl.name} on ${target.id === caster.id ? 'self' : target.displayName}.`,
+    type: 'special'
+  });
+  if (tmpl.key === 'rage' && target.monsterData.heroClass === 'Barbarian' && (target.monsterData.heroLevel ?? 0) >= 6) {
+    for (const condition of ['charmed', 'frightened'] as const) {
+      if (!target.conditions.includes(condition)) continue;
+      target.conditions = target.conditions.filter(c => c !== condition);
+      target.conditionTimers = target.conditionTimers.filter(t => t.condition !== condition);
+      pushLog(state, {
+        round: state.round, turn: state.turnIndex,
+        actor: target.displayName, action: 'Mindless Rage',
+        details: `${target.displayName}'s Rage ends ${condition}.`,
+        type: 'condition',
+      });
+      state.events.push({
+        kind: 'condition',
+        creatureId: target.id,
+        condition,
+        applied: false,
+        durationMs: 0,
+      });
+    }
+  }
+}
+
+function scaleAttackSpellForSlot(action: MonsterAction, slotLevelUsed: number): MonsterAction {
+  if (action.name === 'Aid' && action.buff?.maxHpBonus) {
+    const baseLevel = action.spellLevel ?? 2;
+    const maxHpBonus = action.buff.maxHpBonus + Math.max(0, slotLevelUsed - baseLevel) * 5;
+    return {
+      ...action,
+      description: `Bolster up to 3 allies within 30 ft. Each target's Hit Point maximum and current Hit Points increase by ${maxHpBonus} for the encounter.`,
+      buff: { ...action.buff, maxHpBonus },
+    };
+  }
+
+  if (action.name !== 'Witch Bolt' || !action.damage) return action;
+  const baseLevel = action.spellLevel ?? 1;
+  const extraDice = Math.max(0, slotLevelUsed - baseLevel);
+  if (extraDice === 0) return action;
+  const match = action.damage.match(/^(\d+)d12$/);
+  if (!match) return action;
+  return { ...action, damage: `${parseInt(match[1], 10) + extraDice}d12` };
+}
+
+function clearDeadBonusActionDamageLinks(state: BattleState, caster: Creature): void {
+  let clearedConcentrationKey: string | undefined;
+  for (const target of state.creatures) {
+    if (target.isAlive || !target.activeBuffs) continue;
+    const before = target.activeBuffs.length;
+    target.activeBuffs = target.activeBuffs.filter(b => {
+      const shouldClear = b.casterId === caster.id && b.bonusActionDamage && b.endsWhenTargetDies;
+      if (shouldClear) clearedConcentrationKey = b.key;
+      return !shouldClear;
+    });
+    if (target.activeBuffs.length !== before) {
+      pushLog(state, {
+        round: state.round, turn: state.turnIndex,
+        actor: caster.displayName, action: clearedConcentrationKey ?? 'Concentration',
+        details: `${caster.displayName}'s linked spell ends because the target is down.`,
+        type: 'special',
+      });
+    }
+  }
+  if (clearedConcentrationKey && caster.concentratingOn === clearedConcentrationKey) {
+    caster.concentratingOn = undefined;
+  }
+}
+
+function canReceiveTacticalBuff(creature: Creature): boolean {
+  return creature.isAlive
+    && !creature.dying
+    && !(creature.currentHp === 0 && creature.conditions.includes('unconscious'));
+}
+
+function canReceiveAreaBuff(creature: Creature, action: MonsterAction): boolean {
+  if (action.buff?.maxHpBonus) return creature.isAlive;
+  return canReceiveTacticalBuff(creature);
+}
+
+/**
+ * Resolve bonus-action damage from a maintained linked spell such as 2024
+ * Witch Bolt. This is not a new spell cast, so it does not set the
+ * bonusActionSpellCast flag.
+ */
+export function tryUseBonusActionDamageBuff(state: BattleState, caster: Creature): boolean {
+  clearDeadBonusActionDamageLinks(state, caster);
+  if (caster.bonusActionUsed) return false;
+
+  const linked = getAliveCreatures(state)
+    .filter(target => target.team !== caster.team)
+    .flatMap(target => (target.activeBuffs ?? [])
+      .filter(b =>
+        b.casterId === caster.id &&
+        b.bonusActionDamage &&
+        b.appliedRound < state.round &&
+        creatureDistance(caster, target) <= (b.bonusActionDamageRange ?? Infinity)
+      )
+      .map(buff => ({ target, buff })))
+    .sort((a, b) => a.target.currentHp - b.target.currentHp)[0];
+
+  if (!linked) return false;
+
+  const damageType = linked.buff.bonusActionDamageType ?? 'untyped';
+  const amount = rollDice(linked.buff.bonusActionDamage!).total;
+  pushLog(state, {
+    round: state.round, turn: state.turnIndex,
+    actor: caster.displayName, action: linked.buff.name,
+    details: `${caster.displayName}'s ${linked.buff.name} deals ${amount} ${damageType} damage to ${linked.target.displayName}.`,
+    damage: amount, type: 'damage',
+  });
+  const beforeHp = linked.target.currentHp;
+  state.events.push({
+    kind: 'hit', targetId: linked.target.id, damage: amount, damageType,
+    critical: false, targetHpBefore: beforeHp, targetHpAfter: beforeHp,
+    durationMs: BASE_DURATIONS.hit,
+  });
+  applyDamage(state, linked.target, amount, damageType, caster, false, true);
+  const ev = state.events[state.events.length - (linked.target.isAlive ? 1 : 2)] as { kind: 'hit'; targetHpAfter: number };
+  if (ev.kind === 'hit') ev.targetHpAfter = linked.target.currentHp;
+  caster.bonusActionUsed = true;
+  caster.stats.actionUsage[linked.buff.name] = (caster.stats.actionUsage[linked.buff.name] || 0) + 1;
+  return true;
+}
+
+function applyBaneFromSpell(state: BattleState, caster: Creature, action: MonsterAction): void {
+  if (!action.buff || !action.savingThrow) return;
+  const { ability } = action.savingThrow;
+  const dc = action.savingThrow.dc + getSpellSaveDcBonus(caster, action);
+  if (action.buff.requiresConcentration) {
+    dropConcentratedBuffsFrom(state, caster.id);
+    caster.concentratingOn = action.buff.key;
+  }
+  const range = action.range?.normal ?? 30;
+  const targets = getAliveCreatures(state)
+    .filter(c => c.team !== caster.team && creatureDistance(caster, c) <= range)
+    .sort((a, b) => b.currentHp - a.currentHp)
+    .slice(0, 3);
+
+  for (const target of targets) {
+    const saveMod = getEffectiveSaveModifier(target, ability, state);
+    const save = rollSaveWithBuffs(target, saveMod, false, dc, ability);
+    const passed = save.total >= dc;
+    state.events.push({ kind: 'save', targetId: target.id, success: passed, durationMs: BASE_DURATIONS.save });
+    if (passed) {
+      pushLog(state, {
+        round: state.round, turn: state.turnIndex,
+        actor: target.displayName, action: 'Bane Save',
+        details: `${target.displayName} resists Bane (${save.total} vs DC ${dc}).`,
+        type: 'save'
+      });
+      continue;
+    }
+    pushLog(state, {
+      round: state.round, turn: state.turnIndex,
+      actor: target.displayName, action: 'Bane Save',
+      details: `${target.displayName} fails against Bane (${save.total} vs DC ${dc}).`,
+      type: 'save'
+    });
+    applyBuffFromSpell(state, caster, target, action, { skipConcentrationDrop: true });
+  }
+}
+
+/**
+ * Single entry point for casting a leveled spell. Consumes the slot
+ * (or nothing if it's a cantrip), then dispatches to the right
+ * resolver based on the action shape:
+ *   autoDarts -> applyAutoDarts (Magic Missile)
+ *   heal      -> applyHealing   (Cure Wounds, Healing Word)
+ *   buff      -> applyBuffFromSpell  (Bless, Shield of Faith, Hex)
+ *   attackBonus present -> resolveAttack (Fire Bolt, Guiding Bolt)
+ *   savingThrow present -> resolveAoE   (Fireball, Sacred Flame)
+ *
+ * Returns true on successful cast, false if out of slots or invalid
+ * target. Callers should only invoke this for actions where
+ * action.spellLevel is defined.
+ */
+export function executeSpell(
+  state: BattleState,
+  caster: Creature,
+  action: MonsterAction,
+  primaryTarget: Creature | null,
+  aoeTargets?: Creature[],
+  /**
+   * Optional explicit center for the AoE animation. When a hero casts a
+   * point-origin spell (Fireball, Shatter, Lightning Bolt's endpoint), the
+   * AI picks a target cell and passes it here so the visual AoE draws at
+   * that cell instead of at the caster's feet. Monster-cast AoEs
+   * (dragon breath) omit this and keep the caster-centered default.
+   */
+  aoeCenter?: { x: number; y: number },
+): boolean {
+  const level = action.spellLevel ?? 0;
+  let slotLevelUsed = level;
+  let spellSlotUsedForThisCast: number | null = null;
+
+  // Slot check + consume. Cantrips cost nothing. For leveled spells we
+  // find the LOWEST available slot >= spell's level and consume it. This
+  // gives us two things automatically:
+  //   (1) Warlock pact slots: Warlock L3 has only L2 slots but needs to
+  //       cast Hex (spellLevel 1). Upcasting into the L2 slot works.
+  //   (2) Full casters conserving high slots: Wizard casts Magic Missile
+  //       using their lowest L1 slot, not an L3 slot.
+  // Monster innate spellcasting (e.g. "Mage casts Fireball 2/Day", or
+  // Lich at-will Fireball) skips the slot path entirely. The spellLevel
+  // on these actions is informational (used by damage scaling and AI
+  // valuation), not a consumable.
+  if (level > 0 && !action.resourceCost && !action.atWill) {
+    let chosenSlotLevel: number | null = null;
+    for (let lvl = level; lvl <= 9; lvl++) {
+      if (hasResource(caster, `slot-${lvl}`)) { chosenSlotLevel = lvl; break; }
+    }
+    if (chosenSlotLevel === null) return false;
+    if (shouldPreserveSpellSlot(caster, chosenSlotLevel)) {
+      pushLog(state, {
+        round: state.round,
+        turn: state.turnIndex,
+        actor: caster.displayName,
+        action: 'Boon of Spell Recall',
+        details: `${caster.displayName} preserves a level ${chosenSlotLevel} spell slot.`,
+        type: 'special',
+      });
+    } else {
+      consumeResource(caster, `slot-${chosenSlotLevel}`);
+    }
+    slotLevelUsed = chosenSlotLevel;
+    spellSlotUsedForThisCast = chosenSlotLevel;
+  }
+
+  // Non-slot resource cost: Barbarian Rage, Monk Ki, Fighter Second
+  // Wind, AND monster innate per-spell counters (Mage Fireball uses).
+  if (action.resourceCost) {
+    if (!consumeResource(caster, action.resourceCost.key, action.resourceCost.amount)) {
+      return false;
+    }
+  }
+  if (action.layOnHands && primaryTarget && !layOnHandsCanHelp(caster, primaryTarget, action.layOnHands.resourceKey)) {
+    return false;
+  }
+
+  // Track spell usage (catches all spell paths: buff, heal, AoE, attack, darts)
+  caster.stats.actionUsage[action.name] = (caster.stats.actionUsage[action.name] || 0) + 1;
+  if (action.isBonusAction && action.spellLevel !== undefined) {
+    caster.turnFlags = { ...(caster.turnFlags ?? {}), bonusActionSpellCast: true };
+  }
+  const castAction = scaleAttackSpellForSlot(action, slotLevelUsed);
+
+  if (castAction.powerWord) {
+    return executePowerWord(state, caster, castAction, primaryTarget);
+  }
+
+  // Auto-hit darts (Magic Missile) - caller supplies dart targets
+  if (castAction.autoDarts && aoeTargets && aoeTargets.length > 0) {
+    applyAutoDarts(state, caster, castAction, aoeTargets.slice(0, castAction.autoDarts));
+    return true;
+  }
+
+  // Healing
+  if (castAction.heal && primaryTarget) {
+    if (castAction.layOnHands) {
+      const resourceKey = castAction.layOnHands.resourceKey;
+      const available = caster.resources[resourceKey] ?? 0;
+      const missingHp = Math.max(0, primaryTarget.maxHp - primaryTarget.currentHp);
+      const amount = Math.min(available, missingHp);
+      if (amount <= 0 && clearableLayOnHandsConditions(caster, primaryTarget).length === 0) return false;
+      if (amount > 0 && !consumeResource(caster, resourceKey, amount)) return false;
+      applyHealing(state, primaryTarget, amount, caster, castAction.name);
+      return true;
+    }
+
+    let healedAnotherCreature = false;
+    if (castAction.targetScope === 'all_allies_in_area') {
+      const range = castAction.range?.normal ?? 30;
+      const targets = getAliveCreatures(state)
+        .filter(c => c.team === caster.team && creatureDistance(caster, c) <= range)
+        .slice(0, 6);
+      for (const t of targets) {
+        const beforeHeal = t.currentHp;
+        const amount = capHealingTotalForAction(castAction, t, rollHealingTotal(caster, castAction, spellSlotUsedForThisCast));
+        applyHealing(state, t, amount, caster, castAction.name);
+        clearHealingSpellConditions(state, caster, t, castAction);
+        if (t.id !== caster.id && t.currentHp > beforeHeal) healedAnotherCreature = true;
+      }
+    } else {
+      const beforeHeal = primaryTarget.currentHp;
+      const amount = capHealingTotalForAction(castAction, primaryTarget, rollHealingTotal(caster, castAction, spellSlotUsedForThisCast));
+      applyHealing(state, primaryTarget, amount, caster, castAction.name);
+      clearHealingSpellConditions(state, caster, primaryTarget, castAction);
+      if (primaryTarget.id !== caster.id && primaryTarget.currentHp > beforeHeal) healedAnotherCreature = true;
+    }
+    applyLifeDomainBlessedHealer(state, caster, spellSlotUsedForThisCast, healedAnotherCreature);
+    return true;
+  }
+
+  if (castAction.temporaryHp && primaryTarget) {
+    const amount = rollDice(castAction.temporaryHp.dice).total;
+    applyTemporaryHp(state, primaryTarget, amount, caster, castAction.name);
+    return true;
+  }
+
+  // Buff/debuff
+  if (castAction.buff && primaryTarget && castAction.attackBonus === undefined) {
+    if (castAction.name === 'Bane' && castAction.savingThrow) {
+      applyBaneFromSpell(state, caster, castAction);
+      return true;
+    }
+    if (castAction.targetScope === 'all_allies_in_area') {
+      if (castAction.buff.requiresConcentration) {
+        dropConcentratedBuffsFrom(state, caster.id);
+        caster.concentratingOn = castAction.buff.key;
+      }
+      const range = castAction.range?.normal ?? 30;
+      const targets = getAliveCreatures(state)
+        .filter(c => c.team === caster.team && canReceiveAreaBuff(c, castAction) && creatureDistance(caster, c) <= range)
+        .sort((a, b) => {
+          if (castAction.buff?.maxHpBonus) {
+            if (a.id === primaryTarget.id) return -1;
+            if (b.id === primaryTarget.id) return 1;
+            return (a.currentHp / a.maxHp) - (b.currentHp / b.maxHp);
+          }
+          return (a.id === caster.id ? -1 : b.id === caster.id ? 1 : b.currentHp - a.currentHp);
+        })
+        .slice(0, 3);
+      for (const t of targets) {
+        applyBuffFromSpell(state, caster, t, castAction, { skipConcentrationDrop: true });
+      }
+      return true;
+    }
+    applyBuffFromSpell(state, caster, primaryTarget, castAction);
+    return true;
+  }
+
+  // Area save spell (Fireball, Thunderwave, Sacred Flame if save-type)
+  if (castAction.savingThrow && aoeTargets) {
+    resolveAoE(state, caster, castAction, aoeTargets, aoeCenter, undefined, true);
+    attachConcentrationAura(state, caster, castAction, aoeCenter);
+    applyLandAidHeal(state, caster, castAction);
+    return true;
+  }
+
+  // Single-target save spell with no AoE array (e.g., Sacred Flame)
+  if (castAction.savingThrow && primaryTarget) {
+    resolveAoE(state, caster, castAction, [primaryTarget], aoeCenter, undefined, true);
+    attachConcentrationAura(state, caster, castAction, aoeCenter);
+    return true;
+  }
+
+  // Attack-roll spell (Fire Bolt, Guiding Bolt, Eldritch Blast beam)
+  if (castAction.attackBonus !== undefined && primaryTarget) {
+    if (castAction.buff) {
+      applyBuffFromSpell(state, caster, primaryTarget, castAction);
+    }
+    resolveAttack(state, caster, primaryTarget, castAction);
+    return true;
+  }
+
+  // Unknown shape - log and eat the slot
+  pushLog(state, {
+    round: state.round, turn: state.turnIndex,
+    actor: caster.displayName, action: action.name,
+    details: `${caster.displayName} casts ${action.name} but the spell effect isn't simulated.`,
+    type: 'info'
+  });
+  return true;
+}
