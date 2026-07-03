@@ -2,11 +2,16 @@
 
 A D&D 5e (2024 SRD) rules engine and combat state engine, with a built-in
 [MCP](https://modelcontextprotocol.io) server. Extracted from
-[BattleCast](https://battlecast.gg), which runs this engine in production.
+[BattleCast](https://battlecast.gg), the browser-based tactical combat
+simulator that runs this engine in production - every rule here is
+battle-tested against thousands of simulated encounters.
 
 Any LLM agent connected over MCP can build encounters, run tactically
 simulated combat, and make rules-validated state edits. Any TypeScript
-program can use the same engine directly as a library.
+program can use the same engine directly as a library. Battles are
+deterministic when seeded: same seed, same result, byte for byte - which
+makes it equally suited to DM assistants, encounter balancing, regression
+testing, and LLM benchmarks.
 
 **What is inside**
 
@@ -58,7 +63,16 @@ Or in any MCP client config:
 A typical session: `create_encounter` (optionally seeded), `add_creature` a
 few times, `start_battle`, then either `run_round` for narrated round-by-round
 play or `run_battle` for an instant result. `get_state` returns a compact
-snapshot designed to be read by a language model.
+snapshot designed to be read by a language model. Round narration comes
+straight from the engine's battle log:
+
+```
+Round 1:
+[R1] Fighter L5 moves 30 ft toward Goblin Warrior 2.
+[R1] Fighter L5 hits Goblin Warrior 2 with Javelin (15 vs AC 15) for 10 piercing damage!
+[R1] Goblin Warrior 2 has been slain!
+[R1] Fighter L5 uses Action Surge for an extra attack action!
+```
 
 ## Library
 
@@ -80,6 +94,20 @@ console.log(result.winner);
 
 Lower-level engine primitives (`applyDamage`, `resolveAttack`, `moveToward`,
 `executeRound`, monster and hero data) are exported too - see `src/index.ts`.
+
+## Built with battlecast-engine?
+
+The code is MIT, so you owe nothing beyond keeping the license file. But if
+this engine saved you from reimplementing opportunity attacks, a link back
+means a lot and helps the project:
+
+- Link to [battlecast.gg](https://battlecast.gg) or this repo in your README
+  or credits
+- A "powered by battlecast-engine" line in your app's about screen is the
+  gold standard
+
+If you build something with it, open an issue and say hi - cool projects get
+listed here.
 
 ## Development
 
