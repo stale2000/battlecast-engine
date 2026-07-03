@@ -24,8 +24,16 @@ testing, and LLM benchmarks.
 - AoE geometry (cones, lines, spheres), spellcasting, concentration, buffs
 - A complete combat AI (targeting, multiattack, smart movement, legendary
   actions) with four team tactics
-- 82 SRD monsters and 12 hero classes at levels 1-20
+- 317 SRD monsters and 12 hero classes at levels 1-20
 - Seeded, reproducible battles: same seed, same result, byte for byte
+
+**Documentation**
+
+- [docs/rules-coverage.md](docs/rules-coverage.md) - exactly which 5e rules
+  are implemented, verified against the source, including the honest gaps
+- [docs/api.md](docs/api.md) - the library API
+- [docs/mcp-tools.md](docs/mcp-tools.md) - every MCP tool with parameters
+  and an example session
 
 ## MCP server
 
@@ -93,7 +101,8 @@ console.log(result.winner);
 ```
 
 Lower-level engine primitives (`applyDamage`, `resolveAttack`, `moveToward`,
-`executeRound`, monster and hero data) are exported too - see `src/index.ts`.
+`executeRound`, monster and hero data) are exported too - see
+[docs/api.md](docs/api.md) and `src/index.ts`.
 
 ## Built with battlecast-engine?
 

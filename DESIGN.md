@@ -19,7 +19,7 @@ imports - enforced by that repo's architecture rules. It implements:
   terrain blocking, line of sight
 - AoE geometry (cones, lines, spheres), spellcasting, concentration, buffs
 - Full AI turn loop (targeting, multiattack, smart movement, legendary actions)
-- 82 SRD monsters, 12 hero classes at levels 1-20, spell data
+- 317 SRD monsters, 12 hero classes at levels 1-20, spell data
 
 This repo copies that engine verbatim (same file names, same invariants) and adds
 two layers on top: a **state engine API** (`src/api/`) and an **MCP server**
