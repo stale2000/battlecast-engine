@@ -43,6 +43,18 @@ they protect future re-syncs. New feature work needs new tests.
 Code is MIT. The LICENSE file also carries the CC-BY-4.0 SRD 5.2 attribution
 for the data files - keep both intact when touching LICENSE or README.
 
+## Workflow
+
+- Repo: `bjedrzejewski/battlecast-engine` (public). Deliberately NOT under
+  opengandalf - do not move or recreate it there.
+- Work as the **opengandalf** account: repo-local git identity is set to
+  `opengandalf <opengandalf@gmail.com>`, and `gh auth switch -u opengandalf`
+  if the active gh account is wrong. opengandalf is an admin collaborator.
+- Branch + PR, same as BattleCast: branch `engine/<short-description>`,
+  `gh pr create`, merge with `gh pr merge <n> --squash --delete-branch`
+  once build and tests are green.
+- `npm run build` clean and `npm test` green before pushing. Always.
+
 ## Owner
 
 Bartosz Jedrzejewski (github: opengandalf / bjedrzejewski). Related repos:
