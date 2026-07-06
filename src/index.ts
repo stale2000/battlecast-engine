@@ -42,7 +42,7 @@ export {
   TACTIC_LABELS,
 } from './engine/combat.js';
 export type { BattleState, BattleLog, TacticType, TeamTactics } from './engine/combat.js';
-export { executeRound, runBattle, runMonteCarlo, moveToward } from './engine/ai.js';
+export { executeRound, executeTurn, runBattle, runMonteCarlo, moveToward } from './engine/ai.js';
 
 // Content library
 export { monsters, getMonsterByName, searchMonsters, getMonstersByCR, crToNumber } from './data/monsters.js';
