@@ -22,11 +22,12 @@ import type { Creature, MonsterAction } from '../types/monster.js';
 export type ArenaAction =
   | { id: string; type: 'attack'; actionName: string; actionIndex: number; targetId: string }
   | { id: string; type: 'spell'; actionName: string; actionIndex: number; targetId: string; targetIds?: string[]; center?: { x: number; y: number } }
-  | { id: 'dash'; type: 'dash' }
+  | { id: 'dash' | 'bonus_dash'; type: 'dash'; isBonusAction: boolean }
   | { id: 'dodge'; type: 'dodge' }
   | { id: 'disengage' | 'bonus_disengage'; type: 'disengage'; isBonusAction: boolean }
   | { id: string; type: 'help'; targetId: string }
   | { id: 'class_feature:action_surge'; type: 'action_surge' }
+  | { id: 'class_feature:steady_aim'; type: 'steady_aim' }
   | { id: 'move_to'; type: 'move_to'; destination?: { x: number; y: number } }
   | { id: 'end_turn'; type: 'end_turn' };
 
@@ -163,7 +164,7 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
     actions.push({ id: 'class_feature:action_surge', type: 'action_surge' });
   }
   if (!active.hasActed && !attackInProgress) {
-    if (active.movementRemaining > 0) actions.push({ id: 'dash', type: 'dash' });
+    if (active.movementRemaining > 0) actions.push({ id: 'dash', type: 'dash', isBonusAction: false });
     actions.push({ id: 'dodge', type: 'dodge' });
     for (const target of enemies.filter(target => creatureDistance(active, target) <= 5)) {
       actions.push({ id: `help:${target.id}`, type: 'help', targetId: target.id });
@@ -172,6 +173,10 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
       actions.push({ id: 'disengage', type: 'disengage', isBonusAction: false });
       if (active.monsterData.heroClass === 'Rogue' && !active.bonusActionUsed) actions.push({ id: 'bonus_disengage', type: 'disengage', isBonusAction: true });
     }
+  }
+  if (active.monsterData.heroClass === 'Rogue' && !active.bonusActionUsed && !active.hasMovedThisTurn && !active.turnFlags.steadyAim) {
+    actions.push({ id: 'class_feature:steady_aim', type: 'steady_aim' });
+    if (active.movementRemaining > 0) actions.push({ id: 'bonus_dash', type: 'dash', isBonusAction: true });
   }
   actions.push({ id: 'end_turn', type: 'end_turn' });
   if (new Set(actions.map(action => action.id)).size !== actions.length) {
@@ -263,13 +268,15 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       if (!reachableMovementDestinations(active, state).some(cell => cell.x === destination.x && cell.y === destination.y)) throw new EncounterError('Illegal or stale move destination.');
       const oldPosition = { ...active.position };
       moveToDestination(active, destination, state);
+      active.hasMovedThisTurn = active.position.x !== oldPosition.x || active.position.y !== oldPosition.y;
       if ((active.position.x !== oldPosition.x || active.position.y !== oldPosition.y) && !active.turnFlags.arenaDisengaged && runOpportunityAttacks(state, active, oldPosition)) {
         checkBattleComplete(state);
         if (!state.isComplete) endTurn(encounter, active);
       }
     } else if (legal.type === 'dash') {
       active.movementRemaining += getEffectiveMoveSpeed(active, state);
-      active.hasActed = true;
+      if (legal.isBonusAction) active.bonusActionUsed = true;
+      else active.hasActed = true;
       pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Dash', details: `${active.displayName} dashes.`, type: 'move' });
     } else if (legal.type === 'dodge') {
       active.turnFlags.dodge = true;
@@ -293,6 +300,12 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       for (const key of Object.keys(active.turnFlags)) if (key.startsWith('arena-attack-')) delete active.turnFlags[key];
       active.hasActed = false;
       pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Action Surge', details: `${active.displayName} gains another action.`, type: 'special' });
+    } else if (legal.type === 'steady_aim') {
+      if (active.monsterData.heroClass !== 'Rogue' || active.bonusActionUsed || active.hasMovedThisTurn || active.turnFlags.steadyAim) throw new EncounterError('Illegal or stale arena Steady Aim.');
+      active.turnFlags.steadyAim = true;
+      active.bonusActionUsed = true;
+      active.movementRemaining = 0;
+      pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Steady Aim', details: `${active.displayName} gains advantage on their next attack.`, type: 'special' });
     } else {
       endTurn(encounter, active);
     }
