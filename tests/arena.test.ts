@@ -16,17 +16,32 @@ describe('Kaggle arena bridge', () => {
 
   it('accepts every current legal action and rejects stale or wrong-team actions without mutation', () => {
     const initial = kaggleStep(init());
-    const active = initial.observations.red.activeCreatureIds[0];
-    expect(kaggleStep({ version: 1, mode: 'step', state: initial.state, team: 'red', action: initial.observations.red.legalActions[0] }).state).toBeTruthy();
-    for (const action of initial.observations.red.legalActions) {
+    const team = initial.statuses.red === 'ACTIVE' ? 'red' : 'blue';
+    const inactiveTeam = team === 'red' ? 'blue' : 'red';
+    const actions = initial.observations[team].legalActions;
+    const active = initial.observations[team].activeCreatureIds[0];
+    expect(kaggleStep({ version: 1, mode: 'step', state: initial.state, team, action: actions[0] }).state).toBeTruthy();
+    for (const action of actions) {
       const encounter = Encounter.fromJSON(initial.state);
       applyLegalAction(encounter, action);
     }
     const before = JSON.stringify(initial.state);
-    expect(() => kaggleStep({ version: 1, mode: 'step', state: initial.state, team: 'blue', action: 'end_turn' })).toThrow(/does not own/);
+    expect(() => kaggleStep({ version: 1, mode: 'step', state: initial.state, team: inactiveTeam, action: 'end_turn' })).toThrow(/does not own/);
     expect(JSON.stringify(initial.state)).toBe(before);
-    expect(() => kaggleStep({ version: 1, mode: 'step', state: initial.state, team: 'red', action: 'stale' })).toThrow(/Illegal or stale/);
+    expect(() => kaggleStep({ version: 1, mode: 'step', state: initial.state, team, action: 'stale' })).toThrow(/Illegal or stale/);
     expect(active).toBeTruthy();
+  });
+
+  it('keeps opponent build details out of team observations and validates custom point-buy heroes', () => {
+    const customParty = {
+      characters: Array.from({ length: 4 }, () => ({
+        heroClass: 'Fighter',
+        abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 },
+      })),
+    };
+    const result = kaggleStep({ ...init(), redParty: customParty, blueParty: customParty });
+    expect(result.observations.red.publicCombatState.creatures.filter(c => c.team === 'blue').every(c => !('build' in c) && !('hp' in c))).toBe(true);
+    expect(() => kaggleStep({ ...init(), redParty: { characters: [{ heroClass: 'Fighter', abilities: { str: 15, dex: 15, con: 15, int: 15, wis: 15, cha: 15 } }] } })).toThrow(/exactly four/);
   });
 
   it('runs opportunity attacks caused by arena movement', () => {

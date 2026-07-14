@@ -14,7 +14,7 @@ import { executeLegendaryAction, handlePassiveAuras, processTurnStart, runOpport
 import type { Creature, MonsterAction } from '../types/monster.js';
 
 export type ArenaAction =
-  | { id: string; type: 'attack'; actionName: string; targetId: string }
+  | { id: string; type: 'attack'; actionName: string; actionIndex: number; targetId: string }
   | { id: string; type: 'move_toward'; targetId: string }
   | { id: 'end_turn'; type: 'end_turn' };
 
@@ -47,11 +47,11 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
   const enemies = state.creatures.filter(c => c.team !== active.team && c.isAlive && !c.dying);
   const actions: ArenaAction[] = [];
   if (!active.hasActed) {
-    for (const action of getActiveActions(active)) {
+    for (const [actionIndex, action] of getActiveActions(active).entries()) {
       if (action.legendaryOnly || action.type === 'multiattack' || action.attackBonus === undefined) continue;
       for (const target of enemies) {
         if (!attackInRange(active, target, action) || (action.type === 'ranged' && !canSee(state, active, target))) continue;
-        actions.push({ id: `attack:${slug(action.name)}:${target.id}`, type: 'attack', actionName: action.name, targetId: target.id });
+        actions.push({ id: `attack:${actionIndex}:${slug(action.name)}:${target.id}`, type: 'attack', actionName: action.name, actionIndex, targetId: target.id });
       }
     }
   }
@@ -61,6 +61,9 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
     }
   }
   actions.push({ id: 'end_turn', type: 'end_turn' });
+  if (new Set(actions.map(action => action.id)).size !== actions.length) {
+    throw new EncounterError(`Arena legal-action id collision for ${active.id}.`);
+  }
   return actions;
 }
 
@@ -126,7 +129,8 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
   encounter.runWithRng(() => {
     if (legal.type === 'attack') {
       const target = state.creatures.find(c => c.id === legal.targetId)!;
-      const attack = getActiveActions(active).find(candidate => candidate.name === legal.actionName)!;
+      const attack = getActiveActions(active)[legal.actionIndex];
+      if (!attack || attack.name !== legal.actionName) throw new EncounterError(`Stale arena attack "${legal.id}".`);
       resolveAttack(state, active, target, attack);
       active.hasActed = true;
       checkBattleComplete(state);

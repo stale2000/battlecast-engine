@@ -29,8 +29,10 @@ import type { Condition, ConditionDuration, Creature, MonsterData } from '../typ
 import { getMonsterByName, searchMonsters } from '../data/monsters.js';
 import {
   buildHero,
+  buildCustomHero,
   isSupportedHeroLevel,
   type HeroClassName,
+  type HeroOverrides,
   HERO_CLASS_NAMES,
 } from '../data/heroes.js';
 import { findPlacementSlots } from '../utils/placement.js';
@@ -50,6 +52,8 @@ export interface AddCreatureOptions {
   /** Hero class, e.g. "Fighter". Requires heroLevel. */
   heroClass?: string;
   heroLevel?: number;
+  /** Trusted-library overrides. Arena input validates its own narrow subset. */
+  heroOverrides?: HeroOverrides;
   team: Team;
   /** Explicit origin cell. Omit to auto-place in the team's zone. */
   position?: { x: number; y: number };
@@ -180,7 +184,9 @@ export class Encounter {
       if (!isSupportedHeroLevel(heroClass, level)) {
         throw new EncounterError(`Level ${level} is not supported for ${heroClass}.`);
       }
-      return this.run(() => buildHero(heroClass as HeroClassName, level));
+      return this.run(() => options.heroOverrides
+        ? buildCustomHero(heroClass as HeroClassName, level, options.heroOverrides)
+        : buildHero(heroClass as HeroClassName, level));
     }
     throw new EncounterError('Pass a monster name or a heroClass.');
   }
