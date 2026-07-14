@@ -74,7 +74,7 @@ describe('Kaggle arena bridge', () => {
   it('offers and resolves supported resource actions without trusting client parameters', () => {
     const encounter = new Encounter({ seed: 1 });
     const [fighter] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'red', position: { x: 0, y: 0 } });
-    encounter.addCreature({ monster: 'Goblin Warrior', team: 'blue', position: { x: 1, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
     encounter.start();
     encounter.state!.initiativeOrder = [fighter.id];
     const active = encounter.state!.creatures.find(creature => creature.id === fighter.id)!;
@@ -87,6 +87,24 @@ describe('Kaggle arena bridge', () => {
     applyLegalAction(encounter, action!);
     expect(active.currentHp).toBeGreaterThan(before);
     expect(active.resources['second-wind']).toBe(uses - 1);
+  });
+
+  it('keeps a multiattack creature active until every attack roll is spent', () => {
+    const encounter = new Encounter({ seed: 1 });
+    const [fighter] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'red', position: { x: 0, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
+    encounter.start();
+    encounter.state!.initiativeOrder = [fighter.id];
+    startArena(encounter);
+    const first = getLegalActions(encounter, fighter.id).find(action => action.type === 'attack')!;
+    applyLegalAction(encounter, first);
+    expect(getLegalActions(encounter, fighter.id).some(action => action.type === 'attack')).toBe(true);
+    applyLegalAction(encounter, getLegalActions(encounter, fighter.id).find(action => action.type === 'attack')!);
+    expect(getLegalActions(encounter, fighter.id).some(action => action.type === 'attack')).toBe(false);
+    const surge = getLegalActions(encounter, fighter.id).find(action => action.type === 'action_surge');
+    expect(surge).toBeTruthy();
+    applyLegalAction(encounter, surge!);
+    expect(getLegalActions(encounter, fighter.id).some(action => action.type === 'attack')).toBe(true);
   });
 
   it('ends at the configured round cap and keeps CLI protocol output on stdout', () => {
