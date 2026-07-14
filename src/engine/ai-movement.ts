@@ -130,8 +130,9 @@ function findPath(
   gridSize: number | undefined,
   terrainBlocked: Set<string> | undefined,
   maxSteps: number,
+  options: { exactGoal?: boolean } = {},
 ): Array<{ x: number; y: number }> {
-  if (chebyshev(from, target) <= 1) return []; // already adjacent
+  if (options.exactGoal ? from.x === target.x && from.y === target.y : chebyshev(from, target) <= 1) return [];
 
   interface Node { x: number; y: number; g: number; f: number; parentKey: string | null }
   const open = new Map<string, Node>();
@@ -184,8 +185,10 @@ function findPath(
     }
     if (!current) break;
 
-    // Goal test: arrival at OR adjacent to target.
-    if (chebyshev(current, target) <= 1 && !(current.x === from.x && current.y === from.y)) {
+    const reachedGoal = options.exactGoal
+      ? current.x === target.x && current.y === target.y
+      : chebyshev(current, target) <= 1;
+    if (reachedGoal && !(current.x === from.x && current.y === from.y)) {
       return buildPath(currentKey);
     }
 
@@ -249,6 +252,44 @@ export function nearestFootprintEdge(from: { x: number; y: number }, target: Cre
     }
   }
   return best;
+}
+
+export function reachableMovementDestinations(
+  creature: Creature,
+  state: BattleState,
+): Array<{ x: number; y: number; distanceFt: number }> {
+  const maxSquares = Math.floor(creature.movementRemaining / 5);
+  if (maxSquares <= 0) return [];
+  const from = { ...creature.position };
+  const size = creature.wildShape?.size ?? creature.monsterData.size;
+  const fp = getFootprintSize(size);
+  const gridSize = state.gridSize;
+  const movementBlocked = movementBlockedSetFor(creature, state);
+  const results: Array<{ x: number; y: number; distanceFt: number }> = [];
+  for (let y = 0; y <= (gridSize ?? from.y + maxSquares) - fp; y++) {
+    for (let x = 0; x <= (gridSize ?? from.x + maxSquares) - fp; x++) {
+      const destination = { x, y };
+      if ((x === from.x && y === from.y) || chebyshev(from, destination) > maxSquares) continue;
+      if (!isValidStep(destination, size, fp, state.creatures, creature.id, gridSize, movementBlocked)) continue;
+      const path = findPath(from, destination, size, fp, state.creatures, creature.id, gridSize, movementBlocked, maxSquares, { exactGoal: true });
+      if (path.length && path[path.length - 1]?.x === x && path[path.length - 1]?.y === y) results.push({ x, y, distanceFt: path.length * 5 });
+    }
+  }
+  return results.sort((left, right) => left.x - right.x || left.y - right.y);
+}
+
+export function moveToDestination(creature: Creature, destination: { x: number; y: number }, state: BattleState): { x: number; y: number } {
+  const reachable = reachableMovementDestinations(creature, state);
+  if (!reachable.some(cell => cell.x === destination.x && cell.y === destination.y)) return creature.position;
+  const from = { ...creature.position };
+  const size = creature.wildShape?.size ?? creature.monsterData.size;
+  const fp = getFootprintSize(size);
+  const movementBlocked = movementBlockedSetFor(creature, state);
+  const path = findPath(from, destination, size, fp, state.creatures, creature.id, state.gridSize, movementBlocked, Math.floor(creature.movementRemaining / 5), { exactGoal: true });
+  creature.position = destination;
+  creature.movementRemaining -= path.length * 5;
+  state.events.push({ kind: 'move', creatureId: creature.id, from, to: destination, path: path.length > 1 ? [from, ...path] : undefined, durationMs: Math.min(BASE_DURATIONS.move * Math.max(1, path.length / 2), 800) });
+  return destination;
 }
 
 /**
@@ -344,4 +385,9 @@ export function moveToward(creature: Creature, target: { x: number; y: number },
   }
 
   return current;
+}
+
+function movementBlockedSetFor(creature: Creature, state: BattleState): Set<string> | undefined {
+  const activeSpeed = creature.wildShape?.speed ?? creature.monsterData.speed;
+  return (activeSpeed.fly ?? 0) > 0 ? state.terrainSightBlocked : state.terrainBlocked;
 }

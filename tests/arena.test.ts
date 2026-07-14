@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { Encounter } from '../src/api/encounter.js';
 import { getActiveCreature, getLegalActions, applyLegalAction, startArena } from '../src/api/arena.js';
+import { reachableMovementDestinations } from '../src/engine/ai-movement.js';
 import { kaggleStep } from '../src/arena.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
@@ -20,15 +21,25 @@ describe('Kaggle arena bridge', () => {
     const inactiveTeam = team === 'red' ? 'blue' : 'red';
     const actions = initial.observations[team].legalActions;
     const active = initial.observations[team].activeCreatureIds[0];
-    expect(kaggleStep({ version: 1, mode: 'step', state: initial.state, team, action: actions[0] }).state).toBeTruthy();
+    expect(kaggleStep({ version: 1, mode: 'step', state: initial.state, team, action: actions.find(action => action.type !== 'move_to')! }).state).toBeTruthy();
     for (const action of actions) {
       const encounter = Encounter.fromJSON(initial.state);
-      applyLegalAction(encounter, action);
+      if (action.type === 'move_to') {
+        const activeCreature = getActiveCreature(encounter)!;
+        const destination = reachableMovementDestinations(activeCreature, encounter.state!)[0]!;
+        applyLegalAction(encounter, { ...action, destination: { x: destination.x, y: destination.y } });
+      } else {
+        applyLegalAction(encounter, action);
+      }
     }
     const before = JSON.stringify(initial.state);
     expect(() => kaggleStep({ version: 1, mode: 'step', state: initial.state, team: inactiveTeam, action: 'end_turn' })).toThrow(/does not own/);
     expect(JSON.stringify(initial.state)).toBe(before);
     expect(() => kaggleStep({ version: 1, mode: 'step', state: initial.state, team, action: 'stale' })).toThrow(/Illegal or stale/);
+    if (actions.some(action => action.type === 'move_to')) {
+      expect(() => kaggleStep({ version: 1, mode: 'step', state: initial.state, team, action: { id: 'move_to', x: -1, y: -1 } })).toThrow(/move destination/);
+      expect(JSON.stringify(initial.state)).toBe(before);
+    }
     expect(active).toBeTruthy();
   });
 
@@ -44,18 +55,38 @@ describe('Kaggle arena bridge', () => {
     expect(() => kaggleStep({ ...init(), redParty: { characters: [{ heroClass: 'Fighter', abilities: { str: 15, dex: 15, con: 15, int: 15, wis: 15, cha: 15 } }] } })).toThrow(/exactly four/);
   });
 
-  it('runs opportunity attacks caused by arena movement', () => {
+  it('accepts only exact reachable move destinations and runs opportunity attacks', () => {
     const encounter = new Encounter({ seed: 1 });
     const [mover] = encounter.addCreature({ monster: 'Goblin Warrior', team: 'red', position: { x: 0, y: 0 } });
     const [guard] = encounter.addCreature({ monster: 'Goblin Warrior', team: 'blue', position: { x: 1, y: 0 } });
-    const [target] = encounter.addCreature({ monster: 'Goblin Warrior', team: 'blue', position: { x: 10, y: 0 } });
+    encounter.addCreature({ monster: 'Goblin Warrior', team: 'blue', position: { x: 10, y: 0 } });
     encounter.start();
     encounter.state!.initiativeOrder = [mover.id];
     startArena(encounter);
-    const action = getLegalActions(encounter, mover.id).find(candidate => candidate.type === 'move_toward' && candidate.targetId === target.id);
+    const action = getLegalActions(encounter, mover.id).find(candidate => candidate.type === 'move_to');
     expect(action).toBeTruthy();
-    applyLegalAction(encounter, action!);
+    const destination = reachableMovementDestinations(getActiveCreature(encounter)!, encounter.state!).find(cell => cell.x === 0 && cell.y === 2)!;
+    expect(destination).toBeTruthy();
+    applyLegalAction(encounter, { ...action!, destination: { x: destination.x, y: destination.y } });
     expect(encounter.state!.creatures.find(creature => creature.id === guard.id)!.reactionUsed).toBe(true);
+  });
+
+  it('offers and resolves supported resource actions without trusting client parameters', () => {
+    const encounter = new Encounter({ seed: 1 });
+    const [fighter] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'red', position: { x: 0, y: 0 } });
+    encounter.addCreature({ monster: 'Goblin Warrior', team: 'blue', position: { x: 1, y: 0 } });
+    encounter.start();
+    encounter.state!.initiativeOrder = [fighter.id];
+    const active = encounter.state!.creatures.find(creature => creature.id === fighter.id)!;
+    active.currentHp -= 10;
+    startArena(encounter);
+    const action = getLegalActions(encounter, fighter.id).find(candidate => candidate.type === 'spell' && candidate.actionName === 'Second Wind');
+    expect(action).toBeTruthy();
+    const before = active.currentHp;
+    const uses = active.resources['second-wind'];
+    applyLegalAction(encounter, action!);
+    expect(active.currentHp).toBeGreaterThan(before);
+    expect(active.resources['second-wind']).toBe(uses - 1);
   });
 
   it('ends at the configured round cap and keeps CLI protocol output on stdout', () => {
@@ -77,5 +108,11 @@ describe('Kaggle arena bridge', () => {
     const malformed = spawnSync(process.execPath, ['dist/mcp/cli.js', 'arena', 'kaggle-step'], { input: '{', encoding: 'utf8' });
     expect(malformed.status).toBe(1);
     expect(malformed.stdout).toBe('');
+    expect(malformed.stderr).toMatch(/^INVALID_REQUEST:/);
+    const validParty = spawnSync(process.execPath, ['dist/mcp/cli.js', 'arena', 'validate-party'], {
+      input: JSON.stringify({ team: 'red', party }), encoding: 'utf8',
+    });
+    expect(validParty.status).toBe(0);
+    expect(validParty.stdout).toBe('{"valid":true}\n');
   });
 });

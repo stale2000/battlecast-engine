@@ -19,7 +19,7 @@
  * from './ai.js'. This file simply re-exports the public surface so the
  * split is invisible to the rest of the codebase.
  */
-export { moveToward, nearestFootprintEdge } from './ai-movement.js';
+export { moveToward, moveToDestination, reachableMovementDestinations, nearestFootprintEdge } from './ai-movement.js';
 export { executeRound, runBattle, runMonteCarlo } from './ai-loop.js';
 export type { MonteCarloResult, MonteCarloProgress } from './ai-loop.js';
 export { shouldPreferRanged } from './ai-targeting.js';

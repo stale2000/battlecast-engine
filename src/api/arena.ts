@@ -3,19 +3,22 @@ import {
   checkBattleComplete,
   creatureDistance,
   getAliveCreatures,
+  executeSpell,
+  hasResource,
   processHydraEndOfTurn,
   processTargetTurnEndOngoingEffects,
   pushLog,
   resolveAttack,
 } from '../engine/combat.js';
 import { canSee, getActiveActions } from '../engine/ai-targeting.js';
-import { moveToward } from '../engine/ai-movement.js';
+import { moveToDestination, reachableMovementDestinations } from '../engine/ai-movement.js';
 import { executeLegendaryAction, handlePassiveAuras, processTurnStart, runOpportunityAttacks } from '../engine/ai-turn.js';
 import type { Creature, MonsterAction } from '../types/monster.js';
 
 export type ArenaAction =
   | { id: string; type: 'attack'; actionName: string; actionIndex: number; targetId: string }
-  | { id: string; type: 'move_toward'; targetId: string }
+  | { id: string; type: 'spell'; actionName: string; actionIndex: number; targetId: string }
+  | { id: 'move_to'; type: 'move_to'; destination?: { x: number; y: number } }
   | { id: 'end_turn'; type: 'end_turn' };
 
 const slug = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -39,6 +42,34 @@ function attackInRange(attacker: Creature, target: Creature, action: MonsterActi
     : distance <= (action.range?.long ?? action.range?.normal ?? 0);
 }
 
+function isSpellAction(action: MonsterAction): boolean {
+  return action.spellLevel !== undefined || action.resourceCost !== undefined || action.layOnHands !== undefined;
+}
+
+function canCastArenaSpell(active: Creature, action: MonsterAction): boolean {
+  if (action.isBonusAction && active.bonusActionUsed) return false;
+  if (active.turnFlags?.bonusActionSpellCast && (action.spellLevel ?? 0) > 0 && !action.isBonusAction) return false;
+  if (action.resourceCost && !hasResource(active, action.resourceCost.key, action.resourceCost.amount)) return false;
+  if ((action.spellLevel ?? 0) > 0 && !action.resourceCost && !action.atWill) {
+    return Array.from({ length: 9 }, (_, index) => index + 1).some(level => level >= (action.spellLevel ?? 0) && hasResource(active, `slot-${level}`));
+  }
+  return true;
+}
+
+function spellTargets(active: Creature, state: NonNullable<Encounter['state']>, action: MonsterAction): Creature[] {
+  if (action.autoDarts || action.savingThrow?.area || action.targetScope === 'all_allies_in_area') return [];
+  const living = state.creatures.filter(c => c.isAlive && !c.dying);
+  if (action.targetScope === 'self') return [active];
+  const inRange = (target: Creature) => {
+    const range = action.range?.normal;
+    return range === undefined || creatureDistance(active, target) <= range;
+  };
+  if (action.targetScope === 'one_ally' || action.heal || action.layOnHands) {
+    return living.filter(c => c.team === active.team && inRange(c) && (action.heal || action.layOnHands ? c.currentHp < c.maxHp || c.dying : true));
+  }
+  return living.filter(c => c.team !== active.team && attackInRange(active, c, action) && (action.type !== 'ranged' || canSee(state, active, c)));
+}
+
 /** The exact, intentionally small set of player-selectable engine actions. */
 export function getLegalActions(encounter: Encounter, creatureId: string): ArenaAction[] {
   const state = encounter.state;
@@ -48,18 +79,22 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
   const actions: ArenaAction[] = [];
   if (!active.hasActed) {
     for (const [actionIndex, action] of getActiveActions(active).entries()) {
-      if (action.legendaryOnly || action.type === 'multiattack' || action.attackBonus === undefined) continue;
+      if (action.legendaryOnly || action.type === 'multiattack') continue;
+      if (isSpellAction(action)) {
+        if (!canCastArenaSpell(active, action)) continue;
+        for (const target of spellTargets(active, state, action)) {
+          actions.push({ id: `spell:${actionIndex}:${slug(action.name)}:${target.id}`, type: 'spell', actionName: action.name, actionIndex, targetId: target.id });
+        }
+        continue;
+      }
+      if (action.attackBonus === undefined) continue;
       for (const target of enemies) {
         if (!attackInRange(active, target, action) || (action.type === 'ranged' && !canSee(state, active, target))) continue;
         actions.push({ id: `attack:${actionIndex}:${slug(action.name)}:${target.id}`, type: 'attack', actionName: action.name, actionIndex, targetId: target.id });
       }
     }
   }
-  if (active.movementRemaining > 0) {
-    for (const target of enemies.filter(target => creatureDistance(active, target) > 5)) {
-      actions.push({ id: `move_toward:${target.id}`, type: 'move_toward', targetId: target.id });
-    }
-  }
+  if (reachableMovementDestinations(active, state).length) actions.push({ id: 'move_to', type: 'move_to' });
   actions.push({ id: 'end_turn', type: 'end_turn' });
   if (new Set(actions.map(action => action.id)).size !== actions.length) {
     throw new EncounterError(`Arena legal-action id collision for ${active.id}.`);
@@ -123,7 +158,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
   const active = getActiveCreature(encounter);
   if (!state || !active) throw new EncounterError('No active creature.');
   const legal = getLegalActions(encounter, active.id).find(candidate => candidate.id === action.id);
-  if (!legal || !sameArenaAction(legal, action)) {
+  if (!legal || (legal.type !== 'move_to' && !sameArenaAction(legal, action))) {
     throw new EncounterError(`Illegal or stale arena action "${action.id}".`);
   }
   encounter.runWithRng(() => {
@@ -134,10 +169,20 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       resolveAttack(state, active, target, attack);
       active.hasActed = true;
       checkBattleComplete(state);
-    } else if (legal.type === 'move_toward') {
+    } else if (legal.type === 'spell') {
       const target = state.creatures.find(c => c.id === legal.targetId)!;
+      const spell = getActiveActions(active)[legal.actionIndex];
+      if (!spell || spell.name !== legal.actionName || !isSpellAction(spell)) throw new EncounterError(`Stale arena spell "${legal.id}".`);
+      if (!executeSpell(state, active, spell, target)) throw new EncounterError(`Illegal or stale arena spell "${legal.id}".`);
+      if (spell.isBonusAction) active.bonusActionUsed = true;
+      else active.hasActed = true;
+      checkBattleComplete(state);
+    } else if (legal.type === 'move_to') {
+      const destination = action.type === 'move_to' ? action.destination : undefined;
+      if (!destination || !Number.isInteger(destination.x) || !Number.isInteger(destination.y)) throw new EncounterError('move_to requires an integer destination.');
+      if (!reachableMovementDestinations(active, state).some(cell => cell.x === destination.x && cell.y === destination.y)) throw new EncounterError('Illegal or stale move destination.');
       const oldPosition = { ...active.position };
-      active.position = moveToward(active, target.position, state);
+      moveToDestination(active, destination, state);
       if ((active.position.x !== oldPosition.x || active.position.y !== oldPosition.y) && runOpportunityAttacks(state, active, oldPosition)) {
         checkBattleComplete(state);
         if (!state.isComplete) endTurn(encounter, active);

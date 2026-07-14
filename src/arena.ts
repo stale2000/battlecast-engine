@@ -37,6 +37,10 @@ function parseAbilities(value: unknown, label: string): Abilities {
   return Object.fromEntries(ABILITIES.map(key => [key, abilities[key]])) as unknown as Abilities;
 }
 
+export function validateArenaParty(value: unknown, team: Team): void {
+  parseParty(value, team);
+}
+
 function parseParty(value: unknown, team: Team): AddCreatureOptions[] {
   const party = assertObject(value, `${team}Party`);
   if (!Array.isArray(party.characters) || party.characters.length !== 4) {
@@ -123,6 +127,10 @@ function parseAction(value: unknown): ArenaAction {
   if (typeof value === 'string') return { id: value, type: 'end_turn' } as ArenaAction;
   const action = assertObject(value, 'action');
   if (typeof action.id !== 'string') throw new EncounterError('action must be a legal action id or action object with an id.');
+  if (action.id === 'move_to') {
+    if (!Number.isInteger(action.x) || !Number.isInteger(action.y)) throw new EncounterError('move_to requires integer x and y.');
+    return { id: 'move_to', type: 'move_to', destination: { x: action.x as number, y: action.y as number } };
+  }
   return action as ArenaAction;
 }
 
@@ -150,8 +158,8 @@ export function kaggleStep(value: unknown) {
     if (!active || active.team !== request.team) throw new EncounterError('The submitted team does not own the active creature.');
     const requested = parseAction(request.action);
     const legal = getLegalActions(encounter, active.id).find(action => action.id === requested.id);
-    if (!legal || (typeof request.action === 'object' && !sameArenaAction(legal, requested))) throw new EncounterError(`Illegal or stale arena action "${requested.id}".`);
-    applyLegalAction(encounter, legal);
+    if (!legal || (legal.type !== 'move_to' && typeof request.action === 'object' && !sameArenaAction(legal, requested))) throw new EncounterError(`Illegal or stale arena action "${requested.id}".`);
+    applyLegalAction(encounter, legal.type === 'move_to' ? requested : legal);
     return response(encounter);
   }
   throw new EncounterError('mode must be init or step.');
