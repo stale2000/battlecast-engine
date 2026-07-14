@@ -1,0 +1,155 @@
+import { Encounter, EncounterError, type Team } from './encounter.js';
+import {
+  checkBattleComplete,
+  creatureDistance,
+  getAliveCreatures,
+  processHydraEndOfTurn,
+  processTargetTurnEndOngoingEffects,
+  pushLog,
+  resolveAttack,
+} from '../engine/combat.js';
+import { canSee, getActiveActions } from '../engine/ai-targeting.js';
+import { moveToward } from '../engine/ai-movement.js';
+import { executeLegendaryAction, handlePassiveAuras, processTurnStart, runOpportunityAttacks } from '../engine/ai-turn.js';
+import type { Creature, MonsterAction } from '../types/monster.js';
+
+export type ArenaAction =
+  | { id: string; type: 'attack'; actionName: string; targetId: string }
+  | { id: string; type: 'move_toward'; targetId: string }
+  | { id: 'end_turn'; type: 'end_turn' };
+
+const slug = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+export function sameArenaAction(left: ArenaAction, right: ArenaAction): boolean {
+  const a = left as Record<string, unknown>;
+  const b = right as Record<string, unknown>;
+  return Object.keys(a).length === Object.keys(b).length && Object.entries(a).every(([key, value]) => b[key] === value);
+}
+
+export function getActiveCreature(encounter: Encounter): Creature | undefined {
+  const state = encounter.state;
+  if (!state || state.isComplete || state.initiativeOrder.length === 0) return undefined;
+  return state.creatures.find(c => c.id === state.initiativeOrder[state.turnIndex % state.initiativeOrder.length]);
+}
+
+function attackInRange(attacker: Creature, target: Creature, action: MonsterAction): boolean {
+  const distance = creatureDistance(attacker, target);
+  return action.type === 'melee'
+    ? distance <= (action.reach ?? 5)
+    : distance <= (action.range?.long ?? action.range?.normal ?? 0);
+}
+
+/** The exact, intentionally small set of player-selectable engine actions. */
+export function getLegalActions(encounter: Encounter, creatureId: string): ArenaAction[] {
+  const state = encounter.state;
+  const active = getActiveCreature(encounter);
+  if (!state || !active || active.id !== creatureId) return [];
+  const enemies = state.creatures.filter(c => c.team !== active.team && c.isAlive && !c.dying);
+  const actions: ArenaAction[] = [];
+  if (!active.hasActed) {
+    for (const action of getActiveActions(active)) {
+      if (action.legendaryOnly || action.type === 'multiattack' || action.attackBonus === undefined) continue;
+      for (const target of enemies) {
+        if (!attackInRange(active, target, action) || (action.type === 'ranged' && !canSee(state, active, target))) continue;
+        actions.push({ id: `attack:${slug(action.name)}:${target.id}`, type: 'attack', actionName: action.name, targetId: target.id });
+      }
+    }
+  }
+  if (active.movementRemaining > 0) {
+    for (const target of enemies.filter(target => creatureDistance(active, target) > 5)) {
+      actions.push({ id: `move_toward:${target.id}`, type: 'move_toward', targetId: target.id });
+    }
+  }
+  actions.push({ id: 'end_turn', type: 'end_turn' });
+  return actions;
+}
+
+function beginTurn(state: NonNullable<Encounter['state']>, creature: Creature): boolean {
+  if (!creature.isAlive) return false;
+  if (!processTurnStart(state, creature)) {
+    processTargetTurnEndOngoingEffects(state, creature);
+    return false;
+  }
+  handlePassiveAuras(state, creature);
+  checkBattleComplete(state);
+  return creature.isAlive && !state.isComplete;
+}
+
+function advanceTurn(encounter: Encounter): void {
+  const state = encounter.state!;
+  while (!state.isComplete) {
+    state.turnIndex += 1;
+    if (state.turnIndex >= state.initiativeOrder.length) {
+      state.turnIndex = 0;
+      state.round += 1;
+      if (state.round > (encounter.getArenaRoundCap() ?? Infinity)) {
+        const hp = (team: Team) => state.creatures.filter(c => c.team === team && c.isAlive).reduce((sum, c) => sum + Math.max(c.currentHp, 0), 0);
+        state.isComplete = true;
+        state.winner = hp('red') === hp('blue') ? 'draw' : hp('red') > hp('blue') ? 'red' : 'blue';
+        return;
+      }
+      for (const creature of getAliveCreatures(state)) {
+        if (creature.monsterData.legendaryActions?.length) {
+          creature.legendaryActionsRemaining = creature.monsterData.legendaryActionUses || 3;
+        }
+      }
+    }
+    const next = getActiveCreature(encounter);
+    if (next && beginTurn(state, next)) return;
+  }
+}
+
+function endTurn(encounter: Encounter, active: Creature): void {
+  const state = encounter.state!;
+  pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'End Turn', details: `${active.displayName} ends their turn.`, type: 'info' });
+  processHydraEndOfTurn(state, active);
+  processTargetTurnEndOngoingEffects(state, active);
+  checkBattleComplete(state);
+  if (state.isComplete) return;
+  for (const legend of getAliveCreatures(state)) {
+    if (legend.id !== active.id && legend.monsterData.legendaryActions?.length && (legend.legendaryActionsRemaining ?? 0) > 0) {
+      executeLegendaryAction(state, legend);
+    }
+  }
+  if (!state.isComplete) advanceTurn(encounter);
+}
+
+/** Applies only an action generated by getLegalActions for the current turn. */
+export function applyLegalAction(encounter: Encounter, action: ArenaAction): void {
+  const state = encounter.state;
+  const active = getActiveCreature(encounter);
+  if (!state || !active) throw new EncounterError('No active creature.');
+  const legal = getLegalActions(encounter, active.id).find(candidate => candidate.id === action.id);
+  if (!legal || !sameArenaAction(legal, action)) {
+    throw new EncounterError(`Illegal or stale arena action "${action.id}".`);
+  }
+  encounter.runWithRng(() => {
+    if (legal.type === 'attack') {
+      const target = state.creatures.find(c => c.id === legal.targetId)!;
+      const attack = getActiveActions(active).find(candidate => candidate.name === legal.actionName)!;
+      resolveAttack(state, active, target, attack);
+      active.hasActed = true;
+      checkBattleComplete(state);
+    } else if (legal.type === 'move_toward') {
+      const target = state.creatures.find(c => c.id === legal.targetId)!;
+      const oldPosition = { ...active.position };
+      active.position = moveToward(active, target.position, state);
+      if ((active.position.x !== oldPosition.x || active.position.y !== oldPosition.y) && runOpportunityAttacks(state, active, oldPosition)) {
+        checkBattleComplete(state);
+        if (!state.isComplete) endTurn(encounter, active);
+      }
+    } else {
+      endTurn(encounter, active);
+    }
+  });
+}
+
+/** Starts the first arena turn after Encounter.start(). */
+export function startArena(encounter: Encounter): void {
+  const state = encounter.state;
+  const active = getActiveCreature(encounter);
+  if (!state || !active) throw new EncounterError('Arena battle did not produce an active creature.');
+  encounter.runWithRng(() => {
+    if (!beginTurn(state, active)) advanceTurn(encounter);
+  });
+}

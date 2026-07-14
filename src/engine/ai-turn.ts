@@ -344,7 +344,7 @@ function processTurnStartTraits(state: BattleState, creature: Creature): void {
 
 /** Turn start: expire buffs, process conditions, recharge, reset movement.
  *  Returns false if the creature can't act (incapacitated/dead). */
-function processTurnStart(state: BattleState, creature: Creature): boolean {
+export function processTurnStart(state: BattleState, creature: Creature): boolean {
   state.events.push({ kind: 'turnStart', creatureId: creature.id, durationMs: BASE_DURATIONS.turnStart });
   // Dying hero at the start of their turn: roll a death save before any
   // other turn-start processing. Outcomes:
@@ -491,7 +491,7 @@ function processHolyNimbusAuras(state: BattleState, creature: Creature): void {
 }
 
 /** Passive aura effects at start of turn (Fire Aura, Heat Aura, Fear Aura). */
-function handlePassiveAuras(state: BattleState, creature: Creature): void {
+export function handlePassiveAuras(state: BattleState, creature: Creature): void {
   processHolyNimbusAuras(state, creature);
   if (!creature.isAlive) return;
 

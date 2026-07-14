@@ -11,6 +11,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./arena": {
+      "types": "./dist/arena.d.ts",
+      "import": "./dist/arena.js"
     }
   },
   "bin": {
@@ -23,6 +27,7 @@
     "LICENSE"
   ],
   "scripts": {
+    "prepare": "npm run build",
     "build": "tsc -b",
     "test": "vitest run",
     "test:watch": "vitest",

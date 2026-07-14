@@ -16,6 +16,8 @@ export type {
 export { EncounterManager } from './api/manager.js';
 export { observeEncounter, viewCreature, formatLog } from './api/observation.js';
 export type { CreatureView, EncounterView } from './api/observation.js';
+export { getActiveCreature, getLegalActions, applyLegalAction } from './api/arena.js';
+export type { ArenaAction } from './api/arena.js';
 
 // Randomness
 export { SeededRng, withRng, engineRandom } from './engine/rng.js';

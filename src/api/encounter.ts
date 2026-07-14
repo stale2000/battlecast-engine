@@ -85,6 +85,7 @@ export interface SerializedEncounter {
         terrainSightBlocked?: string[];
       })
     | null;
+  arenaRoundCap?: number;
 }
 
 export class Encounter {
@@ -94,6 +95,7 @@ export class Encounter {
   private setupCreatures: Creature[] = [];
   private battleState: BattleState | null = null;
   private setupIndexByName = new Map<string, number>();
+  private arenaRoundCap?: number;
 
   constructor(options: EncounterOptions = {}) {
     this.gridSize = options.gridSize ?? 20;
@@ -120,6 +122,22 @@ export class Encounter {
 
   private run<T>(fn: () => T): T {
     return withRng(this.rng, fn);
+  }
+
+  /** Runs a narrow external rules adapter under this encounter's RNG. */
+  runWithRng<T>(fn: () => T): T {
+    return this.run(fn);
+  }
+
+  setArenaRoundCap(roundCap: number): void {
+    if (!Number.isInteger(roundCap) || roundCap < 1) {
+      throw new EncounterError(`roundCap must be a positive integer, got ${roundCap}`);
+    }
+    this.arenaRoundCap = roundCap;
+  }
+
+  getArenaRoundCap(): number | undefined {
+    return this.arenaRoundCap;
   }
 
   private requireActiveState(): BattleState {
@@ -377,27 +395,30 @@ export class Encounter {
             terrainSightBlocked: state.terrainSightBlocked ? [...state.terrainSightBlocked] : undefined,
           }
         : null,
+      arenaRoundCap: this.arenaRoundCap,
     };
   }
 
   static fromJSON(snapshot: SerializedEncounter): Encounter {
-    if (snapshot.version !== 1) {
-      throw new EncounterError(`Unsupported snapshot version ${snapshot.version}.`);
+    const copy = structuredClone(snapshot);
+    if (copy.version !== 1) {
+      throw new EncounterError(`Unsupported snapshot version ${copy.version}.`);
     }
-    const encounter = new Encounter({ gridSize: snapshot.gridSize, seed: snapshot.seed ?? undefined });
-    if (encounter.rng && snapshot.rngState !== null) {
-      encounter.rng.restore(snapshot.rngState);
+    const encounter = new Encounter({ gridSize: copy.gridSize, seed: copy.seed ?? undefined });
+    if (encounter.rng && copy.rngState !== null) {
+      encounter.rng.restore(copy.rngState);
     }
-    encounter.setupCreatures = snapshot.setupCreatures;
-    encounter.setupIndexByName = new Map(snapshot.setupIndexByName);
-    if (snapshot.battleState) {
+    encounter.setupCreatures = copy.setupCreatures;
+    encounter.setupIndexByName = new Map(copy.setupIndexByName);
+    encounter.arenaRoundCap = copy.arenaRoundCap;
+    if (copy.battleState) {
       encounter.battleState = {
-        ...snapshot.battleState,
-        terrainBlocked: snapshot.battleState.terrainBlocked
-          ? new Set(snapshot.battleState.terrainBlocked)
+        ...copy.battleState,
+        terrainBlocked: copy.battleState.terrainBlocked
+          ? new Set(copy.battleState.terrainBlocked)
           : undefined,
-        terrainSightBlocked: snapshot.battleState.terrainSightBlocked
-          ? new Set(snapshot.battleState.terrainSightBlocked)
+        terrainSightBlocked: copy.battleState.terrainSightBlocked
+          ? new Set(copy.battleState.terrainSightBlocked)
           : undefined,
       };
     }
