@@ -107,6 +107,33 @@ describe('Kaggle arena bridge', () => {
     expect(getLegalActions(encounter, fighter.id).some(action => action.type === 'attack')).toBe(true);
   });
 
+  it('keeps canonical AoE and dart target sets engine-owned', () => {
+    const initial = kaggleStep(init());
+    const team = initial.statuses.red === 'ACTIVE' ? 'red' : 'blue';
+    const darts = initial.observations[team].legalActions.find(action => action.type === 'spell' && action.actionName === 'Magic Missile');
+    const area = initial.observations[team].legalActions.find(action => action.type === 'spell' && action.actionName === 'Fireball');
+    expect(darts?.targetIds).toHaveLength(3);
+    expect(area?.targetIds?.length).toBeGreaterThan(0);
+    expect(kaggleStep({ version: 1, mode: 'step', state: initial.state, team, action: darts! }).state).toBeTruthy();
+  });
+
+  it('applies every exposed action across a complete party turn cycle', () => {
+    let result = kaggleStep(init());
+    for (let turn = 0; turn < 8; turn++) {
+      const team = result.statuses.red === 'ACTIVE' ? 'red' : 'blue';
+      for (const action of result.observations[team].legalActions) {
+        if (action.type === 'move_to') {
+          const encounter = Encounter.fromJSON(result.state);
+          const destination = reachableMovementDestinations(getActiveCreature(encounter)!, encounter.state!)[0]!;
+          expect(() => kaggleStep({ version: 1, mode: 'step', state: result.state, team, action: { id: action.id, x: destination.x, y: destination.y } })).not.toThrow();
+        } else {
+          expect(() => kaggleStep({ version: 1, mode: 'step', state: result.state, team, action })).not.toThrow();
+        }
+      }
+      result = kaggleStep({ version: 1, mode: 'step', state: result.state, team, action: 'end_turn' });
+    }
+  });
+
   it('ends at the configured round cap and keeps CLI protocol output on stdout', () => {
     const playToCap = () => {
       let result = kaggleStep(init());
