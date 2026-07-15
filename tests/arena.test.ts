@@ -55,6 +55,16 @@ describe('Kaggle arena bridge', () => {
     expect(() => kaggleStep({ ...init(), redParty: { characters: [{ heroClass: 'Fighter', abilities: { str: 15, dex: 15, con: 15, int: 15, wis: 15, cha: 15 } }] } })).toThrow(/exactly four/);
   });
 
+  it('accepts only engine-listed spell selections for custom casters', () => {
+    const wizard = {
+      heroClass: 'Wizard', abilities: { str: 8, dex: 14, con: 13, int: 15, wis: 12, cha: 10 },
+      spells: ['Magic Missile', 'Burning Hands', 'Thunderwave', 'Sleep', 'Scorching Ray', 'Web', 'Fireball', 'Lightning Bolt'],
+    };
+    const casterParty = { characters: Array.from({ length: 4 }, () => wizard) };
+    expect(kaggleStep({ ...init(), redParty: casterParty, blueParty: casterParty }).state).toBeTruthy();
+    expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...wizard, spells: ['Wish'] })) }, blueParty: casterParty })).toThrow(/spells/);
+  });
+
   it('accepts only exact reachable move destinations and runs opportunity attacks', () => {
     const encounter = new Encounter({ seed: 1 });
     const [mover] = encounter.addCreature({ monster: 'Goblin Warrior', team: 'red', position: { x: 0, y: 0 } });

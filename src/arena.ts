@@ -1,12 +1,12 @@
 import { Encounter, EncounterError, type AddCreatureOptions, type SerializedEncounter, type Team } from './api/encounter.js';
 import { applyLegalAction, getActiveCreature, getLegalActions, sameArenaAction, startArena, type ArenaAction } from './api/arena.js';
-import { HERO_CLASS_NAMES } from './data/heroes.js';
+import { buildHero, getAvailableSpells, HERO_CLASS_NAMES } from './data/heroes.js';
 import type { Abilities, Creature } from './types/monster.js';
 
 export const ARENA_PROTOCOL_VERSION = 1;
 
 type SlotCharacter = { slot: 1 | 2 | 3 | 4 };
-type ArenaHero = { heroClass: string; abilities: Abilities; subclass?: string };
+type ArenaHero = { heroClass: string; abilities: Abilities; subclass?: string; spells?: string[] };
 type Character = SlotCharacter | ArenaHero;
 type Party = { characters: Character[] };
 type Request =
@@ -41,6 +41,20 @@ export function validateArenaParty(value: unknown, team: Team): void {
   parseParty(value, team);
 }
 
+function parseSpells(value: unknown, heroClass: typeof HERO_CLASS_NAMES[number], label: string): string[] | undefined {
+  const expected = buildHero(heroClass, 5).actions.filter(action => (action.spellLevel ?? 0) > 0).length;
+  if (value === undefined) {
+    if (expected) throw new EncounterError(`${label}.spells must select exactly ${expected} engine-supported spells.`);
+    return undefined;
+  }
+  if (!Array.isArray(value) || value.length !== expected || value.some(spell => typeof spell !== 'string') || new Set(value).size !== value.length) {
+    throw new EncounterError(`${label}.spells must select exactly ${expected} distinct spells.`);
+  }
+  const available = new Set(getAvailableSpells(heroClass, 5).filter(spell => spell.spellLevel > 0).map(spell => spell.name));
+  if (value.some(spell => !available.has(spell))) throw new EncounterError(`${label}.spells contains an unavailable spell.`);
+  return value as string[];
+}
+
 function parseParty(value: unknown, team: Team): AddCreatureOptions[] {
   const party = assertObject(value, `${team}Party`);
   if (!Array.isArray(party.characters) || party.characters.length !== 4) {
@@ -59,17 +73,19 @@ function parseParty(value: unknown, team: Team): AddCreatureOptions[] {
     if (typeof character.heroClass !== 'string' || !HERO_CLASS_NAMES.includes(character.heroClass as typeof HERO_CLASS_NAMES[number])) {
       throw new EncounterError(`${team}Party.characters[${index}].heroClass must be a supported hero class.`);
     }
-    if (!Object.keys(character).every(key => key === 'heroClass' || key === 'abilities' || key === 'subclass')) {
+    if (!Object.keys(character).every(key => key === 'heroClass' || key === 'abilities' || key === 'subclass' || key === 'spells')) {
       throw new EncounterError(`${team}Party.characters[${index}] contains unsupported build choices.`);
     }
     const abilities = parseAbilities(character.abilities, `${team}Party.characters[${index}].abilities`);
     if (character.subclass !== undefined && (character.heroClass !== 'Druid' || (character.subclass !== 'Circle of the Land' && character.subclass !== 'Circle of the Moon'))) {
       throw new EncounterError(`${team}Party.characters[${index}].subclass is not supported.`);
     }
+    const heroClass = character.heroClass as typeof HERO_CLASS_NAMES[number];
+    const spells = parseSpells(character.spells, heroClass, `${team}Party.characters[${index}]`);
     return {
       heroClass: character.heroClass,
       heroLevel: 5,
-      heroOverrides: { abilities, subclass: character.subclass as 'Circle of the Land' | 'Circle of the Moon' | undefined },
+      heroOverrides: { abilities, subclass: character.subclass as 'Circle of the Land' | 'Circle of the Moon' | undefined, spells },
       team,
     };
   });
