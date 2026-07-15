@@ -33,6 +33,7 @@ export type ArenaAction =
   | { id: 'class_feature:action_surge'; type: 'action_surge' }
   | { id: 'class_feature:steady_aim'; type: 'steady_aim' }
   | { id: string; type: 'wild_shape'; beastName: string }
+  | { id: string; type: 'monk_strike'; actionIndex: number; targetId: string; flurry: boolean }
   | { id: 'move_to'; type: 'move_to'; destination?: { x: number; y: number } }
   | { id: 'end_turn'; type: 'end_turn' };
 
@@ -67,6 +68,12 @@ function attackRollBudget(creature: Creature): number {
 
 function attacksUsed(creature: Creature): number {
   return Object.keys(creature.turnFlags).filter(key => key.startsWith('arena-attack-')).length;
+}
+
+function monkUnarmedAction(active: Creature): [number, MonsterAction] | undefined {
+  const entries = getActiveActions(active).entries();
+  return Array.from(entries).find(([, action]) => action.type === 'melee' && action.attackBonus !== undefined && action.name === 'Martial Arts (Unarmed)')
+    ?? Array.from(getActiveActions(active).entries()).find(([, action]) => action.type === 'melee' && action.attackBonus !== undefined);
 }
 
 function canCastArenaSpell(active: Creature, action: MonsterAction): boolean {
@@ -194,6 +201,17 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
     if (active.movementRemaining > 0) actions.push({ id: 'bonus_dash', type: 'dash', isBonusAction: true });
   }
   actions.push(...wildShapeActions(active, state));
+  const monk = monkUnarmedAction(active);
+  const flurryStrikes = Object.keys(active.turnFlags).filter(key => key.startsWith('arena-flurry-')).length;
+  if (active.monsterData.heroClass === 'Monk' && monk && attacksUsed(active) > 0) {
+    for (const target of enemies.filter(target => attackInRange(active, target, monk[1]))) {
+      if (flurryStrikes > 0 && flurryStrikes < 2) actions.push({ id: `class_feature:flurry:${target.id}`, type: 'monk_strike', actionIndex: monk[0], targetId: target.id, flurry: true });
+      else if (flurryStrikes === 0 && !active.bonusActionUsed) {
+        actions.push({ id: `class_feature:martial_arts:${target.id}`, type: 'monk_strike', actionIndex: monk[0], targetId: target.id, flurry: false });
+        if (hasResource(active, 'ki')) actions.push({ id: `class_feature:flurry:${target.id}`, type: 'monk_strike', actionIndex: monk[0], targetId: target.id, flurry: true });
+      }
+    }
+  }
   actions.push({ id: 'end_turn', type: 'end_turn' });
   if (new Set(actions.map(action => action.id)).size !== actions.length) {
     throw new EncounterError(`Arena legal-action id collision for ${active.id}.`);
@@ -333,6 +351,23 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       for (const [key, value] of Object.entries(beast.initialResources ?? {})) active.resources[key] = value;
       active.bonusActionUsed = true;
       pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Wild Shape', details: `${active.displayName} transforms into a ${beast.name}.`, type: 'special' });
+    } else if (legal.type === 'monk_strike') {
+      const strike = getActiveActions(active)[legal.actionIndex];
+      const target = state.creatures.find(creature => creature.id === legal.targetId);
+      const flurryStrikes = Object.keys(active.turnFlags).filter(key => key.startsWith('arena-flurry-')).length;
+      if (active.monsterData.heroClass !== 'Monk' || !strike || !target || !target.isAlive || !attackInRange(active, target, strike)) throw new EncounterError('Illegal or stale arena Monk strike.');
+      if (legal.flurry) {
+        if (flurryStrikes === 0) {
+          if (active.bonusActionUsed || !consumeResource(active, 'ki')) throw new EncounterError('Illegal or stale arena Flurry of Blows.');
+          active.bonusActionUsed = true;
+        } else if (flurryStrikes >= 2) throw new EncounterError('Illegal or stale arena Flurry of Blows.');
+        active.turnFlags[`arena-flurry-${flurryStrikes}`] = true;
+      } else {
+        if (active.bonusActionUsed || flurryStrikes) throw new EncounterError('Illegal or stale arena Martial Arts strike.');
+        active.bonusActionUsed = true;
+      }
+      resolveAttack(state, active, target, strike);
+      checkBattleComplete(state);
     } else {
       endTurn(encounter, active);
     }

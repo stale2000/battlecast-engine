@@ -147,6 +147,21 @@ describe('Kaggle arena bridge', () => {
     expect(encounter.state!.creatures.find(creature => creature.id === druid.id)!.wildShape?.beastName).toBe(action!.beastName);
   });
 
+  it('resolves Monk Flurry of Blows as two server-selected strikes', () => {
+    const encounter = new Encounter({ seed: 1 });
+    const [monk] = encounter.addCreature({ heroClass: 'Monk', heroLevel: 5, team: 'red', position: { x: 0, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
+    encounter.start();
+    encounter.state!.initiativeOrder = [monk.id];
+    startArena(encounter);
+    applyLegalAction(encounter, getLegalActions(encounter, monk.id).find(action => action.type === 'attack')!);
+    applyLegalAction(encounter, getLegalActions(encounter, monk.id).find(action => action.type === 'attack')!);
+    const flurry = getLegalActions(encounter, monk.id).find(action => action.type === 'monk_strike' && action.flurry);
+    expect(flurry).toBeTruthy();
+    applyLegalAction(encounter, flurry!);
+    expect(getLegalActions(encounter, monk.id).some(action => action.type === 'monk_strike' && action.flurry)).toBe(true);
+  });
+
   it('ends at the configured round cap and keeps CLI protocol output on stdout', () => {
     const playToCap = () => {
       let result = kaggleStep(init());
