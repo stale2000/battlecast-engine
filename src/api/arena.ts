@@ -8,6 +8,7 @@ import {
   getAoETargets,
   getEffectiveMoveSpeed,
   hasResource,
+  isPositionBlocked,
   pickRangedSphereCenter,
   processHydraEndOfTurn,
   processTargetTurnEndOngoingEffects,
@@ -17,6 +18,9 @@ import {
 import { canSee, getActiveActions } from '../engine/ai-targeting.js';
 import { moveToDestination, reachableMovementDestinations } from '../engine/ai-movement.js';
 import { executeLegendaryAction, handlePassiveAuras, processTurnStart, runOpportunityAttacks } from '../engine/ai-turn.js';
+import { getEligibleWildShapeBeasts } from '../data/heroes.js';
+import { abilityModifier } from '../engine/dice.js';
+import { getFootprintSize } from '../engine/combat-geometry.js';
 import type { Creature, MonsterAction } from '../types/monster.js';
 
 export type ArenaAction =
@@ -28,6 +32,7 @@ export type ArenaAction =
   | { id: string; type: 'help'; targetId: string }
   | { id: 'class_feature:action_surge'; type: 'action_surge' }
   | { id: 'class_feature:steady_aim'; type: 'steady_aim' }
+  | { id: string; type: 'wild_shape'; beastName: string }
   | { id: 'move_to'; type: 'move_to'; destination?: { x: number; y: number } }
   | { id: 'end_turn'; type: 'end_turn' };
 
@@ -125,6 +130,16 @@ function autoDartSpellActions(active: Creature, state: NonNullable<Encounter['st
   return result.slice(0, 32);
 }
 
+function wildShapeActions(active: Creature, state: NonNullable<Encounter['state']>): ArenaAction[] {
+  const level = active.monsterData.heroLevel ?? 0;
+  if (active.monsterData.heroClass !== 'Druid' || level < 2 || active.wildShape || active.bonusActionUsed || active.concentratingOn || !hasResource(active, 'wild-shape')) return [];
+  const gridSize = state.gridSize ?? 20;
+  return getEligibleWildShapeBeasts({ level, subclass: active.monsterData.heroSubclass })
+    .filter(beast => !active.monsterData.preferredWildShapeBeast || beast.name === active.monsterData.preferredWildShapeBeast)
+    .filter(beast => active.position.x + getFootprintSize(beast.size) <= gridSize && active.position.y + getFootprintSize(beast.size) <= gridSize && !isPositionBlocked(active.position, beast.size, state.creatures, active.id, state.terrainBlocked))
+    .map(beast => ({ id: `class_feature:wild_shape:${slug(beast.name)}`, type: 'wild_shape' as const, beastName: beast.name }));
+}
+
 /** The exact, intentionally small set of player-selectable engine actions. */
 export function getLegalActions(encounter: Encounter, creatureId: string): ArenaAction[] {
   const state = encounter.state;
@@ -178,6 +193,7 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
     actions.push({ id: 'class_feature:steady_aim', type: 'steady_aim' });
     if (active.movementRemaining > 0) actions.push({ id: 'bonus_dash', type: 'dash', isBonusAction: true });
   }
+  actions.push(...wildShapeActions(active, state));
   actions.push({ id: 'end_turn', type: 'end_turn' });
   if (new Set(actions.map(action => action.id)).size !== actions.length) {
     throw new EncounterError(`Arena legal-action id collision for ${active.id}.`);
@@ -306,6 +322,17 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       active.bonusActionUsed = true;
       active.movementRemaining = 0;
       pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Steady Aim', details: `${active.displayName} gains advantage on their next attack.`, type: 'special' });
+    } else if (legal.type === 'wild_shape') {
+      const level = active.monsterData.heroLevel ?? 0;
+      const beast = getEligibleWildShapeBeasts({ level, subclass: active.monsterData.heroSubclass }).find(candidate => candidate.name === legal.beastName);
+      if (active.monsterData.heroClass !== 'Druid' || !beast || active.wildShape || active.bonusActionUsed || active.concentratingOn || !hasResource(active, 'wild-shape') || isPositionBlocked(active.position, beast.size, state.creatures, active.id, state.terrainBlocked)) throw new EncounterError('Illegal or stale arena Wild Shape.');
+      if (!consumeResource(active, 'wild-shape')) throw new EncounterError('Illegal or stale arena Wild Shape.');
+      const isMoon = active.monsterData.heroSubclass === 'Circle of the Moon';
+      const tempHp = isMoon ? level * 3 : level;
+      active.wildShape = { beastName: beast.name, tempHp, maxTempHp: tempHp, formHp: beast.formHp, cr: beast.cr, ac: isMoon ? Math.max(beast.ac, 13 + abilityModifier(active.monsterData.abilities.wis)) : beast.ac, speed: beast.speed, actions: beast.actions, size: beast.size, traits: beast.traits, saves: beast.saves, abilities: beast.abilities, isMoon };
+      for (const [key, value] of Object.entries(beast.initialResources ?? {})) active.resources[key] = value;
+      active.bonusActionUsed = true;
+      pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Wild Shape', details: `${active.displayName} transforms into a ${beast.name}.`, type: 'special' });
     } else {
       endTurn(encounter, active);
     }

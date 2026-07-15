@@ -134,6 +134,19 @@ describe('Kaggle arena bridge', () => {
     }
   });
 
+  it('offers only valid Wild Shape forms and applies the selected form', () => {
+    const encounter = new Encounter({ seed: 1 });
+    const [druid] = encounter.addCreature({ heroClass: 'Druid', heroLevel: 5, heroOverrides: { subclass: 'Circle of the Moon' }, team: 'red', position: { x: 0, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 5, y: 0 } });
+    encounter.start();
+    encounter.state!.initiativeOrder = [druid.id];
+    startArena(encounter);
+    const action = getLegalActions(encounter, druid.id).find(candidate => candidate.type === 'wild_shape');
+    expect(action).toBeTruthy();
+    applyLegalAction(encounter, action!);
+    expect(encounter.state!.creatures.find(creature => creature.id === druid.id)!.wildShape?.beastName).toBe(action!.beastName);
+  });
+
   it('ends at the configured round cap and keeps CLI protocol output on stdout', () => {
     const playToCap = () => {
       let result = kaggleStep(init());
