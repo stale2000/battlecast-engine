@@ -4,6 +4,7 @@ import { Encounter } from '../src/api/encounter.js';
 import { getActiveCreature, getLegalActions, applyLegalAction, startArena } from '../src/api/arena.js';
 import { reachableMovementDestinations } from '../src/engine/ai-movement.js';
 import { kaggleStep } from '../src/arena.js';
+import { HERO_CLASS_NAMES } from '../src/data/heroes.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: 2, redParty: party, blueParty: party });
@@ -170,6 +171,27 @@ describe('Kaggle arena bridge', () => {
     expect(flurry).toBeTruthy();
     applyLegalAction(encounter, flurry!);
     expect(getLegalActions(encounter, monk.id).some(action => action.type === 'monk_strike' && action.flurry)).toBe(true);
+  });
+
+  it('resolves every exposed action for every supported level-5 class', () => {
+    for (const heroClass of HERO_CLASS_NAMES) {
+      const encounter = new Encounter({ seed: 1 });
+      const [hero] = encounter.addCreature({ heroClass, heroLevel: 5, team: 'red', position: { x: 0, y: 0 } });
+      encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
+      encounter.start();
+      encounter.state!.initiativeOrder = [hero.id];
+      startArena(encounter);
+      const snapshot = encounter.toJSON();
+      for (const action of getLegalActions(encounter, hero.id)) {
+        const copy = Encounter.fromJSON(snapshot);
+        if (action.type === 'move_to') {
+          const destination = reachableMovementDestinations(getActiveCreature(copy)!, copy.state!)[0]!;
+          expect(() => applyLegalAction(copy, { ...action, destination: { x: destination.x, y: destination.y } })).not.toThrow();
+        } else {
+          expect(() => applyLegalAction(copy, action)).not.toThrow();
+        }
+      }
+    }
   });
 
   it('ends at the configured round cap and keeps CLI protocol output on stdout', () => {
