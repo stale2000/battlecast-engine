@@ -147,7 +147,7 @@ function wildShapeActions(active: Creature, state: NonNullable<Encounter['state'
     .map(beast => ({ id: `class_feature:wild_shape:${slug(beast.name)}`, type: 'wild_shape' as const, beastName: beast.name }));
 }
 
-/** The exact, intentionally small set of player-selectable engine actions. */
+/** The exact server-owned set of player-selectable engine actions. */
 export function getLegalActions(encounter: Encounter, creatureId: string): ArenaAction[] {
   const state = encounter.state;
   const active = getActiveCreature(encounter);
