@@ -68,6 +68,17 @@ Or in any MCP client config:
 | Persistence | `export_encounter`, `import_encounter` |
 | Dice | `roll_dice` |
 
+## Arena bridge
+
+```bash
+battlecast-engine arena kaggle-step < request.json
+```
+
+The bridge reads one Protocol v1 JSON request and writes one JSON response.
+It regenerates legal actions from authoritative encounter state; submitted
+actions cannot supply damage, targets, or state mutations. Library callers can
+import the same bridge from `battlecast-engine/arena`.
+
 A typical session: `create_encounter` (optionally seeded), `add_creature` a
 few times, `start_battle`, then either `run_round` for narrated round-by-round
 play or `run_battle` for an instant result. `get_state` returns a compact
