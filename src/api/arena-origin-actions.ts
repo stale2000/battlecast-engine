@@ -1,12 +1,18 @@
 import {
+  applyCondition,
+  applyDamage,
   consumeResource,
   getEffectiveMoveSpeed,
+  getActiveSize,
   hasResource,
   isPositionBlocked,
   pushLog,
 } from '../engine/combat.js';
+import { rollDice } from '../engine/dice.js';
 import type { BattleState } from '../engine/combat.js';
 import type { Creature } from '../types/monster.js';
+
+export type GoliathAttackFeature = 'fire' | 'frost' | 'hill';
 
 /** Player-selectable actions granted by an SRD species origin. */
 export type OriginArenaAction =
@@ -91,4 +97,41 @@ export function applyOriginLegalAction(state: BattleState, active: Creature, act
   active.airborne = true;
   active.bonusActionUsed = true;
   pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Draconic Flight', details: `${active.displayName} sprouts spectral wings and gains a Fly Speed.`, type: 'special' });
+}
+
+/** Goliath hit riders are separate legal attack variants, and spend only on a damaging hit. */
+export function getGoliathAttackFeatures(active: Creature, target: Creature): GoliathAttackFeature[] {
+  if (active.monsterData.heroSpecies !== 'Goliath' || !hasResource(active, 'goliath-giant-ancestry')) return [];
+  switch (active.monsterData.heroSpeciesChoice) {
+    case 'Fire': return ['fire'];
+    case 'Frost': return ['frost'];
+    case 'Hill': return getActiveSize(target) === 'Huge' || getActiveSize(target) === 'Gargantuan' ? [] : ['hill'];
+    default: return [];
+  }
+}
+
+/** Applies an already-selected Goliath rider after its parent attack dealt damage. */
+export function applyGoliathAttackFeature(
+  state: BattleState,
+  active: Creature,
+  target: Creature,
+  feature: GoliathAttackFeature,
+): void {
+  if (!getGoliathAttackFeatures(active, target).includes(feature)) throw new Error('Illegal or stale Goliath Giant Ancestry.');
+  if (!consumeResource(active, 'goliath-giant-ancestry')) throw new Error('Illegal or stale Goliath Giant Ancestry.');
+  if (feature === 'hill') {
+    applyCondition(state, target, 'prone', active, 'end_of_next_turn');
+    pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: "Hill's Tumble", details: `${active.displayName} knocks ${target.displayName} prone.`, type: 'condition' });
+    return;
+  }
+  const damage = rollDice(feature === 'fire' ? '1d10' : '1d6').total;
+  const damageType = feature === 'fire' ? 'fire' : 'cold';
+  const before = target.currentHp;
+  applyDamage(state, target, damage, damageType, active, false, true);
+  if (feature === 'frost') {
+    target.activeBuffs = (target.activeBuffs ?? []).filter(buff => buff.key !== `goliath-frost:${active.id}`);
+    target.activeBuffs.push({ name: "Frost's Chill", key: `goliath-frost:${active.id}`, casterId: active.id, appliedRound: state.round, endRound: state.round + 2, speedPenalty: 10, expiresOnSourceTurnStart: true });
+  }
+  pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: feature === 'fire' ? "Fire's Burn" : "Frost's Chill", details: `${active.displayName} deals ${damage} ${damageType} damage to ${target.displayName}${feature === 'frost' ? ' and slows it.' : '.'}`, damage, type: 'damage' });
+  if (target.currentHp < before) active.stats.actionUsage[`Giant Ancestry: ${feature}`] = (active.stats.actionUsage[`Giant Ancestry: ${feature}`] || 0) + 1;
 }

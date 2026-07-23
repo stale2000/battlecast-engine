@@ -22,7 +22,7 @@ import { getEligibleWildShapeBeasts } from '../data/heroes.js';
 import { abilityModifier } from '../engine/dice.js';
 import { getFootprintSize } from '../engine/combat-geometry.js';
 import type { Creature, MonsterAction } from '../types/monster.js';
-import { applyOriginLegalAction, getOriginLegalActions } from './arena-origin-actions.js';
+import { applyGoliathAttackFeature, applyOriginLegalAction, getGoliathAttackFeatures, getOriginLegalActions } from './arena-origin-actions.js';
 import { applyClassFeatureLegalAction, getClassFeatureLegalActions } from './arena-class-actions.js';
 import { sameArenaAction, type ArenaAction } from './arena-actions.js';
 export { sameArenaAction, type ArenaAction } from './arena-actions.js';
@@ -175,6 +175,9 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
       for (const target of enemies) {
         if (!attackInRange(active, target, action) || (action.type === 'ranged' && !canSee(state, active, target))) continue;
         actions.push({ id: `attack:${actionIndex}:${slug(action.name)}:${target.id}`, type: 'attack', actionName: action.name, actionIndex, targetId: target.id });
+        for (const feature of getGoliathAttackFeatures(active, target)) {
+          actions.push({ id: `attack:${actionIndex}:${slug(action.name)}:${target.id}:goliath-${feature}`, type: 'attack', actionName: action.name, actionIndex, targetId: target.id, goliathFeature: feature });
+        }
       }
     }
   }
@@ -278,7 +281,15 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       const target = state.creatures.find(c => c.id === legal.targetId)!;
       const attack = getActiveActions(active)[legal.actionIndex];
       if (!attack || attack.name !== legal.actionName) throw new EncounterError(`Stale arena attack "${legal.id}".`);
+      const damageBefore = target.stats.damageTaken;
       resolveAttack(state, active, target, attack);
+      if (legal.goliathFeature && target.stats.damageTaken > damageBefore) {
+        try {
+          applyGoliathAttackFeature(state, active, target, legal.goliathFeature);
+        } catch (error) {
+          throw new EncounterError(error instanceof Error ? error.message : 'Illegal or stale Goliath Giant Ancestry.');
+        }
+      }
       active.turnFlags[`arena-attack-${attacksUsed(active)}`] = true;
       active.hasActed = attacksUsed(active) >= attackRollBudget(active);
       checkBattleComplete(state);

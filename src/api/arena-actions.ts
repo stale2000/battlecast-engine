@@ -1,4 +1,4 @@
-import type { OriginArenaAction } from './arena-origin-actions.js';
+import type { GoliathAttackFeature, OriginArenaAction } from './arena-origin-actions.js';
 
 export type ClassFeatureArenaAction =
   | { id: 'class_feature:action_surge'; type: 'action_surge' }
@@ -9,7 +9,7 @@ export type ClassFeatureArenaAction =
  * only where the engine will validate and consume them.
  */
 export type ArenaAction =
-  | { id: string; type: 'attack'; actionName: string; actionIndex: number; targetId: string }
+  | { id: string; type: 'attack'; actionName: string; actionIndex: number; targetId: string; goliathFeature?: GoliathAttackFeature }
   | { id: string; type: 'spell'; actionName: string; actionIndex: number; targetId: string; targetIds?: string[]; center?: { x: number; y: number }; areaShape?: string }
   | { id: 'dash' | 'bonus_dash'; type: 'dash'; isBonusAction: boolean }
   | { id: 'dodge'; type: 'dodge' }

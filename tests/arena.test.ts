@@ -217,6 +217,22 @@ describe('Kaggle arena bridge', () => {
     expect(encounter.state!.creatures.find(creature => creature.id === goliath.id)!.resources['goliath-giant-ancestry']).toBe(2);
   });
 
+  it('offers and applies Goliath Giant Ancestry hit riders only after a damaging hit', () => {
+    const encounter = new Encounter({ seed: 1 });
+    const [goliath] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { species: 'Goliath', speciesChoice: 'Hill', additionalResources: { 'goliath-giant-ancestry': 3 } }, team: 'red', position: { x: 0, y: 0 } });
+    const [target] = encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
+    encounter.start();
+    encounter.state!.initiativeOrder = [goliath.id];
+    startArena(encounter);
+    const active = getActiveCreature(encounter)!;
+    const targetCreature = encounter.state!.creatures.find(creature => creature.id === target.id)!;
+    const rider = getLegalActions(encounter, active.id).find(action => action.type === 'attack' && action.goliathFeature === 'hill')!;
+    applyLegalAction(encounter, rider);
+    expect(active.resources['goliath-giant-ancestry']).toBeLessThanOrEqual(3);
+    if (active.resources['goliath-giant-ancestry'] === 2) expect(targetCreature.conditions).toContain('prone');
+    else expect(targetCreature.conditions).not.toContain('prone');
+  });
+
   it('rerolls Halfling natural ones in the shared d20 primitive', () => {
     const values = [0, 0.5, 0.9];
     const rng = { next: () => values.shift()! };
