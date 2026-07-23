@@ -193,8 +193,8 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     if (species === 'Tiefling' && !['Abyssal', 'Chthonic', 'Infernal'].includes(tieflingLegacy ?? '')) throw new EncounterError(`${label}.tieflingLegacy must be Abyssal, Chthonic, or Infernal.`);
     if (species !== 'Tiefling' && character.tieflingLegacy !== undefined) throw new EncounterError(`${label}.tieflingLegacy requires Tiefling.`);
     const speciesCastingAbility = character.speciesCastingAbility as CastingAbility | undefined;
-    if ((species === 'Elf' || species === 'Tiefling') && !['int', 'wis', 'cha'].includes(speciesCastingAbility ?? '')) throw new EncounterError(`${label}.speciesCastingAbility must be Intelligence, Wisdom, or Charisma.`);
-    if (species !== 'Elf' && species !== 'Tiefling' && character.speciesCastingAbility !== undefined) throw new EncounterError(`${label}.speciesCastingAbility requires Elf or Tiefling.`);
+    if ((species === 'Elf' || species === 'Gnome' || species === 'Tiefling') && !['int', 'wis', 'cha'].includes(speciesCastingAbility ?? '')) throw new EncounterError(`${label}.speciesCastingAbility must be Intelligence, Wisdom, or Charisma.`);
+    if (species !== 'Elf' && species !== 'Gnome' && species !== 'Tiefling' && character.speciesCastingAbility !== undefined) throw new EncounterError(`${label}.speciesCastingAbility requires Elf, Gnome, or Tiefling.`);
     const humanOriginFeat = character.humanOriginFeat as string | undefined;
     if (species === 'Human' && !['Alert', 'Magic Initiate (Cleric)', 'Magic Initiate (Wizard)', 'Savage Attacker', 'Tough'].includes(humanOriginFeat ?? '')) {
       throw new EncounterError(`${label}.humanOriginFeat must be an engine-supported Origin Feat.`);

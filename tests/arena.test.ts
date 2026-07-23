@@ -287,12 +287,23 @@ describe('Kaggle arena bridge', () => {
   });
 
   it('requires and preserves Gnome and Goliath SRD ancestry choices', () => {
-    const build = (species: 'Gnome' | 'Goliath', choice: string) => ({ heroClass: 'Fighter', species, background: 'Soldier', abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 }, ...(species === 'Gnome' ? { gnomeLineage: choice } : { goliathAncestry: choice }) });
+    const build = (species: 'Gnome' | 'Goliath', choice: string) => ({ heroClass: 'Fighter', species, background: 'Soldier', abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 }, ...(species === 'Gnome' ? { gnomeLineage: choice, speciesCastingAbility: 'int' } : { goliathAncestry: choice }) });
     for (const [species, choice] of [['Gnome', 'Forest Gnome'], ['Goliath', 'Cloud']] as const) {
       const party = { characters: Array.from({ length: 4 }, () => build(species, choice)) };
       const result = kaggleStep({ ...init(), redParty: party, blueParty: party });
       expect(result.observations.red.publicCombatState.creatures.find(creature => creature.team === 'red')!.build.speciesChoice).toBe(choice);
     }
+  });
+
+  it('requires and preserves the Gnome lineage spellcasting ability', () => {
+    const gnome = {
+      heroClass: 'Fighter', species: 'Gnome', gnomeLineage: 'Forest Gnome', speciesCastingAbility: 'wis', background: 'Soldier',
+      abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 },
+    };
+    const party = { characters: Array.from({ length: 4 }, () => gnome) };
+    const creature = kaggleStep({ ...init(), redParty: party, blueParty: party }).state.battleState!.creatures.find(candidate => candidate.team === 'red')!;
+    expect(creature.monsterData.heroSpeciesCastingAbility).toBe('wis');
+    expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...gnome, speciesCastingAbility: undefined })) }, blueParty: party })).toThrow(/speciesCastingAbility/);
   });
 
   it('resolves Goliath Large Form through the legal-action catalogue', () => {
