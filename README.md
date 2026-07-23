@@ -81,9 +81,11 @@ import the same bridge from `battlecast-engine/arena`.
 
 Arena v1 is a trusted-host interface. The host, not an agent, retains and
 submits serialized state between steps. It supports the fixed `open-arena` map
-and a 20-round cap. Party construction currently supports four fixed slots or
-the engine's validated level-5 class, point-buy, supported-subclass, and spell
-selection model; it is not a complete SRD character-sheet builder.
+and a 20-round cap. Party construction supports four fixed slots or validated
+level-5 SRD arena builds: point-buy, core species and lineages, backgrounds,
+subclasses, equipment, weapon properties and mastery, and every spell the
+engine can resolve. It is not a campaign inventory or downtime character-sheet
+system.
 
 A typical session: `create_encounter` (optionally seeded), `add_creature` a
 few times, `start_battle`, then either `run_round` for narrated round-by-round
