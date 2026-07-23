@@ -148,6 +148,26 @@ describe('Kaggle arena bridge', () => {
     expect(creature.resources['abyssal-hold-person']).toBe(1);
   });
 
+  it('adds Abyssal Ray of Sickness as an authoritative lineage free cast', () => {
+    const abyssal = {
+      heroClass: 'Fighter', species: 'Tiefling', tieflingLegacy: 'Abyssal', speciesCastingAbility: 'cha', background: 'Soldier',
+      abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 },
+    };
+    const party = { characters: Array.from({ length: 4 }, () => abyssal) };
+    const creature = kaggleStep({ ...init(), redParty: party, blueParty: party }).state.battleState!.creatures.find(candidate => candidate.team === 'red')!;
+    const ray = creature.monsterData.actions.find(action => action.name === 'Ray of Sickness')!;
+    expect(ray).toMatchObject({ spellLevel: 1, damage: '2d8', damageType: 'poison', conditionOnHit: { condition: 'poisoned', duration: 'end_of_next_turn' } });
+    expect(creature.resources['abyssal-ray-of-sickness']).toBe(1);
+
+    const encounter = new Encounter({ seed: 1 });
+    const [hero] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { species: 'Tiefling', speciesChoice: 'Abyssal', speciesCastingAbility: 'cha', additionalResources: { 'abyssal-ray-of-sickness': 1 }, additionalActions: [ray] }, team: 'red', position: { x: 0, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
+    encounter.start(); encounter.state!.initiativeOrder = [hero.id]; startArena(encounter);
+    const active = getActiveCreature(encounter)!;
+    applyLegalAction(encounter, getLegalActions(encounter, active.id).find(action => action.type === 'spell' && action.actionName === 'Ray of Sickness')!);
+    expect(active.resources['abyssal-ray-of-sickness']).toBe(0);
+  });
+
   it('adds Chthonic False Life as a self-targeted lineage free cast', () => {
     const chthonic = {
       heroClass: 'Fighter', species: 'Tiefling', tieflingLegacy: 'Chthonic', speciesCastingAbility: 'cha', background: 'Soldier',
