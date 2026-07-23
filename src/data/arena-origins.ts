@@ -14,11 +14,14 @@ export interface ArenaWeapon {
 /** Server-owned SRD weapon facts. Public build requests select only these names. */
 export const ARENA_WEAPONS: Record<string, ArenaWeapon> = {
   Club: { name: 'Club', die: '1d4', damageType: 'bludgeoning', type: 'melee' },
+  Sickle: { name: 'Sickle', die: '1d4', damageType: 'slashing', type: 'melee' },
+  LightHammer: { name: 'Light Hammer', die: '1d4', damageType: 'bludgeoning', type: 'melee' },
   Dagger: { name: 'Dagger', die: '1d4', damageType: 'piercing', type: 'melee' },
   Greatclub: { name: 'Greatclub', die: '1d8', damageType: 'bludgeoning', type: 'melee' },
   Handaxe: { name: 'Handaxe', die: '1d6', damageType: 'slashing', type: 'melee' },
   Javelin: { name: 'Javelin', die: '1d6', damageType: 'piercing', type: 'ranged', range: { normal: 30, long: 120 }, attackAbility: 'str' },
   Mace: { name: 'Mace', die: '1d6', damageType: 'bludgeoning', type: 'melee' },
+  Morningstar: { name: 'Morningstar', die: '1d8', damageType: 'piercing', type: 'melee' },
   Quarterstaff: { name: 'Quarterstaff', die: '1d6', damageType: 'bludgeoning', type: 'melee' },
   Spear: { name: 'Spear', die: '1d6', damageType: 'piercing', type: 'ranged', range: { normal: 20, long: 60 }, attackAbility: 'str' },
   LightCrossbow: { name: 'Light Crossbow', die: '1d8', damageType: 'piercing', type: 'ranged', range: { normal: 80, long: 320 }, loading: true },
@@ -27,6 +30,8 @@ export const ARENA_WEAPONS: Record<string, ArenaWeapon> = {
   Longbow: { name: 'Longbow', die: '1d8', damageType: 'piercing', type: 'ranged', range: { normal: 150, long: 600 } },
   Rapier: { name: 'Rapier', die: '1d8', damageType: 'piercing', type: 'melee' },
   Greatsword: { name: 'Greatsword', die: '2d6', damageType: 'slashing', type: 'melee' },
+  Battleaxe: { name: 'Battleaxe', die: '1d8', damageType: 'slashing', type: 'melee' },
+  Warhammer: { name: 'Warhammer', die: '1d8', damageType: 'bludgeoning', type: 'melee' },
 };
 
 export const ARENA_SRD_VERSION = '5.2.1';

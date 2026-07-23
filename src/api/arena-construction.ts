@@ -30,7 +30,7 @@ const SKILLS = ['Acrobatics', 'Animal Handling', 'Arcana', 'Athletics', 'Decepti
 const TOOLS = ['Alchemist’s Supplies', 'Brewer’s Supplies', 'Calligrapher’s Supplies', 'Carpenter’s Tools', 'Cartographer’s Tools', 'Cobbler’s Tools', 'Cook’s Utensils', 'Disguise Kit', 'Forgery Kit', 'Gaming Set', 'Glassblower’s Tools', 'Herbalism Kit', 'Jeweler’s Tools', 'Leatherworker’s Tools', 'Mason’s Tools', 'Musical Instrument', 'Navigator’s Tools', 'Painter’s Supplies', 'Poisoner’s Kit', 'Potter’s Tools', 'Smith’s Tools', 'Thieves’ Tools', 'Tinker’s Tools', 'Weaver’s Tools', 'Woodcarver’s Tools'] as const;
 const LANGUAGES = ['Common Sign Language', 'Draconic', 'Dwarvish', 'Elvish', 'Giant', 'Gnomish', 'Goblin', 'Halfling', 'Orc', 'Abyssal', 'Celestial', 'Deep Speech', 'Druidic', 'Infernal', 'Primordial', 'Sylvan', 'Thieves’ Cant', 'Undercommon'] as const;
 const ALIGNMENTS = ['Lawful Good', 'Neutral Good', 'Chaotic Good', 'Lawful Neutral', 'Neutral', 'Chaotic Neutral', 'Lawful Evil', 'Neutral Evil', 'Chaotic Evil'] as const;
-const MARTIAL_WEAPONS = new Set(['Longsword', 'Longbow', 'Rapier', 'Greatsword']);
+const MARTIAL_WEAPONS = new Set(['Battleaxe', 'Greatsword', 'Longbow', 'Longsword', 'Morningstar', 'Rapier', 'Warhammer']);
 const MARTIAL_CLASSES = new Set(['Barbarian', 'Fighter', 'Paladin', 'Ranger', 'Rogue']);
 
 function speciesDarkvision(species: ArenaSpecies, elfLineage?: ElfLineage): string | undefined {
