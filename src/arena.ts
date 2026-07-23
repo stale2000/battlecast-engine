@@ -29,7 +29,7 @@ function visibleEquipment(creature: Creature): string[] {
 function preparedSpells(creature: Creature): string[] {
   return [...new Set(creature.monsterData.actions
     .filter(action => (action.spellLevel ?? 0) > 0)
-    .map(action => action.name))];
+    .map(action => action.name).concat(creature.monsterData.speciesPreparedSpells ?? []))];
 }
 
 function observation(encounter: Encounter, team: Team) {
@@ -44,7 +44,7 @@ function observation(encounter: Encounter, team: Team) {
           heroClass: c.monsterData.heroClass, heroLevel: c.monsterData.heroLevel, heroSubclass: c.monsterData.heroSubclass,
           species: c.monsterData.heroSpecies, speciesChoice: c.monsterData.heroSpeciesChoice, speciesCastingAbility: c.monsterData.heroSpeciesCastingAbility, background: c.monsterData.heroBackground, originFeat: c.monsterData.originFeat, originFeats: c.monsterData.originFeats,
           abilities: { ...c.monsterData.abilities }, ac: c.monsterData.ac, speed: { ...c.monsterData.speed },
-          equipment: visibleEquipment(c), preparedSpells: preparedSpells(c),
+          equipment: visibleEquipment(c), cantrips: c.monsterData.speciesCantrips, preparedSpells: preparedSpells(c),
         },
       }
     : {

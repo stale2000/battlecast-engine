@@ -2379,6 +2379,8 @@ export interface HeroOverrides {
   originSkills?: string[];
   originTool?: string;
   originEquipment?: string[];
+  speciesCantrips?: string[];
+  speciesPreparedSpells?: string[];
   additionalSenses?: string;
   additionalResources?: Record<string, number>;
   additionalActions?: MonsterAction[];
@@ -2753,6 +2755,8 @@ export function buildCustomHero(
     originSkills: overrides.originSkills,
     originTool: overrides.originTool,
     originEquipment: overrides.originEquipment,
+    speciesCantrips: overrides.speciesCantrips,
+    speciesPreparedSpells: overrides.speciesPreparedSpells,
     preferredWildShapeBeast: overrides.preferredWildShapeBeast,
     initialResources: Object.keys(initialResources).length ? initialResources : undefined,
   };

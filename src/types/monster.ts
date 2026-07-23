@@ -479,6 +479,10 @@ export interface MonsterData {
   originSkills?: string[];
   originTool?: string;
   originEquipment?: string[];
+  /** Known lineage cantrips, including noncombat spells omitted from actions. */
+  speciesCantrips?: string[];
+  /** Always-prepared lineage spells, including effects not yet arena-playable. */
+  speciesPreparedSpells?: string[];
   /** Research/config hook for Druids: prefer this eligible Beast when using Wild Shape. */
   preferredWildShapeBeast?: string;
   /**

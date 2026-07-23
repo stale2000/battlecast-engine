@@ -30,6 +30,24 @@ function speciesDarkvision(species: ArenaSpecies, elfLineage?: ElfLineage): stri
   return range ? `Darkvision ${range} ft.` : undefined;
 }
 
+function lineageSpells(species: ArenaSpecies, choice?: string): { cantrips?: string[]; prepared?: string[] } {
+  if (species === 'Elf') {
+    if (choice === 'Drow') return { cantrips: ['Dancing Lights'], prepared: ['Faerie Fire', 'Darkness'] };
+    if (choice === 'High Elf') return { cantrips: ['Prestidigitation'], prepared: ['Detect Magic', 'Misty Step'] };
+    return { cantrips: ['Druidcraft'], prepared: ['Longstrider', 'Pass without Trace'] };
+  }
+  if (species === 'Gnome') return choice === 'Forest Gnome'
+    ? { cantrips: ['Minor Illusion'], prepared: ['Speak with Animals'] }
+    : { cantrips: ['Mending', 'Prestidigitation'] };
+  if (species === 'Tiefling') {
+    const legacy = choice as TieflingLegacy;
+    return legacy === 'Abyssal' ? { cantrips: ['Thaumaturgy', 'Poison Spray'], prepared: ['Ray of Sickness', 'Hold Person'] }
+      : legacy === 'Chthonic' ? { cantrips: ['Thaumaturgy', 'Chill Touch'], prepared: ['False Life', 'Ray of Enfeeblement'] }
+      : { cantrips: ['Thaumaturgy', 'Fire Bolt'], prepared: ['Hellish Rebuke', 'Darkness'] };
+  }
+  return {};
+}
+
 const SLOT_PARTY: Record<1 | 2 | 3 | 4, AddCreatureOptions> = {
   1: { heroClass: 'Fighter', heroLevel: 5, team: 'red' },
   2: { heroClass: 'Cleric', heroLevel: 5, team: 'red' },
@@ -246,7 +264,7 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
         abilities, subclass: character.subclass as 'Circle of the Land' | 'Circle of the Moon' | undefined, spells,
         ...(species && background ? {
           species, speciesChoice: elfLineage ?? gnomeLineage ?? goliathAncestry ?? tieflingLegacy ?? character.dragonAncestry as string | undefined, speciesCastingAbility, background, originFeat: BACKGROUNDS[background].originFeat, originFeats: [BACKGROUNDS[background].originFeat, ...(humanOriginFeat ? [humanOriginFeat] : [])], originSkills: [...new Set([...BACKGROUNDS[background].skills, ...(elfKeenSense ? [elfKeenSense] : []), ...(humanSkill ? [humanSkill] : [])])], originTool: BACKGROUNDS[background].tool,
-          originEquipment: [...BACKGROUNDS[background].equipment], additionalSenses: speciesDarkvision(species, elfLineage), sizeOverride: size ?? SPECIES[species].size, speedOverride: elfLineage === 'Wood Elf' ? 35 : SPECIES[species].speed,
+          originEquipment: [...BACKGROUNDS[background].equipment], additionalSenses: speciesDarkvision(species, elfLineage), speciesCantrips: lineageSpells(species, elfLineage ?? gnomeLineage ?? tieflingLegacy).cantrips, speciesPreparedSpells: lineageSpells(species, elfLineage ?? gnomeLineage ?? tieflingLegacy).prepared, sizeOverride: size ?? SPECIES[species].size, speedOverride: elfLineage === 'Wood Elf' ? 35 : SPECIES[species].speed,
           hitPointBonus: (SPECIES[species].maxHpBonusAtLevel5 ?? 0) + (humanOriginFeat === 'Tough' ? 10 : 0), additionalResistances: tieflingLegacy ? [{ Abyssal: 'poison', Chthonic: 'necrotic', Infernal: 'fire' }[tieflingLegacy]] : SPECIES[species].resistances ? [...SPECIES[species].resistances] : undefined,
           additionalResources: { ...(species === 'Orc' ? { 'orc-adrenaline-rush': 3 } : {}), ...(species === 'Goliath' ? { 'goliath-large-form': 1, 'goliath-giant-ancestry': 3 } : {}), ...(species === 'Elf' && elfLineage === 'Drow' ? { 'drow-faerie-fire': 1 } : {}), ...(species === 'Elf' && elfLineage === 'High Elf' ? { 'high-elf-misty-step': 1 } : {}), ...(species === 'Elf' && elfLineage === 'Wood Elf' ? { 'wood-elf-longstrider': 1 } : {}), ...(species === 'Tiefling' && tieflingLegacy === 'Abyssal' ? { 'abyssal-ray-of-sickness': 1, 'abyssal-hold-person': 1 } : {}), ...(species === 'Tiefling' && tieflingLegacy === 'Chthonic' ? { 'chthonic-false-life': 1 } : {}), ...(species === 'Tiefling' && tieflingLegacy === 'Infernal' ? { 'infernal-hellish-rebuke': 1 } : {}), ...(origin?.resources ?? {}), ...(humanOrigin?.resources ?? {}) },
           additionalActions: [...(species === 'Dragonborn' ? [dragonbornBreath(character.dragonAncestry as DragonAncestry, abilities)] : []), ...(species === 'Elf' && elfLineage === 'Drow' ? lineageSpellActions(drowFaerieFire(speciesCastingAbility!, abilities)) : []), ...(species === 'Elf' && elfLineage === 'Wood Elf' ? lineageSpellActions(woodElfLongstrider(speciesCastingAbility!)) : []), ...(species === 'Tiefling' ? [tieflingCantrip(tieflingLegacy!, speciesCastingAbility!, abilities)] : []), ...(species === 'Tiefling' && tieflingLegacy === 'Abyssal' ? [...lineageSpellActions(abyssalRayOfSickness(speciesCastingAbility!, abilities)), ...lineageSpellActions({ ...holdPerson(speciesCastingAbility!, Math.floor((abilities[speciesCastingAbility!] - 10) / 2), 3), resourceCost: { key: 'abyssal-hold-person', amount: 1 } })] : []), ...(species === 'Tiefling' && tieflingLegacy === 'Chthonic' ? lineageSpellActions(chthonicFalseLife(speciesCastingAbility!)) : []), ...(origin?.actions ?? []), ...(humanOrigin?.actions ?? [])],
