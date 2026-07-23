@@ -10,6 +10,7 @@ import {
 } from '../engine/combat.js';
 import { rollDice } from '../engine/dice.js';
 import { canSee } from '../engine/ai-targeting.js';
+import { BASE_DURATIONS } from '../types/animation.js';
 import type { BattleState } from '../engine/combat.js';
 import type { Creature } from '../types/monster.js';
 
@@ -165,7 +166,10 @@ export function applyGoliathAttackFeature(
   const damage = rollDice(feature === 'fire' ? '1d10' : '1d6').total;
   const damageType = feature === 'fire' ? 'fire' : 'cold';
   const before = target.currentHp;
+  const event = { kind: 'hit' as const, targetId: target.id, damage, damageType, critical: false, targetHpBefore: before, targetHpAfter: before, durationMs: BASE_DURATIONS.hit };
+  state.events.push(event);
   applyDamage(state, target, damage, damageType, active, false, true);
+  event.targetHpAfter = target.currentHp;
   if (feature === 'frost') {
     target.activeBuffs = (target.activeBuffs ?? []).filter(buff => buff.key !== `goliath-frost:${active.id}`);
     target.activeBuffs.push({ name: "Frost's Chill", key: `goliath-frost:${active.id}`, casterId: active.id, appliedRound: state.round, endRound: state.round + 2, speedPenalty: 10, expiresOnSourceTurnStart: true });

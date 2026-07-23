@@ -233,6 +233,19 @@ describe('Kaggle arena bridge', () => {
     else expect(targetCreature.conditions).not.toContain('prone');
   });
 
+  it("records Fire's Burn as its own replay hit", () => {
+    const encounter = new Encounter({ seed: 1 });
+    const [goliath] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { species: 'Goliath', speciesChoice: 'Fire', additionalResources: { 'goliath-giant-ancestry': 3 } }, team: 'red', position: { x: 0, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
+    encounter.start();
+    encounter.state!.initiativeOrder = [goliath.id];
+    startArena(encounter);
+    const active = getActiveCreature(encounter)!;
+    const rider = getLegalActions(encounter, active.id).find(action => action.type === 'attack' && action.goliathFeature === 'fire')!;
+    applyLegalAction(encounter, rider);
+    if (active.resources['goliath-giant-ancestry'] === 2) expect(encounter.state!.events.some(event => event.kind === 'hit' && event.damageType === 'fire')).toBe(true);
+  });
+
   it("resolves Cloud's Jaunt with only a legal server-validated destination", () => {
     const encounter = new Encounter({ seed: 1 });
     const [goliath] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { species: 'Goliath', speciesChoice: 'Cloud', additionalResources: { 'goliath-giant-ancestry': 3 } }, team: 'red', position: { x: 0, y: 0 } });
