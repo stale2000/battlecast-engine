@@ -11,6 +11,12 @@ export interface ArenaWeapon {
   attackAbility?: keyof Abilities;
 }
 
+export const ARENA_ARMOR = {
+  Leather: { armorBase: 11, dexCap: Infinity },
+  'Chain Mail': { armorBase: 16, dexCap: 0 },
+  Plate: { armorBase: 18, dexCap: 0 },
+} as const;
+
 /** Server-owned SRD weapon facts. Public build requests select only these names. */
 export const ARENA_WEAPONS: Record<string, ArenaWeapon> = {
   Club: { name: 'Club', die: '1d4', damageType: 'bludgeoning', type: 'melee' },

@@ -2,6 +2,7 @@ import { EncounterError, type AddCreatureOptions, type Team } from './encounter.
 import { buildHero, getAvailableSpells, HERO_CLASS_NAMES, type HeroSubclassName } from '../data/heroes.js';
 import {
   ARENA_BACKGROUNDS,
+  ARENA_ARMOR,
   ARENA_SPECIES,
   ARENA_WEAPONS,
   BACKGROUNDS,
@@ -228,7 +229,7 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     if (typeof character.heroClass !== 'string' || !HERO_CLASS_NAMES.includes(character.heroClass as typeof HERO_CLASS_NAMES[number])) {
       throw new EncounterError(`${label}.heroClass must be a supported hero class.`);
     }
-    if (!Object.keys(character).every(key => ['heroClass', 'abilities', 'subclass', 'spells', 'weapons', 'species', 'background', 'abilityIncreases', 'alignment', 'dragonAncestry', 'elfLineage', 'highElfCantrip', 'gnomeLineage', 'goliathAncestry', 'tieflingLegacy', 'speciesCastingAbility', 'size', 'languages', 'elfKeenSense', 'humanSkill', 'originCantrips', 'originSpell', 'originCastingAbility', 'humanOriginFeat', 'humanOriginSkills', 'humanOriginTools', 'humanOriginCantrips', 'humanOriginSpell', 'humanOriginCastingAbility'].includes(key))) {
+    if (!Object.keys(character).every(key => ['heroClass', 'abilities', 'subclass', 'spells', 'weapons', 'armor', 'species', 'background', 'abilityIncreases', 'alignment', 'dragonAncestry', 'elfLineage', 'highElfCantrip', 'gnomeLineage', 'goliathAncestry', 'tieflingLegacy', 'speciesCastingAbility', 'size', 'languages', 'elfKeenSense', 'humanSkill', 'originCantrips', 'originSpell', 'originCastingAbility', 'humanOriginFeat', 'humanOriginSkills', 'humanOriginTools', 'humanOriginCantrips', 'humanOriginSpell', 'humanOriginCastingAbility'].includes(key))) {
       throw new EncounterError(`${label} contains unsupported build choices.`);
     }
     const baseAbilities = parseAbilities(character.abilities, `${label}.abilities`);
@@ -311,6 +312,9 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
       }
     }
     const heroClass = character.heroClass as typeof HERO_CLASS_NAMES[number];
+    if (character.armor !== undefined && (typeof character.armor !== 'string' || !(character.armor in ARENA_ARMOR))) throw new EncounterError(`${label}.armor must select catalog armor.`);
+    const armor = character.armor as keyof typeof ARENA_ARMOR | undefined;
+    if (armor === 'Plate' && !['Fighter', 'Paladin', 'Cleric'].includes(heroClass)) throw new EncounterError(`${label}.armor includes armor your class is not proficient with.`);
     if (character.weapons !== undefined && (!Array.isArray(character.weapons) || character.weapons.length < 1 || character.weapons.length > 2 || character.weapons.some(name => typeof name !== 'string' || !ARENA_WEAPONS[name]))) throw new EncounterError(`${label}.weapons must select one or two catalog weapons.`);
     const weapons = (character.weapons as string[] | undefined)?.map(name => ARENA_WEAPONS[name]!);
     if (weapons?.some(weapon => MARTIAL_WEAPONS.has(weapon.name) && !MARTIAL_CLASSES.has(heroClass))) throw new EncounterError(`${label}.weapons includes a weapon your class is not proficient with.`);
@@ -328,7 +332,7 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     return {
       heroClass, heroLevel: 5, team,
       heroOverrides: {
-        abilities, subclass: character.subclass as HeroSubclassName | undefined, spells, weapons,
+        abilities, subclass: character.subclass as HeroSubclassName | undefined, spells, weapons, ...(armor ? { armorBaseOverride: ARENA_ARMOR[armor].armorBase, armorDexCapOverride: ARENA_ARMOR[armor].dexCap } : {}),
         ...(species && background ? {
           species, speciesChoice: elfLineage ?? gnomeLineage ?? goliathAncestry ?? tieflingLegacy ?? character.dragonAncestry as string | undefined, speciesCastingAbility, background, originFeat: BACKGROUNDS[background].originFeat, originFeats: [BACKGROUNDS[background].originFeat, ...(humanOriginFeat ? [humanOriginFeat] : [])], originSkills: [...new Set([...BACKGROUNDS[background].skills, ...(elfKeenSense ? [elfKeenSense] : []), ...(humanSkill ? [humanSkill] : []), ...selectedOriginSkills])], originTool: BACKGROUNDS[background].tool, originTools: [...new Set([BACKGROUNDS[background].tool, ...selectedOriginTools])],
           originEquipment: [...BACKGROUNDS[background].equipment], alignmentOverride: alignment, additionalSenses: speciesDarkvision(species, elfLineage), additionalLanguages: languages, speciesCantrips: lineageSpells(species, elfLineage ?? gnomeLineage ?? tieflingLegacy, selectedHighElfCantrip).cantrips, speciesPreparedSpells: lineageSpells(species, elfLineage ?? gnomeLineage ?? tieflingLegacy).prepared, sizeOverride: size ?? SPECIES[species].size, speedOverride: elfLineage === 'Wood Elf' ? 35 : SPECIES[species].speed,
