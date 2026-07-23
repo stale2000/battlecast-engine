@@ -808,6 +808,7 @@ describe('Kaggle arena bridge', () => {
     const breath = dragon.monsterData.actions.find(action => action.name === 'Breath Weapon')!;
     expect(breath.damageType).toBe('fire');
     expect(breath.resourceCost).toEqual({ key: 'dragonborn-breath', amount: 1 });
+    expect(dragon.resources['hit-die']).toBe(5);
     expect(dragon.resources['dragonborn-breath']).toBe(3);
   });
 
