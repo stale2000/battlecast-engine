@@ -4,6 +4,7 @@ import { Encounter } from '../src/api/encounter.js';
 import { getActiveCreature, getLegalActions, applyLegalAction, startArena } from '../src/api/arena.js';
 import { reachableMovementDestinations } from '../src/engine/ai-movement.js';
 import { applyDamage, hasDisadvantage, resolveAttack } from '../src/engine/combat.js';
+import { rollSaveWithBuffs } from '../src/engine/combat-buffs.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { HERO_CLASS_NAMES } from '../src/data/heroes.js';
 
@@ -141,6 +142,15 @@ describe('Kaggle arena bridge', () => {
     const party = { characters: Array.from({ length: 4 }, () => elf) };
     const result = kaggleStep({ ...init(), redParty: party, blueParty: party });
     expect(result.state.battleState!.creatures.find(creature => creature.team === 'red')!.monsterData.speed.walk).toBe(35);
+  });
+
+  it('applies Gnomish Cunning automatically to mental saves', () => {
+    const encounter = new Encounter({ seed: 1 });
+    const [gnome] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { species: 'Gnome' }, team: 'red' });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue' });
+    encounter.start();
+    const creature = encounter.state!.creatures.find(candidate => candidate.id === gnome.id)!;
+    encounter.runWithRng(() => expect(rollSaveWithBuffs(creature, 0, false, 10, 'wis').rolls).toHaveLength(2));
   });
 
   it('constructs a Dragonborn Breath Weapon with its chosen ancestry', () => {

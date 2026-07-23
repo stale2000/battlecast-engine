@@ -109,11 +109,13 @@ export function rollSaveWithBuffs(
       (ability === 'dex' && barbarianLevel >= 2) ||
       (ability === 'str' && rageActive)
     );
+  const gnomishCunning = saver.monsterData.heroSpecies === 'Gnome'
+    && (ability === 'int' || ability === 'wis' || ability === 'cha');
   const saveDisadvantageKeys = (saver.activeBuffs ?? [])
     .filter(b => b.saveDisadvantage)
     .map(b => b.key);
 
-  const result = rollSave(mod, advantage || barbarianSaveAdvantage, saveDisadvantageKeys.length > 0);
+  const result = rollSave(mod, advantage || barbarianSaveAdvantage || gnomishCunning, saveDisadvantageKeys.length > 0);
   if (saveDisadvantageKeys.length > 0) {
     saver.activeBuffs = saver.activeBuffs.filter(b => !saveDisadvantageKeys.includes(b.key));
   }
@@ -130,7 +132,7 @@ export function rollSaveWithBuffs(
       && saver.monsterData.heroClass === 'Monk' && (saver.monsterData.heroLevel ?? 0) >= 14
       && hasResource(saver, 'ki')) {
     consumeResource(saver, 'ki');
-    const reroll = rollSave(mod, advantage || barbarianSaveAdvantage);
+    const reroll = rollSave(mod, advantage || barbarianSaveAdvantage || gnomishCunning);
     const rerollBonus = rollSaveBuffBonus(saver);
     reroll.total += rerollBonus;
     reroll.modifier += rerollBonus;
