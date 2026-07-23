@@ -343,6 +343,20 @@ describe('Kaggle arena bridge', () => {
     expect(active.bonusActionUsed).toBe(true);
   });
 
+  it('casts Wood Elf Pass without Trace through the shared concentration path', () => {
+    const encounter = new Encounter({ seed: 1 });
+    const passWithoutTrace = { name: 'Pass without Trace', type: 'special' as const, spellLevel: 2, castingAbility: 'wis' as const, resourceCost: { key: 'wood-elf-pass-without-trace', amount: 1 }, range: { normal: 30, long: 30 }, targetScope: 'all_allies_in_area' as const, durationRounds: 600, buff: { name: 'Pass without Trace', key: 'wood-elf-pass-without-trace', requiresConcentration: true, stealthBonus: 10 }, description: 'Stealth bonus.' };
+    const [elf] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { species: 'Elf', speciesChoice: 'Wood Elf', additionalResources: { 'wood-elf-pass-without-trace': 1 }, additionalActions: [passWithoutTrace] }, team: 'red', position: { x: 0, y: 0 } });
+    const [ally] = encounter.addCreature({ heroClass: 'Rogue', heroLevel: 5, team: 'red', position: { x: 1, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 10, y: 0 } });
+    encounter.start(); encounter.state!.initiativeOrder = [elf.id]; startArena(encounter);
+    const active = getActiveCreature(encounter)!;
+    applyLegalAction(encounter, getLegalActions(encounter, active.id).find(action => action.type === 'spell' && action.actionName === 'Pass without Trace')!);
+    const state = encounter.state!;
+    expect(state.creatures.find(creature => creature.id === elf.id)!.activeBuffs.some(buff => buff.stealthBonus === 10 && buff.requiresConcentration)).toBe(true);
+    expect(state.creatures.find(creature => creature.id === ally.id)!.activeBuffs.some(buff => buff.stealthBonus === 10)).toBe(true);
+  });
+
   it('requires an Elf casting ability and resolves Drow Faerie Fire through the shared spell path', () => {
     const drow = {
       heroClass: 'Fighter', species: 'Elf', elfLineage: 'Drow', speciesCastingAbility: 'cha', elfKeenSense: 'Perception', background: 'Soldier',
