@@ -203,7 +203,7 @@ function tryCountercharm(
 
   bard.reactionUsed = true;
   bard.stats.actionUsage['Countercharm'] = (bard.stats.actionUsage['Countercharm'] || 0) + 1;
-  const reroll = rollSaveWithBuffs(target, saveMod, true, dc, ability);
+  const reroll = rollSaveWithBuffs(target, saveMod, true, dc, ability, conditionOnFail);
   const passed = reroll.total >= dc;
   pushLog(state, {
     round: state.round,
@@ -295,7 +295,7 @@ export function resolveSingleTargetSave(
 
   const saveMod = getEffectiveSaveModifier(target, ability, state);
   const hasMR = hasActiveTrait(target, 'Magic Resistance');
-  const save = rollSaveWithBuffs(target, saveMod, hasMR, dc, ability);
+  const save = rollSaveWithBuffs(target, saveMod, hasMR, dc, ability, conditionOnFail);
   let passed = save.total >= dc;
 
   if (!passed) {
@@ -571,7 +571,7 @@ export function resolveAoE(
     const saveMod = getEffectiveSaveModifier(target, ability, state);
 
     const hasMR = hasActiveTrait(target, 'Magic Resistance');
-    const save = rollSaveWithBuffs(target, saveMod, hasMR, dc, ability);
+    const save = rollSaveWithBuffs(target, saveMod, hasMR, dc, ability, conditionOnFail);
     let passed = save.total >= dc;
 
     if (!passed) {

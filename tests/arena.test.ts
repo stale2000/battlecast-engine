@@ -155,6 +155,19 @@ describe('Kaggle arena bridge', () => {
     encounter.runWithRng(() => expect(rollSaveWithBuffs(creature, 0, false, 10, 'wis').rolls).toHaveLength(2));
   });
 
+  it('applies Dwarf, Elf, and Halfling condition-save advantages automatically', () => {
+    const encounter = new Encounter({ seed: 1 });
+    for (const species of ['Dwarf', 'Elf', 'Halfling']) encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { species }, team: 'red' });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue' });
+    encounter.start();
+    const creatures = encounter.state!.creatures.filter(creature => creature.team === 'red');
+    encounter.runWithRng(() => {
+      expect(rollSaveWithBuffs(creatures[0]!, 0, false, 10, 'con', 'poisoned').rolls).toHaveLength(2);
+      expect(rollSaveWithBuffs(creatures[1]!, 0, false, 10, 'wis', 'charmed').rolls).toHaveLength(2);
+      expect(rollSaveWithBuffs(creatures[2]!, 0, false, 10, 'wis', 'frightened').rolls).toHaveLength(2);
+    });
+  });
+
   it('requires and preserves Gnome and Goliath SRD ancestry choices', () => {
     const build = (species: 'Gnome' | 'Goliath', choice: string) => ({ heroClass: 'Fighter', species, background: 'Soldier', abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 }, ...(species === 'Gnome' ? { gnomeLineage: choice } : { goliathAncestry: choice }) });
     for (const [species, choice] of [['Gnome', 'Forest Gnome'], ['Goliath', 'Cloud']] as const) {

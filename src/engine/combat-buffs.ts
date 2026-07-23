@@ -19,7 +19,7 @@
  * (lazy named-binding), not at module init - same pattern as the
  * ai-loop <-> ai cycle from the AI refactor.
  */
-import { ActiveBuff, Creature, MonsterAction } from '../types/monster.js';
+import { ActiveBuff, Condition, Creature, MonsterAction } from '../types/monster.js';
 import { BASE_DURATIONS } from '../types/animation.js';
 import { rollDice, rollSave } from './dice.js';
 import { distance } from './combat-geometry.js';
@@ -98,6 +98,7 @@ export function rollSaveWithBuffs(
   advantage: boolean = false,
   dc?: number,
   ability?: keyof Creature['monsterData']['abilities'],
+  condition?: Condition,
 ): ReturnType<typeof rollSave> {
   const isBarbarian = saver.monsterData.heroClass === 'Barbarian';
   const barbarianLevel = saver.monsterData.heroLevel ?? 0;
@@ -111,12 +112,16 @@ export function rollSaveWithBuffs(
     );
   const gnomishCunning = saver.monsterData.heroSpecies === 'Gnome'
     && (ability === 'int' || ability === 'wis' || ability === 'cha');
+  const speciesConditionAdvantage =
+    (saver.monsterData.heroSpecies === 'Dwarf' && condition === 'poisoned') ||
+    (saver.monsterData.heroSpecies === 'Elf' && condition === 'charmed') ||
+    (saver.monsterData.heroSpecies === 'Halfling' && condition === 'frightened');
   const saveDisadvantageKeys = (saver.activeBuffs ?? [])
     .filter(b => b.saveDisadvantage)
     .map(b => b.key);
 
   const halflingLuck = saver.monsterData.heroSpecies === 'Halfling';
-  const result = rollSave(mod, advantage || barbarianSaveAdvantage || gnomishCunning, saveDisadvantageKeys.length > 0, halflingLuck);
+  const result = rollSave(mod, advantage || barbarianSaveAdvantage || gnomishCunning || speciesConditionAdvantage, saveDisadvantageKeys.length > 0, halflingLuck);
   if (saveDisadvantageKeys.length > 0) {
     saver.activeBuffs = saver.activeBuffs.filter(b => !saveDisadvantageKeys.includes(b.key));
   }
@@ -133,7 +138,7 @@ export function rollSaveWithBuffs(
       && saver.monsterData.heroClass === 'Monk' && (saver.monsterData.heroLevel ?? 0) >= 14
       && hasResource(saver, 'ki')) {
     consumeResource(saver, 'ki');
-    const reroll = rollSave(mod, advantage || barbarianSaveAdvantage || gnomishCunning, false, halflingLuck);
+    const reroll = rollSave(mod, advantage || barbarianSaveAdvantage || gnomishCunning || speciesConditionAdvantage, false, halflingLuck);
     const rerollBonus = rollSaveBuffBonus(saver);
     reroll.total += rerollBonus;
     reroll.modifier += rerollBonus;
@@ -144,7 +149,7 @@ export function rollSaveWithBuffs(
       && saver.monsterData.heroClass === 'Fighter' && (saver.monsterData.heroLevel ?? 0) >= 9
       && hasResource(saver, 'indomitable')) {
     consumeResource(saver, 'indomitable');
-    const reroll = rollSave(mod, advantage, false, halflingLuck);
+    const reroll = rollSave(mod, advantage || speciesConditionAdvantage, false, halflingLuck);
     const rerollBonus = rollSaveBuffBonus(saver);
     reroll.total += rerollBonus + (saver.monsterData.heroLevel ?? 0);
     reroll.modifier += rerollBonus;
@@ -229,7 +234,7 @@ export function highestAvailableSlot(creature: Creature): number | null {
 
 /** True if a buff with the given key is currently on the creature. */
 export function hasBuff(creature: Creature, key: string): boolean {
-  return creature.activeBuffs.some(b => b.key === key);
+  return (creature.activeBuffs ?? []).some(b => b.key === key);
 }
 
 export function getBuff(creature: Creature, key: string): ActiveBuff | undefined {

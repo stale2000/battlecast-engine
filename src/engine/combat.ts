@@ -1658,7 +1658,7 @@ function applyRogueCunningStrikes(
       (attacker.stats.actionUsage[`Cunning Strike: ${choice.name}`] || 0) + 1;
 
     const saveMod = getEffectiveSaveModifier(target, choice.saveAbility, state);
-    const save = rollSaveWithBuffs(target, saveMod, false, dc, choice.saveAbility);
+    const save = rollSaveWithBuffs(target, saveMod, false, dc, choice.saveAbility, choice.condition);
     state.events.push({
       kind: 'save',
       targetId: target.id,

@@ -179,7 +179,7 @@ export function processConditionTimers(state: BattleState, creature: Creature): 
         if (timer.stageInfo && timer.saveDC && timer.saveAbility) {
           const saveMod = getEffectiveSaveModifier(creature, timer.saveAbility, state);
           const hasMR = hasActiveTrait(creature, 'Magic Resistance');
-          const save = rollSave(saveMod, hasMR);
+          const save = rollSaveWithBuffs(creature, saveMod, hasMR, timer.saveDC, timer.saveAbility, timer.condition);
 
           state.events.push({ kind: 'save', targetId: creature.id, success: save.total >= timer.saveDC, durationMs: BASE_DURATIONS.save });
 
@@ -219,7 +219,7 @@ export function processConditionTimers(state: BattleState, creature: Creature): 
       if (state.round > timer.appliedRound && timer.saveDC && timer.saveAbility) {
         const saveMod = getEffectiveSaveModifier(creature, timer.saveAbility, state);
         const hasMR = hasActiveTrait(creature, 'Magic Resistance');
-        const save = rollSave(saveMod, hasMR);
+        const save = rollSaveWithBuffs(creature, saveMod, hasMR, timer.saveDC, timer.saveAbility, timer.condition);
 
         state.events.push({ kind: 'save', targetId: creature.id, success: save.total >= timer.saveDC, durationMs: BASE_DURATIONS.save });
 
