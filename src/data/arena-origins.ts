@@ -2,6 +2,7 @@ import type { Abilities } from '../types/monster.js';
 
 export interface ArenaWeapon {
   name: string;
+  category: 'simple' | 'martial';
   die: string;
   damageType: string;
   type: 'melee' | 'ranged';
@@ -10,36 +11,37 @@ export interface ArenaWeapon {
   loading?: boolean;
   attackAbility?: keyof Abilities;
   finesse?: boolean;
+  twoHanded?: boolean;
 }
 
 export const ARENA_ARMOR = {
-  Leather: { armorBase: 11, dexCap: Infinity },
-  'Scale Mail': { armorBase: 14, dexCap: 2 },
-  'Chain Mail': { armorBase: 16, dexCap: 0 },
-  Plate: { armorBase: 18, dexCap: 0 },
+  Leather: { category: 'light', armorBase: 11, dexCap: Infinity },
+  'Scale Mail': { category: 'medium', armorBase: 14, dexCap: 2 },
+  'Chain Mail': { category: 'heavy', armorBase: 16, dexCap: 0 },
+  Plate: { category: 'heavy', armorBase: 18, dexCap: 0 },
 } as const;
 
 /** Server-owned SRD weapon facts. Public build requests select only these names. */
 export const ARENA_WEAPONS: Record<string, ArenaWeapon> = {
-  Club: { name: 'Club', die: '1d4', damageType: 'bludgeoning', type: 'melee' },
-  Sickle: { name: 'Sickle', die: '1d4', damageType: 'slashing', type: 'melee' },
-  LightHammer: { name: 'Light Hammer', die: '1d4', damageType: 'bludgeoning', type: 'melee' },
-  Dagger: { name: 'Dagger', die: '1d4', damageType: 'piercing', type: 'melee' },
-  Greatclub: { name: 'Greatclub', die: '1d8', damageType: 'bludgeoning', type: 'melee' },
-  Handaxe: { name: 'Handaxe', die: '1d6', damageType: 'slashing', type: 'melee' },
-  Javelin: { name: 'Javelin', die: '1d6', damageType: 'piercing', type: 'ranged', range: { normal: 30, long: 120 }, attackAbility: 'str' },
-  Mace: { name: 'Mace', die: '1d6', damageType: 'bludgeoning', type: 'melee' },
-  Morningstar: { name: 'Morningstar', die: '1d8', damageType: 'piercing', type: 'melee' },
-  Quarterstaff: { name: 'Quarterstaff', die: '1d6', damageType: 'bludgeoning', type: 'melee' },
-  Spear: { name: 'Spear', die: '1d6', damageType: 'piercing', type: 'ranged', range: { normal: 20, long: 60 }, attackAbility: 'str' },
-  LightCrossbow: { name: 'Light Crossbow', die: '1d8', damageType: 'piercing', type: 'ranged', range: { normal: 80, long: 320 }, loading: true },
-  Shortbow: { name: 'Shortbow', die: '1d6', damageType: 'piercing', type: 'ranged', range: { normal: 80, long: 320 } },
-  Longsword: { name: 'Longsword', die: '1d8', damageType: 'slashing', type: 'melee' },
-  Longbow: { name: 'Longbow', die: '1d8', damageType: 'piercing', type: 'ranged', range: { normal: 150, long: 600 } },
-  Rapier: { name: 'Rapier', die: '1d8', damageType: 'piercing', type: 'melee', finesse: true },
-  Greatsword: { name: 'Greatsword', die: '2d6', damageType: 'slashing', type: 'melee' },
-  Battleaxe: { name: 'Battleaxe', die: '1d8', damageType: 'slashing', type: 'melee' },
-  Warhammer: { name: 'Warhammer', die: '1d8', damageType: 'bludgeoning', type: 'melee' },
+  Club: { name: 'Club', category: 'simple', die: '1d4', damageType: 'bludgeoning', type: 'melee' },
+  Sickle: { name: 'Sickle', category: 'simple', die: '1d4', damageType: 'slashing', type: 'melee' },
+  LightHammer: { name: 'Light Hammer', category: 'simple', die: '1d4', damageType: 'bludgeoning', type: 'melee' },
+  Dagger: { name: 'Dagger', category: 'simple', die: '1d4', damageType: 'piercing', type: 'melee', finesse: true },
+  Greatclub: { name: 'Greatclub', category: 'simple', die: '1d8', damageType: 'bludgeoning', type: 'melee', twoHanded: true },
+  Handaxe: { name: 'Handaxe', category: 'simple', die: '1d6', damageType: 'slashing', type: 'melee' },
+  Javelin: { name: 'Javelin', category: 'simple', die: '1d6', damageType: 'piercing', type: 'ranged', range: { normal: 30, long: 120 }, attackAbility: 'str' },
+  Mace: { name: 'Mace', category: 'simple', die: '1d6', damageType: 'bludgeoning', type: 'melee' },
+  Morningstar: { name: 'Morningstar', category: 'martial', die: '1d8', damageType: 'piercing', type: 'melee' },
+  Quarterstaff: { name: 'Quarterstaff', category: 'simple', die: '1d6', damageType: 'bludgeoning', type: 'melee' },
+  Spear: { name: 'Spear', category: 'simple', die: '1d6', damageType: 'piercing', type: 'ranged', range: { normal: 20, long: 60 }, attackAbility: 'str' },
+  LightCrossbow: { name: 'Light Crossbow', category: 'simple', die: '1d8', damageType: 'piercing', type: 'ranged', range: { normal: 80, long: 320 }, loading: true, twoHanded: true },
+  Shortbow: { name: 'Shortbow', category: 'simple', die: '1d6', damageType: 'piercing', type: 'ranged', range: { normal: 80, long: 320 }, twoHanded: true },
+  Longsword: { name: 'Longsword', category: 'martial', die: '1d8', damageType: 'slashing', type: 'melee' },
+  Longbow: { name: 'Longbow', category: 'martial', die: '1d8', damageType: 'piercing', type: 'ranged', range: { normal: 150, long: 600 }, twoHanded: true },
+  Rapier: { name: 'Rapier', category: 'martial', die: '1d8', damageType: 'piercing', type: 'melee', finesse: true },
+  Greatsword: { name: 'Greatsword', category: 'martial', die: '2d6', damageType: 'slashing', type: 'melee', twoHanded: true },
+  Battleaxe: { name: 'Battleaxe', category: 'martial', die: '1d8', damageType: 'slashing', type: 'melee' },
+  Warhammer: { name: 'Warhammer', category: 'martial', die: '1d8', damageType: 'bludgeoning', type: 'melee' },
 };
 
 export const ARENA_SRD_VERSION = '5.2.1';

@@ -31,8 +31,18 @@ const SKILLS = ['Acrobatics', 'Animal Handling', 'Arcana', 'Athletics', 'Decepti
 const TOOLS = ['Alchemist’s Supplies', 'Brewer’s Supplies', 'Calligrapher’s Supplies', 'Carpenter’s Tools', 'Cartographer’s Tools', 'Cobbler’s Tools', 'Cook’s Utensils', 'Disguise Kit', 'Forgery Kit', 'Gaming Set', 'Glassblower’s Tools', 'Herbalism Kit', 'Jeweler’s Tools', 'Leatherworker’s Tools', 'Mason’s Tools', 'Musical Instrument', 'Navigator’s Tools', 'Painter’s Supplies', 'Poisoner’s Kit', 'Potter’s Tools', 'Smith’s Tools', 'Thieves’ Tools', 'Tinker’s Tools', 'Weaver’s Tools', 'Woodcarver’s Tools'] as const;
 const LANGUAGES = ['Common Sign Language', 'Draconic', 'Dwarvish', 'Elvish', 'Giant', 'Gnomish', 'Goblin', 'Halfling', 'Orc', 'Abyssal', 'Celestial', 'Deep Speech', 'Druidic', 'Infernal', 'Primordial', 'Sylvan', 'Thieves’ Cant', 'Undercommon'] as const;
 const ALIGNMENTS = ['Lawful Good', 'Neutral Good', 'Chaotic Good', 'Lawful Neutral', 'Neutral', 'Chaotic Neutral', 'Lawful Evil', 'Neutral Evil', 'Chaotic Evil'] as const;
-const MARTIAL_WEAPONS = new Set(['Battleaxe', 'Greatsword', 'Longbow', 'Longsword', 'Morningstar', 'Rapier', 'Warhammer']);
-const MARTIAL_CLASSES = new Set(['Barbarian', 'Fighter', 'Paladin', 'Ranger', 'Rogue']);
+const ARMOR_TRAINING: Record<typeof HERO_CLASS_NAMES[number], readonly ('light' | 'medium' | 'heavy')[]> = {
+  Barbarian: ['light', 'medium'], Bard: ['light'], Cleric: ['light', 'medium'], Druid: ['light', 'medium'], Fighter: ['light', 'medium', 'heavy'], Monk: [], Paladin: ['light', 'medium', 'heavy'], Ranger: ['light', 'medium'], Rogue: ['light'], Sorcerer: [], Warlock: ['light'], Wizard: [],
+};
+const SHIELD_TRAINING = new Set<typeof HERO_CLASS_NAMES[number]>(['Barbarian', 'Cleric', 'Druid', 'Fighter', 'Paladin', 'Ranger']);
+
+function isWeaponProficient(heroClass: typeof HERO_CLASS_NAMES[number], weapon: typeof ARENA_WEAPONS[string]): boolean {
+  if (heroClass === 'Barbarian' || heroClass === 'Fighter' || heroClass === 'Paladin' || heroClass === 'Ranger') return true;
+  if (heroClass === 'Bard') return weapon.category === 'simple' || weapon.finesse === true;
+  if (heroClass === 'Monk') return weapon.category === 'simple';
+  if (heroClass === 'Rogue') return weapon.category === 'simple' || weapon.finesse === true;
+  return weapon.category === 'simple';
+}
 
 function speciesDarkvision(species: ArenaSpecies, elfLineage?: ElfLineage): string | undefined {
   const range = species === 'Dwarf' || species === 'Orc' || (species === 'Elf' && elfLineage === 'Drow') ? 120
@@ -315,11 +325,12 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     if (character.armor !== undefined && (typeof character.armor !== 'string' || !(character.armor in ARENA_ARMOR))) throw new EncounterError(`${label}.armor must select catalog armor.`);
     const armor = character.armor as keyof typeof ARENA_ARMOR | undefined;
     if (character.shield !== undefined && typeof character.shield !== 'boolean') throw new EncounterError(`${label}.shield must be boolean.`);
-    if (character.shield === true && !['Barbarian', 'Cleric', 'Druid', 'Fighter', 'Paladin', 'Ranger'].includes(heroClass)) throw new EncounterError(`${label}.shield requires shield proficiency.`);
-    if (armor === 'Plate' && !['Fighter', 'Paladin', 'Cleric'].includes(heroClass)) throw new EncounterError(`${label}.armor includes armor your class is not proficient with.`);
+    if (character.shield === true && !SHIELD_TRAINING.has(heroClass)) throw new EncounterError(`${label}.shield requires shield proficiency.`);
+    if (armor && !ARMOR_TRAINING[heroClass].includes(ARENA_ARMOR[armor].category)) throw new EncounterError(`${label}.armor includes armor your class is not proficient with.`);
     if (character.weapons !== undefined && (!Array.isArray(character.weapons) || character.weapons.length < 1 || character.weapons.length > 2 || character.weapons.some(name => typeof name !== 'string' || !ARENA_WEAPONS[name]))) throw new EncounterError(`${label}.weapons must select one or two catalog weapons.`);
     const weapons = (character.weapons as string[] | undefined)?.map(name => ARENA_WEAPONS[name]!);
-    if (weapons?.some(weapon => MARTIAL_WEAPONS.has(weapon.name) && !MARTIAL_CLASSES.has(heroClass))) throw new EncounterError(`${label}.weapons includes a weapon your class is not proficient with.`);
+    if (weapons?.some(weapon => !isWeaponProficient(heroClass, weapon))) throw new EncounterError(`${label}.weapons includes a weapon your class is not proficient with.`);
+    if (character.shield === true && weapons?.some(weapon => weapon.twoHanded)) throw new EncounterError(`${label}.shield cannot be used with a selected two-handed weapon.`);
     if (character.subclass !== undefined && (typeof character.subclass !== 'string' || !SRD_SUBCLASSES[heroClass].includes(character.subclass))) {
       throw new EncounterError(`${label}.subclass is not an SRD subclass for ${heroClass}.`);
     }

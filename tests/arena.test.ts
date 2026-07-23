@@ -105,6 +105,18 @@ describe('Kaggle arena bridge', () => {
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...fighter, heroClass: 'Wizard' })) }, blueParty: party })).toThrow(/not proficient/);
   });
 
+  it('enforces category-based equipment training and finesse ability selection', () => {
+    const dexFighter = { heroClass: 'Fighter', species: 'Human', background: 'Soldier', humanOriginFeat: 'Alert', humanSkill: 'Perception', weapons: ['Rapier'], abilities: { str: 8, dex: 15, con: 15, int: 13, wis: 12, cha: 8 }, abilityIncreases: { dex: 2, con: 1 } };
+    const party = { characters: Array.from({ length: 4 }, () => dexFighter) };
+    const rapier = kaggleStep({ ...init(), redParty: party, blueParty: party }).state.battleState!.creatures.find(creature => creature.team === 'red')!.monsterData.actions.find(action => action.name === 'Rapier')!;
+    expect(rapier.attackBonus).toBe(6);
+    const rogue = { ...dexFighter, heroClass: 'Rogue', weapons: ['Rapier'], armor: 'Leather' };
+    expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => rogue) }, blueParty: party })).not.toThrow();
+    expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...rogue, weapons: ['Longbow'] })) }, blueParty: party })).toThrow(/not proficient/);
+    expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...rogue, armor: 'Scale Mail' })) }, blueParty: party })).toThrow(/not proficient/);
+    expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...dexFighter, weapons: ['Greatsword'], shield: true })) }, blueParty: party })).toThrow(/two-handed/);
+  });
+
   it('applies catalog armor and rejects unavailable heavy armor', () => {
     const fighter = { heroClass: 'Fighter', species: 'Human', background: 'Soldier', humanOriginFeat: 'Alert', humanSkill: 'Perception', armor: 'Plate', abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 } };
     const party = { characters: Array.from({ length: 4 }, () => fighter) };
