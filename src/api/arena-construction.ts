@@ -119,7 +119,7 @@ function lineageDarkness(resourceKey: string): MonsterAction {
   };
 }
 
-type SupportedDamageCantrip = 'Fire Bolt' | 'Ray of Frost' | 'Poison Spray' | 'Chill Touch' | 'Produce Flame';
+type SupportedDamageCantrip = 'Fire Bolt' | 'Ray of Frost' | 'Poison Spray' | 'Chill Touch' | 'Produce Flame' | 'Shocking Grasp';
 
 function damagingCantrip(name: SupportedDamageCantrip, castingAbility: CastingAbility, abilities: Abilities): MonsterAction {
   const mod = Math.floor((abilities[castingAbility] - 10) / 2);
@@ -128,6 +128,7 @@ function damagingCantrip(name: SupportedDamageCantrip, castingAbility: CastingAb
   if (name === 'Ray of Frost') return { name, type: 'ranged', description: 'Ranged spell attack, 2d8 cold damage and the target’s Speed is reduced by 10 feet until your next turn.', spellLevel: 0, castingAbility, attackBonus, damage: '2d8', damageType: 'cold', range: { normal: 60, long: 60 }, magical: true, targetScope: 'one_enemy', buffOnHit: { name: 'Ray of Frost', key: 'ray-of-frost', speedPenalty: 10, expiresOnSourceTurnStart: true } };
   if (name === 'Poison Spray') return { name, type: 'special', description: `CON save DC ${8 + attackBonus}; 2d12 poison damage.`, spellLevel: 0, castingAbility, damageType: 'poison', savingThrow: { ability: 'con', dc: 8 + attackBonus, damageOnFail: '2d12' }, range: { normal: 10, long: 10 }, targetScope: 'one_enemy' };
   if (name === 'Produce Flame') return { name, type: 'ranged', description: 'Ranged spell attack, 2d8 fire damage.', spellLevel: 0, castingAbility, attackBonus, damage: '2d8', damageType: 'fire', range: { normal: 60, long: 60 }, magical: true, targetScope: 'one_enemy' };
+  if (name === 'Shocking Grasp') return { name, type: 'melee', description: 'Melee spell attack, 2d8 lightning damage. The target cannot take Reactions until your next turn.', spellLevel: 0, castingAbility, attackBonus, damage: '2d8', damageType: 'lightning', reach: 5, magical: true, targetScope: 'one_enemy', buffOnHit: { name: 'Shocking Grasp', key: 'shocking-grasp', preventsReactions: true, expiresOnSourceTurnStart: true } };
   return { name, type: 'ranged', description: 'Ranged spell attack, 2d8 necrotic damage. The target cannot regain HP until your next turn.', spellLevel: 0, castingAbility, attackBonus, damage: '2d8', damageType: 'necrotic', range: { normal: 120, long: 120 }, magical: true, targetScope: 'one_enemy', effects: [{ kind: 'blocksHealing', key: 'Chill Touch', tick: 'sourceTurnStart', expiresAfterRounds: 1 }] };
 }
 
@@ -182,7 +183,7 @@ function magicInitiateActions(
 ): { actions: MonsterAction[]; resources: Record<string, number> } | undefined {
   if (feat !== 'Magic Initiate (Cleric)' && feat !== 'Magic Initiate (Druid)' && feat !== 'Magic Initiate (Wizard)') return undefined;
   const list = feat === 'Magic Initiate (Cleric)' ? 'Cleric' : feat === 'Magic Initiate (Druid)' ? 'Druid' : 'Wizard';
-  const allowedCantrips = list === 'Cleric' ? ['Sacred Flame', 'Toll the Dead'] : list === 'Druid' ? ['Poison Spray', 'Produce Flame'] : ['Chill Touch', 'Fire Bolt', 'Poison Spray', 'Ray of Frost'];
+  const allowedCantrips = list === 'Cleric' ? ['Sacred Flame', 'Toll the Dead'] : list === 'Druid' ? ['Poison Spray', 'Produce Flame'] : ['Chill Touch', 'Fire Bolt', 'Poison Spray', 'Ray of Frost', 'Shocking Grasp'];
   const allowedSpells = list === 'Cleric'
     ? ['Bless', 'Cure Wounds', 'Healing Word', 'Shield of Faith', 'Guiding Bolt']
     : list === 'Druid'
@@ -261,7 +262,7 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     if (species === 'Elf' && !['Drow', 'High Elf', 'Wood Elf'].includes(elfLineage ?? '')) throw new EncounterError(`${label}.elfLineage must be Drow, High Elf, or Wood Elf.`);
     if (species !== 'Elf' && character.elfLineage !== undefined) throw new EncounterError(`${label}.elfLineage requires Elf.`);
     const selectedHighElfCantrip = character.highElfCantrip as string | undefined;
-    if (elfLineage === 'High Elf' && selectedHighElfCantrip !== undefined && !['Prestidigitation', 'Chill Touch', 'Fire Bolt', 'Poison Spray', 'Ray of Frost'].includes(selectedHighElfCantrip)) throw new EncounterError(`${label}.highElfCantrip must be an engine-supported Wizard cantrip.`);
+    if (elfLineage === 'High Elf' && selectedHighElfCantrip !== undefined && !['Prestidigitation', 'Chill Touch', 'Fire Bolt', 'Poison Spray', 'Ray of Frost', 'Shocking Grasp'].includes(selectedHighElfCantrip)) throw new EncounterError(`${label}.highElfCantrip must be an engine-supported Wizard cantrip.`);
     if (elfLineage !== 'High Elf' && selectedHighElfCantrip !== undefined) throw new EncounterError(`${label}.highElfCantrip requires High Elf.`);
     const gnomeLineage = character.gnomeLineage as GnomeLineage | undefined;
     if (species === 'Gnome' && !['Forest Gnome', 'Rock Gnome'].includes(gnomeLineage ?? '')) throw new EncounterError(`${label}.gnomeLineage must be Forest Gnome or Rock Gnome.`);
