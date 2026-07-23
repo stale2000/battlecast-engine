@@ -58,7 +58,8 @@ function dragonbornBreath(ancestry: DragonAncestry, abilities: Abilities): Monst
   return {
     name: 'Breath Weapon', type: 'special', description: `15-foot cone or 30-foot line, DEX save DC ${dc}, 2d10 ${ancestry} damage (half on success).`,
     damageType: ancestry, resourceCost: { key: 'dragonborn-breath', amount: 1 },
-    savingThrow: { ability: 'dex', dc, damageOnFail: '2d10', damageOnSuccess: 'half', area: '15-foot cone' },
+    replacesAttack: true,
+    savingThrow: { ability: 'dex', dc, damageOnFail: '2d10', damageOnSuccess: 'half', area: '15-foot cone or 30-foot line' },
   };
 }
 
@@ -82,7 +83,7 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     if (typeof character.heroClass !== 'string' || !HERO_CLASS_NAMES.includes(character.heroClass as typeof HERO_CLASS_NAMES[number])) {
       throw new EncounterError(`${label}.heroClass must be a supported hero class.`);
     }
-    if (!Object.keys(character).every(key => ['heroClass', 'abilities', 'subclass', 'spells', 'species', 'background', 'abilityIncreases', 'dragonAncestry'].includes(key))) {
+    if (!Object.keys(character).every(key => ['heroClass', 'abilities', 'subclass', 'spells', 'species', 'background', 'abilityIncreases', 'dragonAncestry', 'size'].includes(key))) {
       throw new EncounterError(`${label} contains unsupported build choices.`);
     }
     const baseAbilities = parseAbilities(character.abilities, `${label}.abilities`);
@@ -92,6 +93,13 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     }
     const species = character.species as ArenaSpecies | undefined;
     const background = character.background as ArenaBackground | undefined;
+    const size = character.size as 'Small' | 'Medium' | undefined;
+    if (character.size !== undefined && (typeof character.size !== 'string' || !['Small', 'Medium'].includes(character.size))) {
+      throw new EncounterError(`${label}.size must be Small or Medium.`);
+    }
+    if (size && species !== 'Human' && species !== 'Tiefling') {
+      throw new EncounterError(`${label}.size is selectable only for Human and Tiefling.`);
+    }
     if (species === 'Dragonborn' && (typeof character.dragonAncestry !== 'string' || !DRAGON_DAMAGE_TYPES.includes(character.dragonAncestry as DragonAncestry))) {
       throw new EncounterError(`${label}.dragonAncestry must be an SRD damage type.`);
     }
@@ -116,7 +124,7 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
         abilities, subclass: character.subclass as 'Circle of the Land' | 'Circle of the Moon' | undefined, spells,
         ...(species && background ? {
           species, background, originFeat: BACKGROUNDS[background].originFeat, originSkills: [...BACKGROUNDS[background].skills], originTool: BACKGROUNDS[background].tool,
-          originEquipment: [...BACKGROUNDS[background].equipment], sizeOverride: SPECIES[species].size, speedOverride: SPECIES[species].speed,
+          originEquipment: [...BACKGROUNDS[background].equipment], sizeOverride: size ?? SPECIES[species].size, speedOverride: SPECIES[species].speed,
           hitPointBonus: SPECIES[species].maxHpBonusAtLevel5, additionalResistances: SPECIES[species].resistances ? [...SPECIES[species].resistances] : undefined,
           additionalResources: species === 'Orc' ? { 'orc-adrenaline-rush': 3 } : undefined,
           additionalActions: species === 'Dragonborn' ? [dragonbornBreath(character.dragonAncestry as DragonAncestry, abilities)] : undefined,

@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { Encounter } from '../src/api/encounter.js';
 import { getActiveCreature, getLegalActions, applyLegalAction, startArena } from '../src/api/arena.js';
 import { reachableMovementDestinations } from '../src/engine/ai-movement.js';
-import { hasDisadvantage, resolveAttack } from '../src/engine/combat.js';
+import { applyDamage, hasDisadvantage, resolveAttack } from '../src/engine/combat.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { HERO_CLASS_NAMES } from '../src/data/heroes.js';
 
@@ -103,6 +103,17 @@ describe('Kaggle arena bridge', () => {
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...dwarfSoldier, abilityIncreases: { int: 2, con: 1 } })) }, blueParty: originParty })).toThrow(/listed abilities/);
   });
 
+  it('accepts the SRD Small-or-Medium choice only for Human and Tiefling', () => {
+    const human = {
+      heroClass: 'Fighter', species: 'Human', background: 'Soldier', size: 'Small',
+      abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 },
+    };
+    const party = { characters: Array.from({ length: 4 }, () => human) };
+    const result = kaggleStep({ ...init(), redParty: party, blueParty: party });
+    expect(result.state.battleState!.creatures.find(creature => creature.team === 'red')!.monsterData.size).toBe('Small');
+    expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...human, species: 'Dwarf' })) }, blueParty: party })).toThrow(/size is selectable/);
+  });
+
   it('constructs a Dragonborn Breath Weapon with its chosen ancestry', () => {
     const dragonborn = {
       heroClass: 'Fighter', species: 'Dragonborn', background: 'Soldier', dragonAncestry: 'fire',
@@ -115,6 +126,26 @@ describe('Kaggle arena bridge', () => {
     expect(breath.damageType).toBe('fire');
     expect(breath.resourceCost).toEqual({ key: 'dragonborn-breath', amount: 1 });
     expect(dragon.resources['dragonborn-breath']).toBe(3);
+  });
+
+  it('offers Dragonborn Breath Weapon as either shape and as an attack replacement', () => {
+    const encounter = new Encounter({ seed: 1 });
+    const [dragon] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: {
+      species: 'Dragonborn', additionalActions: [{
+        name: 'Breath Weapon', type: 'special', description: 'test breath', replacesAttack: true,
+        resourceCost: { key: 'dragonborn-breath', amount: 1 },
+        savingThrow: { ability: 'dex', dc: 13, damageOnFail: '2d10', damageOnSuccess: 'half', area: '15-foot cone or 30-foot line' },
+      }], additionalResources: { 'dragonborn-breath': 3 },
+    }, team: 'red', position: { x: 0, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
+    encounter.start();
+    encounter.state!.initiativeOrder = [dragon.id];
+    startArena(encounter);
+    const active = getActiveCreature(encounter)!;
+    const breath = getLegalActions(encounter, active.id).filter(action => action.type === 'spell' && action.actionName === 'Breath Weapon');
+    expect(breath.map(action => action.areaShape).sort()).toEqual(['15-foot cone', '30-foot line']);
+    applyLegalAction(encounter, getLegalActions(encounter, active.id).find(action => action.type === 'attack')!);
+    expect(getLegalActions(encounter, active.id).some(action => action.type === 'spell' && action.actionName === 'Breath Weapon')).toBe(true);
   });
 
   it('resolves Dragonborn Draconic Flight through the legal-action catalogue', () => {
@@ -143,6 +174,17 @@ describe('Kaggle arena bridge', () => {
     expect(active.movementRemaining).toBeGreaterThan(before);
     expect(active.temporaryHp).toBe(3);
     expect(active.resources['orc-adrenaline-rush']).toBe(2);
+  });
+
+  it('applies Orc Relentless Endurance automatically without a reaction choice', () => {
+    const encounter = new Encounter({ seed: 1 });
+    const [orc] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { species: 'Orc' }, team: 'red' });
+    const [attacker] = encounter.addCreature({ monster: 'Ogre', team: 'blue' });
+    encounter.start();
+    const target = encounter.state!.creatures.find(creature => creature.id === orc.id)!;
+    encounter.runWithRng(() => applyDamage(encounter.state!, target, target.currentHp + 1, 'slashing', encounter.state!.creatures.find(creature => creature.id === attacker.id)!, true));
+    expect(target.currentHp).toBe(1);
+    expect(target.turnFlags.orcRelentlessEndurance).toBe(true);
   });
 
   it('resolves background origin feats through canonical initiative and damage paths', () => {

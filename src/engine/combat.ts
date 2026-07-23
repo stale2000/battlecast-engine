@@ -3116,6 +3116,21 @@ function applyDamage(state: BattleState, target: Creature, damage: number, damag
   }
 
   if (target.currentHp <= 0) {
+    // Orc Relentless Endurance is automatic: it cannot prevent massive damage
+    // and is available once per Long Rest (once per arena encounter).
+    const overflow = Math.abs(target.currentHp);
+    if (target.monsterData.heroSpecies === 'Orc' && !target.turnFlags.orcRelentlessEndurance && overflow < target.maxHp) {
+      target.currentHp = 1;
+      target.turnFlags.orcRelentlessEndurance = true;
+      pushLog(state, {
+        round: state.round, turn: state.turnIndex,
+        actor: target.displayName, action: 'Relentless Endurance',
+        details: `${target.displayName} drops to 1 HP instead of 0.`,
+        type: 'special',
+      });
+      return damage;
+    }
+
     // Death Ward: first time target would drop to 0 HP, set to 1 instead
     const deathWardIdx = target.activeBuffs?.findIndex(b => b.key === 'death-ward' && b.preventDeath);
     if (deathWardIdx !== undefined && deathWardIdx >= 0) {

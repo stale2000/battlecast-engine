@@ -10,7 +10,7 @@ export type ClassFeatureArenaAction =
  */
 export type ArenaAction =
   | { id: string; type: 'attack'; actionName: string; actionIndex: number; targetId: string }
-  | { id: string; type: 'spell'; actionName: string; actionIndex: number; targetId: string; targetIds?: string[]; center?: { x: number; y: number } }
+  | { id: string; type: 'spell'; actionName: string; actionIndex: number; targetId: string; targetIds?: string[]; center?: { x: number; y: number }; areaShape?: string }
   | { id: 'dash' | 'bonus_dash'; type: 'dash'; isBonusAction: boolean }
   | { id: 'dodge'; type: 'dodge' }
   | { id: 'disengage' | 'bonus_disengage'; type: 'disengage'; isBonusAction: boolean }

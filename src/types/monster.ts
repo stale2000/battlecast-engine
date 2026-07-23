@@ -189,6 +189,8 @@ export interface MonsterAction {
    *  Bonus actions can be used alongside a main action on the same turn
    *  (e.g., Rage + Greataxe, Hex + Eldritch Blast, Healing Word + Rapier). */
   isBonusAction?: boolean;
+  /** Uses one attack from an Attack action instead of consuming the whole action. */
+  replacesAttack?: boolean;
   /**
    * True if this action's damage counts as magical for the purposes of
    * resistance bypass. Set on inherently magical attacks (devas, planetars,

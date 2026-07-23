@@ -86,18 +86,30 @@ function spellTargets(active: Creature, state: NonNullable<Encounter['state']>, 
   return living.filter(c => c.team !== active.team && attackInRange(active, c, action) && (action.type !== 'ranged' || canSee(state, active, c)));
 }
 
-function areaSpellAction(state: NonNullable<Encounter['state']>, active: Creature, action: MonsterAction, actionIndex: number): ArenaAction | undefined {
-  const area = action.savingThrow?.area?.toLowerCase() ?? '';
+function areaSpellActions(state: NonNullable<Encounter['state']>, active: Creature, action: MonsterAction, actionIndex: number): ArenaAction[] {
+  const originalArea = action.savingThrow?.area?.toLowerCase() ?? '';
+  const areas = originalArea.includes('cone or') && originalArea.includes('line')
+    ? ['15-foot cone', '30-foot line']
+    : [originalArea];
+  return areas.flatMap(area => areaSpellAction(state, active, action, actionIndex, area));
+}
+
+function areaSpellAction(state: NonNullable<Encounter['state']>, active: Creature, action: MonsterAction, actionIndex: number, area: string): ArenaAction[] {
   const radius = Number(area.match(/(\d+)-foot/)?.[1] ?? 20);
   const rangedPointArea = Boolean(action.range && (area.includes('sphere') || area.includes('cylinder') || area.includes('radius')));
-  const pick = rangedPointArea ? pickRangedSphereCenter(state, active, action, radius) : undefined;
-  const targets = pick?.targets ?? getAoETargets(state, active, action);
-  if (!targets.length) return undefined;
+  const shapedAction = area === originalArea(action) ? action : { ...action, savingThrow: { ...action.savingThrow!, area } };
+  const pick = rangedPointArea ? pickRangedSphereCenter(state, active, shapedAction, radius) : undefined;
+  const targets = pick?.targets ?? getAoETargets(state, active, shapedAction);
+  if (!targets.length) return [];
   const targetIds = targets.map(target => target.id).sort();
-  return {
-    id: `spell:${actionIndex}:${slug(action.name)}:area:${targetIds.join(',')}`,
-    type: 'spell', actionName: action.name, actionIndex, targetId: targetIds[0]!, targetIds, center: pick?.center,
-  };
+  return [{
+    id: `spell:${actionIndex}:${slug(action.name)}:area:${slug(area)}:${targetIds.join(',')}`,
+    type: 'spell', actionName: action.name, actionIndex, targetId: targetIds[0]!, targetIds, center: pick?.center, areaShape: area,
+  }];
+}
+
+function originalArea(action: MonsterAction): string {
+  return action.savingThrow?.area?.toLowerCase() ?? '';
 }
 
 function autoDartSpellActions(active: Creature, state: NonNullable<Encounter['state']>, action: MonsterAction, actionIndex: number): ArenaAction[] {
@@ -145,14 +157,13 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
     for (const [actionIndex, action] of getActiveActions(active).entries()) {
       if (action.legendaryOnly || action.type === 'multiattack') continue;
       if (isSpellAction(action)) {
-        if (attackInProgress || !canCastArenaSpell(active, action)) continue;
+        if ((!action.replacesAttack && attackInProgress) || (action.replacesAttack && attacksUsed(active) >= attackRollBudget(active)) || !canCastArenaSpell(active, action)) continue;
         if (action.autoDarts) {
           actions.push(...autoDartSpellActions(active, state, action, actionIndex));
           continue;
         }
         if (action.savingThrow?.area) {
-          const areaAction = areaSpellAction(state, active, action, actionIndex);
-          if (areaAction) actions.push(areaAction);
+          actions.push(...areaSpellActions(state, active, action, actionIndex));
           continue;
         }
         for (const target of spellTargets(active, state, action)) {
@@ -274,11 +285,17 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
     } else if (legal.type === 'spell') {
       const targets = (legal.targetIds ?? [legal.targetId]).map(id => state.creatures.find(c => c.id === id)).filter((target): target is Creature => Boolean(target));
       const target = targets[0];
-      const spell = getActiveActions(active)[legal.actionIndex];
+      const baseSpell = getActiveActions(active)[legal.actionIndex];
+      const spell = baseSpell && legal.areaShape
+        ? { ...baseSpell, savingThrow: { ...baseSpell.savingThrow!, area: legal.areaShape } }
+        : baseSpell;
       if (!spell || spell.name !== legal.actionName || !isSpellAction(spell)) throw new EncounterError(`Stale arena spell "${legal.id}".`);
       if (!target || !executeSpell(state, active, spell, target, spell.autoDarts || spell.savingThrow?.area ? targets : undefined, legal.center)) throw new EncounterError(`Illegal or stale arena spell "${legal.id}".`);
       if (spell.isBonusAction) active.bonusActionUsed = true;
-      else active.hasActed = true;
+      else if (spell.replacesAttack) {
+        active.turnFlags[`arena-attack-${attacksUsed(active)}`] = true;
+        active.hasActed = attacksUsed(active) >= attackRollBudget(active);
+      } else active.hasActed = true;
       checkBattleComplete(state);
     } else if (legal.type === 'move_to') {
       const destination = action.type === 'move_to' ? action.destination : undefined;
