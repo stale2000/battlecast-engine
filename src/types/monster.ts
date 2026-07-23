@@ -771,6 +771,8 @@ export interface ActiveBuff {
   speedBonus?: number;
   /** Flat bonus to Dexterity (Stealth) checks, e.g. Pass without Trace. */
   stealthBonus?: number;
+  /** Tremorsense range in feet. It pinpoints grounded creatures but is not sight. */
+  tremorsenseRange?: number;
   /** One-shot rider such as Barbarian Staggering Blow: no Opportunity Attacks. */
   preventsOpportunityAttacks?: boolean;
   /** One-shot rider such as Barbarian Sundering Blow: next other attacker gets a flat bonus. */

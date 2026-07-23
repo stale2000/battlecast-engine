@@ -3771,7 +3771,8 @@ function resolveAttack(
     && target.monsterData.heroClass === 'Ranger'
     && (target.monsterData.heroLevel ?? 0) >= 7
     && (!target.monsterData.heroSubclass || target.monsterData.heroSubclass === 'Hunter');
-  const dis = hasDisadvantage(attacker, target, action) || rangedDisadvantage || escapeTheHordeDisadvantage;
+  const hiddenTarget = target.activeBuffs?.some(buff => buff.key === `hidden-from:${attacker.id}`) ?? false;
+  const dis = hasDisadvantage(attacker, target, action) || rangedDisadvantage || escapeTheHordeDisadvantage || hiddenTarget;
 
   // Check displacement
   const hasDisplacement = hasActiveTrait(target, 'Displacement');

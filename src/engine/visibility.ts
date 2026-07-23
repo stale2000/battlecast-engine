@@ -41,6 +41,15 @@ export function canSeeCreatureIgnoringHide(state: BattleState, observer: Creatur
   );
 }
 
+/** Whether the observer can pinpoint a grounded creature with temporary Tremorsense. */
+export function canDetectWithTremorsense(observer: Creature, target: Creature): boolean {
+  const range = Math.max(0, ...(observer.activeBuffs ?? []).map(buff => buff.tremorsenseRange ?? 0));
+  if (!range || observer.airborne || target.airborne) return false;
+  const observerCenter = footprintCenter(observer.position, getFootprintSize(observer.wildShape?.size ?? observer.temporarySize ?? observer.monsterData.size));
+  const targetCenter = footprintCenter(target.position, getFootprintSize(target.wildShape?.size ?? target.temporarySize ?? target.monsterData.size));
+  return Math.max(Math.abs(observerCenter.x - targetCenter.x), Math.abs(observerCenter.y - targetCenter.y)) * 5 <= range;
+}
+
 /** Remove Hide results as soon as the named observer regains clear sight. */
 export function revealVisibleHiddenCreatures(state: BattleState): void {
   for (const creature of state.creatures) {

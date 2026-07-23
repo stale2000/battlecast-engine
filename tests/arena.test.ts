@@ -420,6 +420,24 @@ describe('Kaggle arena bridge', () => {
     });
   });
 
+  it('resolves Dwarf Stonecunning as timed Tremorsense against hidden grounded targets', () => {
+    const encounter = new Encounter({ seed: 1 });
+    const [dwarf] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { species: 'Dwarf', additionalResources: { 'dwarf-stonecunning': 3 } }, team: 'red', position: { x: 0, y: 0 } });
+    const [hidden] = encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 5, y: 0 } });
+    encounter.start();
+    const state = encounter.state!;
+    const active = state.creatures.find(creature => creature.id === dwarf.id)!;
+    const target = state.creatures.find(creature => creature.id === hidden.id)!;
+    state.initiativeOrder = [active.id];
+    startArena(encounter);
+    target.activeBuffs.push({ name: 'Hidden', key: `hidden-from:${active.id}`, casterId: target.id, appliedRound: state.round, endRound: state.round + 100 });
+    expect(getLegalActions(encounter, active.id).some(action => action.type === 'attack' && action.targetId === target.id)).toBe(false);
+    applyLegalAction(encounter, getLegalActions(encounter, active.id).find(action => action.type === 'species_tremorsense')!);
+    expect(active.resources['dwarf-stonecunning']).toBe(2);
+    expect(active.activeBuffs.find(buff => buff.key === 'dwarf-stonecunning')).toMatchObject({ tremorsenseRange: 60, endRound: state.round + 100 });
+    expect(getLegalActions(encounter, active.id).some(action => action.type === 'attack' && action.targetId === target.id)).toBe(true);
+  });
+
   it('requires and preserves Gnome and Goliath SRD ancestry choices', () => {
     const build = (species: 'Gnome' | 'Goliath', choice: string) => ({ heroClass: 'Fighter', species, background: 'Soldier', abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 }, ...(species === 'Gnome' ? { gnomeLineage: choice, speciesCastingAbility: 'int' } : { goliathAncestry: choice }) });
     for (const [species, choice] of [['Gnome', 'Forest Gnome'], ['Goliath', 'Cloud']] as const) {

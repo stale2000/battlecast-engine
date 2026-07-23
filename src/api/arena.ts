@@ -18,7 +18,7 @@ import {
   escapeGrapple,
 } from '../engine/combat.js';
 import { canSee, getActiveActions } from '../engine/ai-targeting.js';
-import { canSeePoint, revealVisibleHiddenCreatures } from '../engine/visibility.js';
+import { canDetectWithTremorsense, canSeePoint, revealVisibleHiddenCreatures } from '../engine/visibility.js';
 import { moveToDestination, reachableMovementDestinations } from '../engine/ai-movement.js';
 import { executeLegendaryAction, handlePassiveAuras, processTurnStart, runOpportunityAttacks } from '../engine/ai-turn.js';
 import { getEligibleWildShapeBeasts } from '../data/heroes.js';
@@ -225,7 +225,7 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
       }
       if (action.attackBonus === undefined || attacksUsed(active) >= attackRollBudget(active)) continue;
       for (const target of enemies) {
-        if (!attackInRange(active, target, action) || (action.type === 'ranged' && !canSee(state, active, target))) continue;
+        if (!attackInRange(active, target, action) || (action.type === 'ranged' && !canSee(state, active, target) && !canDetectWithTremorsense(active, target))) continue;
         actions.push({ id: `attack:${actionIndex}:${slug(action.name)}:${target.id}`, type: 'attack', actionName: action.name, actionIndex, targetId: target.id });
         for (const feature of getGoliathAttackFeatures(active, target)) {
           actions.push({ id: `attack:${actionIndex}:${slug(action.name)}:${target.id}:goliath-${feature}`, type: 'attack', actionName: action.name, actionIndex, targetId: target.id, goliathFeature: feature });
@@ -442,7 +442,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       } catch (error) {
         throw new EncounterError(error instanceof Error ? error.message : 'Illegal or stale arena class feature.');
       }
-    } else if (legal.type === 'species_dash' || legal.type === 'species_flight' || legal.type === 'species_large_form' || legal.type === 'species_teleport') {
+    } else if (legal.type === 'species_dash' || legal.type === 'species_flight' || legal.type === 'species_large_form' || legal.type === 'species_tremorsense' || legal.type === 'species_teleport') {
       try {
         applyOriginLegalAction(state, active, legal.type === 'species_teleport' && action.type === 'species_teleport' ? action : legal);
       } catch (error) {

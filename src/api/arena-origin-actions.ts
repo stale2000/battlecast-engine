@@ -21,11 +21,20 @@ export type OriginArenaAction =
   | { id: 'species:adrenaline_rush'; type: 'species_dash' }
   | { id: 'species:draconic_flight'; type: 'species_flight' }
   | { id: 'species:large_form'; type: 'species_large_form' }
+  | { id: 'species:stonecunning'; type: 'species_tremorsense' }
   | { id: 'species:cloud_jaunt' | 'species:high_elf_misty_step'; type: 'species_teleport'; destination?: { x: number; y: number } };
 
 /** Returns only origin features whose complete effect is supported by the engine. */
 export function getOriginLegalActions(active: Creature): OriginArenaAction[] {
   const actions: OriginArenaAction[] = [];
+  if (
+    active.monsterData.heroSpecies === 'Dwarf'
+    && !active.bonusActionUsed
+    && !active.activeBuffs.some(buff => buff.key === 'dwarf-stonecunning')
+    && hasResource(active, 'dwarf-stonecunning')
+  ) {
+    actions.push({ id: 'species:stonecunning', type: 'species_tremorsense' });
+  }
   if (
     active.monsterData.heroSpecies === 'Orc'
     && !active.bonusActionUsed
@@ -74,6 +83,16 @@ export function getOriginLegalActions(active: Creature): OriginArenaAction[] {
 
 /** Applies an origin action after the caller has matched it against its legal catalogue. */
 export function applyOriginLegalAction(state: BattleState, active: Creature, action: OriginArenaAction): void {
+  if (action.type === 'species_tremorsense') {
+    // The fixed open-arena map is a worked-stone floor, satisfying Stonecunning's surface requirement.
+    if (active.monsterData.heroSpecies !== 'Dwarf' || active.bonusActionUsed || !consumeResource(active, 'dwarf-stonecunning')) {
+      throw new Error('Illegal or stale arena Stonecunning.');
+    }
+    active.activeBuffs.push({ name: 'Stonecunning', key: 'dwarf-stonecunning', casterId: active.id, appliedRound: state.round, endRound: state.round + 100, tremorsenseRange: 60 });
+    active.bonusActionUsed = true;
+    pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Stonecunning', details: `${active.displayName} gains Tremorsense.`, type: 'special' });
+    return;
+  }
   if (action.type === 'species_dash') {
     if (active.monsterData.heroSpecies !== 'Orc' || active.bonusActionUsed || !consumeResource(active, 'orc-adrenaline-rush')) {
       throw new Error('Illegal or stale arena Adrenaline Rush.');
