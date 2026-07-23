@@ -3741,8 +3741,9 @@ function resolveAttack(
   }
   const ac = getEffectiveAC(target);
 
-  // Heroic Warrior (Fighter L10): reroll a missed attack once per turn
-  if (naturalRoll !== 20 && roll.total < ac && attacker.turnFlags?.heroicInspiration) {
+  // Heroic Warrior (Fighter L10) and Human Resourceful inspiration reroll a missed attack.
+  const humanInspiration = (attacker.resources['heroic-inspiration'] ?? 0) > 0;
+  if (naturalRoll !== 20 && roll.total < ac && (attacker.turnFlags?.heroicInspiration || humanInspiration)) {
     const reroll = rollAttackForCreature(attacker, action.attackBonus!, effectiveAdv, attackHasDisadvantage);
     const rerollBuff = rollAttackBuffBonus(attacker);
     reroll.roll.total += rerollBuff + targetAttackBonus;
@@ -3750,8 +3751,13 @@ function resolveAttack(
       roll = reroll.roll;
       naturalRoll = reroll.naturalRoll;
     }
-    delete attacker.turnFlags.heroicInspiration;
-    attacker.stats.actionUsage['Heroic Warrior'] = (attacker.stats.actionUsage['Heroic Warrior'] || 0) + 1;
+    if (attacker.turnFlags?.heroicInspiration) {
+      delete attacker.turnFlags.heroicInspiration;
+      attacker.stats.actionUsage['Heroic Warrior'] = (attacker.stats.actionUsage['Heroic Warrior'] || 0) + 1;
+    } else {
+      consumeResource(attacker, 'heroic-inspiration');
+      attacker.stats.actionUsage['Heroic Inspiration'] = (attacker.stats.actionUsage['Heroic Inspiration'] || 0) + 1;
+    }
   }
 
   applyCuttingWordsToAttackRoll(state, attacker, target, roll, naturalRoll, ac);

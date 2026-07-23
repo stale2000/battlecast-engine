@@ -151,6 +151,7 @@ describe('Kaggle arena bridge', () => {
     const tough = kaggleStep({ ...init(), redParty: party, blueParty: party }).state.battleState!.creatures.find(creature => creature.team === 'red')!;
     const baseline = kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...human, humanOriginFeat: 'Alert' })) }, blueParty: party }).state.battleState!.creatures.find(creature => creature.team === 'red')!;
     expect(tough.maxHp).toBe(baseline.maxHp + 10);
+    expect(tough.resources['heroic-inspiration']).toBe(1);
   });
 
   it('requires a Tiefling legacy and applies its automatic resistance', () => {
