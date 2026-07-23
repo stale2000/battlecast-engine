@@ -2377,6 +2377,7 @@ export interface HeroOverrides {
   originTool?: string;
   originEquipment?: string[];
   additionalResources?: Record<string, number>;
+  additionalActions?: MonsterAction[];
   weapon?: WeaponOverride;
   weapons?: WeaponOverride[];
   spells?: string[];
@@ -2668,6 +2669,7 @@ export function buildCustomHero(
 
   const abilityActions = buildClassAbilities(className, level, abilities, pb);
   actions.push(...abilityActions);
+  actions.push(...(overrides.additionalActions ?? []));
   const initialResources = { ...buildClassResources(className, level), ...(overrides.additionalResources ?? {}) };
 
   if (className === 'Paladin' && level >= 2) {

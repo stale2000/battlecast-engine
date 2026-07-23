@@ -103,6 +103,20 @@ describe('Kaggle arena bridge', () => {
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...dwarfSoldier, abilityIncreases: { int: 2, con: 1 } })) }, blueParty: originParty })).toThrow(/listed abilities/);
   });
 
+  it('constructs a Dragonborn Breath Weapon with its chosen ancestry', () => {
+    const dragonborn = {
+      heroClass: 'Fighter', species: 'Dragonborn', background: 'Soldier', dragonAncestry: 'fire',
+      abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 },
+    };
+    const dragonParty = { characters: Array.from({ length: 4 }, () => dragonborn) };
+    const result = kaggleStep({ ...init(), redParty: dragonParty, blueParty: dragonParty });
+    const dragon = result.state.battleState!.creatures.find(creature => creature.team === 'red')!;
+    const breath = dragon.monsterData.actions.find(action => action.name === 'Breath Weapon')!;
+    expect(breath.damageType).toBe('fire');
+    expect(breath.resourceCost).toEqual({ key: 'dragonborn-breath', amount: 1 });
+    expect(dragon.resources['dragonborn-breath']).toBe(3);
+  });
+
   it('resolves Orc Adrenaline Rush through the legal-action catalogue', () => {
     const encounter = new Encounter({ seed: 1 });
     const [orc] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { species: 'Orc', additionalResources: { 'orc-adrenaline-rush': 3 } }, team: 'red', position: { x: 0, y: 0 } });

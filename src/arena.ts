@@ -2,13 +2,14 @@ import { Encounter, EncounterError, type AddCreatureOptions, type SerializedEnco
 import { applyLegalAction, getActiveCreature, getLegalActions, sameArenaAction, startArena, type ArenaAction } from './api/arena.js';
 import { buildHero, getAvailableSpells, HERO_CLASS_NAMES } from './data/heroes.js';
 import { ARENA_BACKGROUNDS, ARENA_SPECIES, BACKGROUNDS, SPECIES, applyBackgroundIncreases, type AbilityName, type ArenaBackground, type ArenaSpecies } from './data/arena-origins.js';
-import type { Abilities, Creature } from './types/monster.js';
+import type { Abilities, Creature, MonsterAction } from './types/monster.js';
 
 export const ARENA_PROTOCOL_VERSION = 1;
 export const ARENA_ROUND_CAP = 20;
 
 type SlotCharacter = { slot: 1 | 2 | 3 | 4 };
-type ArenaHero = { heroClass: string; abilities: Abilities; subclass?: string; spells?: string[]; species?: ArenaSpecies; background?: ArenaBackground; abilityIncreases?: Partial<Record<AbilityName, 0 | 1 | 2>> };
+type DragonAncestry = 'acid' | 'cold' | 'fire' | 'lightning' | 'poison';
+type ArenaHero = { heroClass: string; abilities: Abilities; subclass?: string; spells?: string[]; species?: ArenaSpecies; background?: ArenaBackground; abilityIncreases?: Partial<Record<AbilityName, 0 | 1 | 2>>; dragonAncestry?: DragonAncestry };
 type Character = SlotCharacter | ArenaHero;
 type Party = { characters: Character[] };
 type Request =
@@ -23,6 +24,7 @@ const SLOT_PARTY: Record<1 | 2 | 3 | 4, AddCreatureOptions> = {
 };
 const ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 const POINT_COST: Record<number, number> = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
+const DRAGON_DAMAGE_TYPES = ['acid', 'cold', 'fire', 'lightning', 'poison'] as const;
 
 function assertObject(value: unknown, label: string): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new EncounterError(`${label} must be an object.`);
@@ -57,6 +59,15 @@ function parseSpells(value: unknown, heroClass: typeof HERO_CLASS_NAMES[number],
   return value as string[];
 }
 
+function dragonbornBreath(ancestry: DragonAncestry, abilities: Abilities): MonsterAction {
+  const dc = 8 + Math.floor((abilities.con - 10) / 2) + 3;
+  return {
+    name: 'Breath Weapon', type: 'special', description: `15-foot cone or 30-foot line, DEX save DC ${dc}, 2d10 ${ancestry} damage (half on success).`,
+    damageType: ancestry, resourceCost: { key: 'dragonborn-breath', amount: 1 },
+    savingThrow: { ability: 'dex', dc, damageOnFail: '2d10', damageOnSuccess: 'half', area: '15-foot cone' },
+  };
+}
+
 function parseParty(value: unknown, team: Team): AddCreatureOptions[] {
   const party = assertObject(value, `${team}Party`);
   if (!Array.isArray(party.characters) || party.characters.length !== 4) {
@@ -75,7 +86,7 @@ function parseParty(value: unknown, team: Team): AddCreatureOptions[] {
     if (typeof character.heroClass !== 'string' || !HERO_CLASS_NAMES.includes(character.heroClass as typeof HERO_CLASS_NAMES[number])) {
       throw new EncounterError(`${team}Party.characters[${index}].heroClass must be a supported hero class.`);
     }
-    if (!Object.keys(character).every(key => key === 'heroClass' || key === 'abilities' || key === 'subclass' || key === 'spells' || key === 'species' || key === 'background' || key === 'abilityIncreases')) {
+    if (!Object.keys(character).every(key => key === 'heroClass' || key === 'abilities' || key === 'subclass' || key === 'spells' || key === 'species' || key === 'background' || key === 'abilityIncreases' || key === 'dragonAncestry')) {
       throw new EncounterError(`${team}Party.characters[${index}] contains unsupported build choices.`);
     }
     const baseAbilities = parseAbilities(character.abilities, `${team}Party.characters[${index}].abilities`);
@@ -85,6 +96,10 @@ function parseParty(value: unknown, team: Team): AddCreatureOptions[] {
     }
     const species = character.species as ArenaSpecies | undefined;
     const background = character.background as ArenaBackground | undefined;
+    if (species === 'Dragonborn' && (typeof character.dragonAncestry !== 'string' || !DRAGON_DAMAGE_TYPES.includes(character.dragonAncestry as DragonAncestry))) {
+      throw new EncounterError(`${team}Party.characters[${index}].dragonAncestry must be an SRD damage type.`);
+    }
+    if (species !== 'Dragonborn' && character.dragonAncestry !== undefined) throw new EncounterError(`${team}Party.characters[${index}].dragonAncestry requires Dragonborn.`);
     let abilities = baseAbilities;
     if (hasOrigin) {
       const increases = assertObject(character.abilityIncreases, `${team}Party.characters[${index}].abilityIncreases`) as Partial<Record<AbilityName, 0 | 1 | 2>>;
@@ -109,6 +124,8 @@ function parseParty(value: unknown, team: Team): AddCreatureOptions[] {
           originEquipment: [...BACKGROUNDS[background].equipment], sizeOverride: SPECIES[species].size, speedOverride: SPECIES[species].speed,
           hitPointBonus: SPECIES[species].maxHpBonusAtLevel5, additionalResistances: SPECIES[species].resistances ? [...SPECIES[species].resistances] : undefined,
           additionalResources: species === 'Orc' ? { 'orc-adrenaline-rush': 3 } : undefined,
+          additionalActions: species === 'Dragonborn' ? [dragonbornBreath(character.dragonAncestry as DragonAncestry, abilities)] : undefined,
+          ...(species === 'Dragonborn' ? { additionalResistances: [character.dragonAncestry as DragonAncestry], additionalResources: { 'dragonborn-breath': 3 } } : {}),
         } : {}),
       },
       team,
