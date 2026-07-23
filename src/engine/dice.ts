@@ -115,8 +115,10 @@ export function abilityModifier(score: number): number {
 }
 
 // Roll initiative
-export function rollInitiative(dexMod: number): number {
-  return Math.floor(engineRandom() * 20) + 1 + dexMod;
+export function rollInitiative(dexMod: number, rerollOnOne = false): number {
+  let roll = Math.floor(engineRandom() * 20) + 1;
+  if (rerollOnOne && roll === 1) roll = Math.floor(engineRandom() * 20) + 1;
+  return roll + dexMod;
 }
 
 // Roll damage with possible critical (double dice)

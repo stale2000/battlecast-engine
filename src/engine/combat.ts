@@ -401,10 +401,11 @@ export function resolveSwallowAction(state: BattleState, attacker: Creature, tar
 export function rollAllInitiatives(creatures: Creature[]): void {
   for (const c of creatures) {
     const dexMod = abilityModifier(getEffectiveAbilityScore(c, 'dex'));
-    c.initiative = rollInitiative(dexMod);
+    const halflingLuck = c.monsterData.heroSpecies === 'Halfling';
+    c.initiative = rollInitiative(dexMod, halflingLuck);
     if (hasOriginFeat(c, 'Alert')) c.initiative += c.monsterData.proficiencyBonus;
     if (c.monsterData.heroClass === 'Barbarian' && (c.monsterData.heroLevel ?? 0) >= 7) {
-      c.initiative = Math.max(c.initiative, rollInitiative(dexMod));
+      c.initiative = Math.max(c.initiative, rollInitiative(dexMod, halflingLuck));
     }
     if (c.monsterData.heroClass === 'Bard' && (c.monsterData.heroLevel ?? 0) >= 18) {
       c.resources['bardic-inspiration'] = Math.max(c.resources['bardic-inspiration'] ?? 0, 2);
