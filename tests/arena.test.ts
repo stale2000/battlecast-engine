@@ -118,6 +118,28 @@ describe('Kaggle arena bridge', () => {
     expect(active.resources['orc-adrenaline-rush']).toBe(2);
   });
 
+  it('resolves background origin feats through canonical initiative and damage paths', () => {
+    const alert = new Encounter({ seed: 2 });
+    const [alertHero] = alert.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { originFeat: 'Alert' }, team: 'red' });
+    alert.addCreature({ monster: 'Ogre', team: 'blue' });
+    alert.start();
+    const alertCreature = alert.state!.creatures.find(creature => creature.id === alertHero.id)!;
+    expect(alertCreature.initiative).toBeGreaterThanOrEqual(alertCreature.monsterData.proficiencyBonus + 1 + 1);
+
+    const savage = new Encounter({ seed: 3 });
+    savage.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { originFeat: 'Savage Attacker' }, team: 'red', position: { x: 0, y: 0 } });
+    savage.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
+    savage.start();
+    const attacker = savage.state!.creatures.find(creature => creature.team === 'red')!;
+    const defender = savage.state!.creatures.find(creature => creature.team === 'blue')!;
+    expect(attacker.monsterData.originFeat).toBe('Savage Attacker');
+    const attack = attacker.monsterData.actions.find(action => action.attackBonus !== undefined)!;
+    attack.attackBonus = 100;
+    savage.runWithRng(() => resolveAttack(savage.state!, attacker, defender, attack));
+    if (!attacker.turnFlags.savageAttackerUsed) savage.runWithRng(() => resolveAttack(savage.state!, attacker, defender, attack));
+    expect(attacker.turnFlags.savageAttackerUsed).toBe(true);
+  });
+
   it('accepts only engine-listed spell selections for custom casters', () => {
     const wizard = {
       heroClass: 'Wizard', abilities: { str: 8, dex: 14, con: 13, int: 15, wis: 12, cha: 10 },

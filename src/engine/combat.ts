@@ -396,6 +396,7 @@ export function rollAllInitiatives(creatures: Creature[]): void {
   for (const c of creatures) {
     const dexMod = abilityModifier(getEffectiveAbilityScore(c, 'dex'));
     c.initiative = rollInitiative(dexMod);
+    if (c.monsterData.originFeat === 'Alert') c.initiative += c.monsterData.proficiencyBonus;
     if (c.monsterData.heroClass === 'Barbarian' && (c.monsterData.heroLevel ?? 0) >= 7) {
       c.initiative = Math.max(c.initiative, rollInitiative(dexMod));
     }
@@ -3785,6 +3786,10 @@ function resolveAttack(
     if (action.damage) {
       const overchannelDamage = tryConsumeWizardOverchannel(state, attacker, action, action.damage);
       let totalDmg = overchannelDamage ?? rollDamage(action.damage, isCrit).total;
+      if (overchannelDamage === null && attacker.monsterData.originFeat === 'Savage Attacker' && !attacker.turnFlags.savageAttackerUsed && action.spellLevel === undefined && (action.type === 'melee' || action.type === 'ranged')) {
+        totalDmg = Math.max(totalDmg, rollDamage(action.damage, isCrit).total);
+        attacker.turnFlags.savageAttackerUsed = true;
+      }
       const mainType = action.damageType || 'bludgeoning';
       const draconicBonus = draconicElementalAffinityBonus(attacker, action, mainType);
       if (draconicBonus > 0) {
