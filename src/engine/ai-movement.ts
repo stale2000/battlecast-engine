@@ -35,7 +35,7 @@
 
 import { Creature } from '../types/monster.js';
 import { BASE_DURATIONS } from '../types/animation.js';
-import { BattleState, getFootprintSize, isPositionBlocked } from './combat.js';
+import { BattleState, canHalflingPassThrough, getFootprintSize, isPositionBlocked } from './combat.js';
 
 /**
  * Check if a position is within grid bounds for a creature of a given footprint size.
@@ -58,9 +58,10 @@ function isValidStep(
   excludeId: string,
   gridSize: number | undefined,
   terrainBlocked?: Set<string>,
+  allowHalflingPassThrough = false,
 ): boolean {
   if (!isInBounds(pos, fp, gridSize)) return false;
-  return !isPositionBlocked(pos, size, creatures, excludeId, terrainBlocked);
+  return !isPositionBlocked(pos, size, creatures, excludeId, terrainBlocked) || (allowHalflingPassThrough && canHalflingPassThrough(pos, size, creatures, excludeId));
 }
 
 /**
@@ -201,7 +202,7 @@ function findPath(
       const key = `${nx},${ny}`;
       if (closed.has(key)) continue;
       const neighbor = { x: nx, y: ny };
-      if (!isValidStep(neighbor, size, fp, creatures, excludeId, gridSize, terrainBlocked)) continue;
+      if (!isValidStep(neighbor, size, fp, creatures, excludeId, gridSize, terrainBlocked, true)) continue;
       // Block diagonal corner-cutting: if moving diagonally, both
       // orthogonal neighbours must also be passable. Without this a
       // creature can slip between two diagonally-adjacent blocked
@@ -209,8 +210,8 @@ function findPath(
       if (dx !== 0 && dy !== 0) {
         const side1 = { x: current.x + dx, y: current.y };
         const side2 = { x: current.x, y: current.y + dy };
-        if (!isValidStep(side1, size, fp, creatures, excludeId, gridSize, terrainBlocked) &&
-            !isValidStep(side2, size, fp, creatures, excludeId, gridSize, terrainBlocked)) continue;
+        if (!isValidStep(side1, size, fp, creatures, excludeId, gridSize, terrainBlocked, true) &&
+            !isValidStep(side2, size, fp, creatures, excludeId, gridSize, terrainBlocked, true)) continue;
       }
       const g = current.g + 1;
       const existing = open.get(key);

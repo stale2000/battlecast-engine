@@ -82,6 +82,19 @@ export function isPositionBlocked(
   return false;
 }
 
+/** Halflings may traverse, but never occupy, a larger creature's space. */
+export function canHalflingPassThrough(
+  pos: { x: number; y: number },
+  size: string,
+  creatures: Creature[],
+  moverId: string,
+): boolean {
+  const mover = creatures.find(creature => creature.id === moverId);
+  if (mover?.monsterData.heroSpecies !== 'Halfling' || getFootprintSize(size) !== 1) return false;
+  const overlaps = creatures.filter(creature => creature.isAlive && creature.id !== moverId && pos.x >= creature.position.x && pos.x < creature.position.x + getFootprintSize(creature.wildShape?.size ?? creature.temporarySize ?? creature.monsterData.size) && pos.y >= creature.position.y && pos.y < creature.position.y + getFootprintSize(creature.wildShape?.size ?? creature.temporarySize ?? creature.monsterData.size));
+  return overlaps.length === 1 && getFootprintSize(overlaps[0]!.wildShape?.size ?? overlaps[0]!.temporarySize ?? overlaps[0]!.monsterData.size) > 1;
+}
+
 export function isInMeleeRange(attacker: Creature, target: Creature, reach: number = 5): boolean {
   return creatureDistance(attacker, target) <= reach;
 }

@@ -4,7 +4,7 @@ import { AnimationEvent, BASE_DURATIONS, OA_ATTACK_DURATIONS } from '../types/an
 import { rollAttack, rollDamage, rollDice, rollInitiative, abilityModifier, rollSave, rollD20, maxDiceTotal } from './dice.js';
 import { lineOfSightBlocked } from '../types/terrain.js';
 import {
-  distance, getFootprintSize, creatureDistance, isPositionBlocked,
+  distance, getFootprintSize, creatureDistance, isPositionBlocked, canHalflingPassThrough,
   isInMeleeRange, isInCone, isInLine,
 } from './combat-geometry.js';
 import {
@@ -4297,7 +4297,7 @@ function checkBattleComplete(state: BattleState): void {
 // resetTurnFlags) plus the concentration-aura helpers (attachConcentrationAura,
 // processConcentrationAuras, checkAuraEntry) live in ./combat-buffs.
 
-export { distance, getFootprintSize, creatureDistance, isPositionBlocked, getEnemies, getAllies, getAliveCreatures, getStandingCreatures, getRecoverableCreatures, getCreatureById, resolveAttack, isInMeleeRange, applyDamage, applyCondition, resolveConditionOnHit, processRegeneration, processRecharges, checkBattleComplete, hasAdvantage, hasDisadvantage, isInCone, isInLine, runDeathSave, stabiliseDyingAlly, revertWildShape, hasThiefsReflexes };
+export { distance, getFootprintSize, creatureDistance, isPositionBlocked, canHalflingPassThrough, getEnemies, getAllies, getAliveCreatures, getStandingCreatures, getRecoverableCreatures, getCreatureById, resolveAttack, isInMeleeRange, applyDamage, applyCondition, resolveConditionOnHit, processRegeneration, processRecharges, checkBattleComplete, hasAdvantage, hasDisadvantage, isInCone, isInLine, runDeathSave, stabiliseDyingAlly, revertWildShape, hasThiefsReflexes };
 // AoE resolution lives in ./combat-aoe; re-export so external imports work.
 export {
   getSingleTargetVisual, resolveSingleTargetSave,
