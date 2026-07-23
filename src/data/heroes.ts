@@ -2379,6 +2379,7 @@ export interface HeroOverrides {
   originSkills?: string[];
   originTool?: string;
   originEquipment?: string[];
+  additionalSenses?: string;
   additionalResources?: Record<string, number>;
   additionalActions?: MonsterAction[];
   weapon?: WeaponOverride;
@@ -2707,11 +2708,12 @@ export function buildCustomHero(
 
   const name = overrides.displayName || `${className} L${level}`;
   const passivePerception = 10 + pb + abilityMod(abilities.wis) * (spec.skills.includes('Perception') ? 1 : 0);
-  const senses = className === 'Paladin' && level >= 19
+  const baseSenses = className === 'Paladin' && level >= 19
     ? `Truesight 60 ft., Passive Perception ${passivePerception}`
     : className === 'Ranger' && level >= 18
-      ? `Blindsight 30 ft., Passive Perception ${passivePerception}`
+    ? `Blindsight 30 ft., Passive Perception ${passivePerception}`
     : `Passive Perception ${passivePerception}`;
+  const senses = [baseSenses, overrides.additionalSenses].filter(Boolean).join(', ');
   const resistances = [
     ...(className === 'Druid' && level >= 10 ? ['cold'] : []),
     ...(className === 'Sorcerer' && level >= 6 ? ['fire'] : []),

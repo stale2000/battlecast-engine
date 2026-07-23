@@ -110,6 +110,7 @@ describe('Kaggle arena bridge', () => {
     expect(red.monsterData.heroBackground).toBe('Soldier');
     expect(red.monsterData.originFeat).toBe('Savage Attacker');
     expect(red.monsterData.resistances).toContain('poison');
+    expect(red.monsterData.senses).toContain('Darkvision 120 ft.');
     expect(red.monsterData.hp).toBeGreaterThan(0);
     expect(result.observations.red.publicCombatState.creatures.filter(creature => creature.team === 'red').every(creature => 'build' in creature && creature.build.species === 'Dwarf')).toBe(true);
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...dwarfSoldier, abilityIncreases: { int: 2, con: 1 } })) }, blueParty: originParty })).toThrow(/listed abilities/);
@@ -224,6 +225,7 @@ describe('Kaggle arena bridge', () => {
     const party = { characters: Array.from({ length: 4 }, () => elf) };
     const result = kaggleStep({ ...init(), redParty: party, blueParty: party });
     expect(result.state.battleState!.creatures.find(creature => creature.team === 'red')!.monsterData.speed.walk).toBe(35);
+    expect(result.state.battleState!.creatures.find(creature => creature.team === 'red')!.monsterData.senses).toContain('Darkvision 60 ft.');
   });
 
   it('preserves Elf Keen Senses and Human Skillful selections', () => {
