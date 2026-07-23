@@ -2620,8 +2620,9 @@ function runDeathSave(state: BattleState, creature: Creature): void {
   // (the single roll site) so it stays accurate even if outcomes branch.
   creature.stats.deathSaveRolls = (creature.stats.deathSaveRolls ?? 0) + 1;
   const survivor = creature.monsterData.heroClass === 'Fighter' && (creature.monsterData.heroLevel ?? 0) >= 18;
-  const result = survivor ? rollAttack(0, true).roll : rollD20();
-  const roll = result.total;
+  const halflingLuck = creature.monsterData.heroSpecies === 'Halfling';
+  const result = survivor ? rollAttack(0, true, false, halflingLuck).roll : rollD20();
+  const roll = halflingLuck && result.total === 1 ? rollD20().total : result.total;
   let outcome: 'success' | 'failure' | 'critFail' | 'popUp' | 'stabilised' | 'died';
 
   if (roll >= (survivor ? 18 : 20)) {

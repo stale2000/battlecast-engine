@@ -4,7 +4,7 @@ import { Encounter } from '../src/api/encounter.js';
 import { getActiveCreature, getLegalActions, applyLegalAction, startArena } from '../src/api/arena.js';
 import { reachableMovementDestinations } from '../src/engine/ai-movement.js';
 import { processTurnStart } from '../src/engine/ai-turn.js';
-import { applyDamage, applyDamageRollPenalty, getEffectiveMoveSpeed, hasDisadvantage, processTargetTurnEndOngoingEffects, resolveAttack, rollAllInitiatives } from '../src/engine/combat.js';
+import { applyDamage, applyDamageRollPenalty, getEffectiveMoveSpeed, hasDisadvantage, processTargetTurnEndOngoingEffects, resolveAttack, rollAllInitiatives, runDeathSave } from '../src/engine/combat.js';
 import { dropConcentratedBuffsFrom } from '../src/engine/combat-buffs.js';
 import { canSee } from '../src/engine/ai-targeting.js';
 import { rollSaveWithBuffs } from '../src/engine/combat-buffs.js';
@@ -664,6 +664,20 @@ describe('Kaggle arena bridge', () => {
     const values = [0, 0.5];
     withRng({ next: () => values.shift()! }, () => rollAllInitiatives([halfling]));
     expect(halfling.initiative).toBe(13);
+  });
+
+  it('applies Halfling Luck to death saves', () => {
+    const encounter = new Encounter({ seed: 1 });
+    const [added] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { species: 'Halfling' }, team: 'red' });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue' });
+    encounter.start();
+    const halfling = encounter.state!.creatures.find(creature => creature.id === added.id)!;
+    halfling.currentHp = 0;
+    halfling.dying = true;
+    halfling.deathSaves = { successes: 0, failures: 0 };
+    const values = [0, 0.5];
+    withRng({ next: () => values.shift()! }, () => runDeathSave(encounter.state!, halfling));
+    expect(halfling.deathSaves).toMatchObject({ successes: 1, failures: 0 });
   });
 
   it('constructs a Dragonborn Breath Weapon with its chosen ancestry', () => {
