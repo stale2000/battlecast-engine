@@ -224,6 +224,7 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
         continue;
       }
       if (action.attackBonus === undefined || attacksUsed(active) >= attackRollBudget(active)) continue;
+      if (action.loading && active.turnFlags[`arena-loading-${actionIndex}`]) continue;
       for (const target of enemies) {
         if (!attackInRange(active, target, action) || (action.type === 'ranged' && !canSee(state, active, target) && !canDetectWithTremorsense(active, target))) continue;
         actions.push({ id: `attack:${actionIndex}:${slug(action.name)}:${target.id}`, type: 'attack', actionName: action.name, actionIndex, targetId: target.id });
@@ -348,6 +349,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       if (!attack || attack.name !== legal.actionName) throw new EncounterError(`Stale arena attack "${legal.id}".`);
       const damageBefore = target.stats.damageTaken;
       resolveAttack(state, active, target, attack);
+      if (attack.loading) active.turnFlags[`arena-loading-${legal.actionIndex}`] = true;
       if (legal.goliathFeature && target.stats.damageTaken > damageBefore) {
         try {
           applyGoliathAttackFeature(state, active, target, legal.goliathFeature);

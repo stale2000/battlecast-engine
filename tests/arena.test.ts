@@ -85,6 +85,20 @@ describe('Kaggle arena bridge', () => {
     expect(rogue.turnFlags.steadyAimConsumed).toBe(true);
   });
 
+  it('enforces Loading across player-selected extra attacks', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { weapons: [{ name: 'Light Crossbow', die: '1d8', damageType: 'piercing', type: 'ranged', range: { normal: 80, long: 320 }, loading: true }] }, team: 'red', position: { x: 0, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 5, y: 0 } });
+    encounter.start();
+    const state = encounter.state!;
+    const hero = state.creatures.find(creature => creature.team === 'red')!;
+    state.initiativeOrder = [hero.id];
+    startArena(encounter);
+    const first = getLegalActions(encounter, hero.id).find(action => action.type === 'attack' && action.actionName === 'Light Crossbow')!;
+    applyLegalAction(encounter, first);
+    expect(getLegalActions(encounter, hero.id).some(action => action.type === 'attack' && action.actionName === 'Light Crossbow')).toBe(false);
+  });
+
   it('keeps opponent build details out of team observations and validates custom point-buy heroes', () => {
     const customParty = {
       characters: Array.from({ length: 4 }, () => ({
