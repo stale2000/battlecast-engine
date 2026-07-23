@@ -12,10 +12,18 @@ const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId
 
 describe('Kaggle arena bridge', () => {
   it('is deterministic and validates the fixed four-member party', () => {
-    expect(kaggleStep(init())).toEqual(kaggleStep(init()));
+    expect(JSON.stringify(kaggleStep(init()))).toBe(JSON.stringify(kaggleStep(init())));
     expect(() => kaggleStep({ ...init(), roundCap: ARENA_ROUND_CAP - 1 })).toThrow(/roundCap/);
     expect(() => kaggleStep({ ...init(), redParty: { characters: [{ slot: 1 }] } })).toThrow(/exactly four/);
     expect(() => kaggleStep({ ...init(), blueParty: { characters: [{ slot: 1 }, { slot: 1 }, { slot: 3 }, { slot: 4 }] } })).toThrow(/once/);
+  });
+
+  it('rejects malformed requests without mutating supplied state', () => {
+    const initial = kaggleStep(init());
+    const before = JSON.stringify(initial.state);
+    const team = initial.statuses.red === 'ACTIVE' ? 'red' : 'blue';
+    expect(() => kaggleStep({ version: 1, mode: 'step', state: initial.state, team, action: { id: 'move_to', x: 0.5, y: 0 } })).toThrow(/integer/);
+    expect(JSON.stringify(initial.state)).toBe(before);
   });
 
   it('accepts every current legal action and rejects stale or wrong-team actions without mutation', () => {
