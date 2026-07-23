@@ -11,7 +11,7 @@ import {
   type ArenaSpecies,
 } from '../data/arena-origins.js';
 import type { Abilities, MonsterAction } from '../types/monster.js';
-import { bless, burningHands, cureWounds, guidingBolt, healingWord, holdPerson, magicMissile, shieldOfFaith, sleep, thunderwave } from '../data/spells.js';
+import { bless, burningHands, cureWounds, entangle, guidingBolt, healingWord, holdPerson, magicMissile, shieldOfFaith, sleep, thunderwave } from '../data/spells.js';
 
 type DragonAncestry = 'acid' | 'cold' | 'fire' | 'lightning' | 'poison';
 type CastingAbility = 'int' | 'wis' | 'cha';
@@ -168,11 +168,13 @@ function magicInitiateActions(
   label: string,
   resourceKey: string,
 ): { actions: MonsterAction[]; resources: Record<string, number> } | undefined {
-  if (feat !== 'Magic Initiate (Cleric)' && feat !== 'Magic Initiate (Wizard)') return undefined;
-  const list = feat === 'Magic Initiate (Cleric)' ? 'Cleric' : 'Wizard';
-  const allowedCantrips = list === 'Cleric' ? ['Sacred Flame', 'Toll the Dead'] : ['Fire Bolt', 'Ray of Frost'];
+  if (feat !== 'Magic Initiate (Cleric)' && feat !== 'Magic Initiate (Druid)' && feat !== 'Magic Initiate (Wizard)') return undefined;
+  const list = feat === 'Magic Initiate (Cleric)' ? 'Cleric' : feat === 'Magic Initiate (Druid)' ? 'Druid' : 'Wizard';
+  const allowedCantrips = list === 'Cleric' ? ['Sacred Flame', 'Toll the Dead'] : list === 'Druid' ? ['Poison Spray', 'Produce Flame'] : ['Fire Bolt', 'Ray of Frost'];
   const allowedSpells = list === 'Cleric'
     ? ['Bless', 'Cure Wounds', 'Healing Word', 'Shield of Faith', 'Guiding Bolt']
+    : list === 'Druid'
+      ? ['Cure Wounds', 'Healing Word', 'Entangle', 'Thunderwave']
     : ['Magic Missile', 'Burning Hands', 'Thunderwave', 'Sleep'];
   if (!Array.isArray(cantrips) || cantrips.length !== 2 || cantrips.some(value => typeof value !== 'string') || new Set(cantrips).size !== 2 || cantrips.some(value => !allowedCantrips.includes(value))) {
     throw new EncounterError(`${label}.originCantrips must select the two engine-supported ${list} cantrips.`);
@@ -185,10 +187,14 @@ function magicInitiateActions(
     ? { name, type: 'special', description: `DEX save DC ${8 + mod + pb}; 2d8 radiant damage.`, spellLevel: 0, castingAbility: castingAbility as CastingAbility, damageType: 'radiant', savingThrow: { ability: 'dex', dc: 8 + mod + pb, damageOnFail: '2d8' }, range: { normal: 60, long: 60 }, targetScope: 'one_enemy' }
     : name === 'Toll the Dead'
       ? { name, type: 'special', description: `WIS save DC ${8 + mod + pb}; 2d8 necrotic damage.`, spellLevel: 0, castingAbility: castingAbility as CastingAbility, damageType: 'necrotic', savingThrow: { ability: 'wis', dc: 8 + mod + pb, damageOnFail: '2d8' }, range: { normal: 60, long: 60 }, targetScope: 'one_enemy' }
+      : name === 'Produce Flame'
+        ? { name, type: 'ranged', description: 'Ranged spell attack, 2d8 fire damage.', spellLevel: 0, castingAbility: castingAbility as CastingAbility, attackBonus: mod + pb, damage: '2d8', damageType: 'fire', range: { normal: 60, long: 60 }, magical: true, targetScope: 'one_enemy' }
+        : name === 'Poison Spray'
+          ? { name, type: 'special', description: `CON save DC ${8 + mod + pb}; 2d12 poison damage.`, spellLevel: 0, castingAbility: castingAbility as CastingAbility, damageType: 'poison', savingThrow: { ability: 'con', dc: 8 + mod + pb, damageOnFail: '2d12' }, range: { normal: 10, long: 10 }, targetScope: 'one_enemy' }
       : name === 'Fire Bolt'
         ? { name, type: 'ranged', description: `Ranged spell attack, 2d10 fire damage.`, spellLevel: 0, castingAbility: castingAbility as CastingAbility, attackBonus: mod + pb, damage: '2d10', damageType: 'fire', range: { normal: 120, long: 120 }, magical: true, targetScope: 'one_enemy' }
         : { name, type: 'ranged', description: `Ranged spell attack, 2d8 cold damage.`, spellLevel: 0, castingAbility: castingAbility as CastingAbility, attackBonus: mod + pb, damage: '2d8', damageType: 'cold', range: { normal: 60, long: 60 }, magical: true, targetScope: 'one_enemy' };
-  const levelOne = spell === 'Bless' ? bless() : spell === 'Cure Wounds' ? cureWounds(castingAbility as CastingAbility, mod, pb) : spell === 'Healing Word' ? healingWord(castingAbility as CastingAbility, mod, pb) : spell === 'Shield of Faith' ? shieldOfFaith() : spell === 'Guiding Bolt' ? guidingBolt(castingAbility as CastingAbility, mod, pb) : spell === 'Magic Missile' ? magicMissile() : spell === 'Burning Hands' ? burningHands(castingAbility as CastingAbility, mod, pb) : spell === 'Thunderwave' ? thunderwave(castingAbility as CastingAbility, mod, pb) : sleep(castingAbility as CastingAbility, mod, pb);
+  const levelOne = spell === 'Bless' ? bless() : spell === 'Cure Wounds' ? cureWounds(castingAbility as CastingAbility, mod, pb) : spell === 'Healing Word' ? healingWord(castingAbility as CastingAbility, mod, pb) : spell === 'Shield of Faith' ? shieldOfFaith() : spell === 'Guiding Bolt' ? guidingBolt(castingAbility as CastingAbility, mod, pb) : spell === 'Entangle' ? entangle(castingAbility as CastingAbility, mod, pb) : spell === 'Magic Missile' ? magicMissile() : spell === 'Burning Hands' ? burningHands(castingAbility as CastingAbility, mod, pb) : spell === 'Thunderwave' ? thunderwave(castingAbility as CastingAbility, mod, pb) : sleep(castingAbility as CastingAbility, mod, pb);
   return { actions: [...cantrips.map(makeCantrip), { ...levelOne, resourceCost: { key: resourceKey, amount: 1 } }], resources: { [resourceKey]: 1 } };
 }
 
@@ -261,14 +267,14 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     if ((species === 'Elf' || species === 'Gnome' || species === 'Tiefling') && !['int', 'wis', 'cha'].includes(speciesCastingAbility ?? '')) throw new EncounterError(`${label}.speciesCastingAbility must be Intelligence, Wisdom, or Charisma.`);
     if (species !== 'Elf' && species !== 'Gnome' && species !== 'Tiefling' && character.speciesCastingAbility !== undefined) throw new EncounterError(`${label}.speciesCastingAbility requires Elf, Gnome, or Tiefling.`);
     const humanOriginFeat = character.humanOriginFeat as string | undefined;
-    if (species === 'Human' && !['Alert', 'Magic Initiate (Cleric)', 'Magic Initiate (Wizard)', 'Savage Attacker', 'Skilled'].includes(humanOriginFeat ?? '')) {
+    if (species === 'Human' && !['Alert', 'Magic Initiate (Cleric)', 'Magic Initiate (Druid)', 'Magic Initiate (Wizard)', 'Savage Attacker', 'Skilled'].includes(humanOriginFeat ?? '')) {
       throw new EncounterError(`${label}.humanOriginFeat must be an SRD Origin Feat.`);
     }
     if (species !== 'Human' && (humanOriginFeat !== undefined || character.humanOriginCantrips !== undefined || character.humanOriginSpell !== undefined || character.humanOriginCastingAbility !== undefined)) {
       throw new EncounterError(`${label}.humanOriginFeat requires Human.`);
     }
     const hasHumanOriginSpellChoice = character.humanOriginCantrips !== undefined || character.humanOriginSpell !== undefined || character.humanOriginCastingAbility !== undefined;
-    if (hasHumanOriginSpellChoice && (!humanOriginFeat || !['Magic Initiate (Cleric)', 'Magic Initiate (Wizard)'].includes(humanOriginFeat))) {
+    if (hasHumanOriginSpellChoice && (!humanOriginFeat || !['Magic Initiate (Cleric)', 'Magic Initiate (Druid)', 'Magic Initiate (Wizard)'].includes(humanOriginFeat))) {
       throw new EncounterError(`${label} human origin spell choices require a Magic Initiate feat.`);
     }
     const humanOriginSkills = character.humanOriginSkills as string[] | undefined;

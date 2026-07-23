@@ -464,14 +464,15 @@ describe('Kaggle arena bridge', () => {
     }
   });
 
-  it('accepts and preserves every non-spell Human Origin Feat', () => {
-    for (const feat of ['Alert', 'Magic Initiate (Cleric)', 'Magic Initiate (Wizard)', 'Savage Attacker', 'Skilled']) {
+  it('accepts and preserves every SRD Human Origin Feat', () => {
+    for (const feat of ['Alert', 'Magic Initiate (Cleric)', 'Magic Initiate (Druid)', 'Magic Initiate (Wizard)', 'Savage Attacker', 'Skilled']) {
       const background = feat === 'Alert' ? 'Soldier' : 'Criminal';
       const character = {
         heroClass: 'Fighter', species: 'Human', background, humanSkill: 'Stealth', humanOriginFeat: feat,
         abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: background === 'Soldier' ? { str: 2, con: 1 } : { dex: 2, con: 1 },
         ...(feat === 'Skilled' ? { humanOriginSkills: ['Acrobatics', 'Arcana', 'Survival'] } : {}),
         ...(feat === 'Magic Initiate (Cleric)' ? { humanOriginCantrips: ['Sacred Flame', 'Toll the Dead'], humanOriginSpell: 'Guiding Bolt', humanOriginCastingAbility: 'wis' } : {}),
+        ...(feat === 'Magic Initiate (Druid)' ? { humanOriginCantrips: ['Poison Spray', 'Produce Flame'], humanOriginSpell: 'Entangle', humanOriginCastingAbility: 'wis' } : {}),
         ...(feat === 'Magic Initiate (Wizard)' ? { humanOriginCantrips: ['Fire Bolt', 'Ray of Frost'], humanOriginSpell: 'Magic Missile', humanOriginCastingAbility: 'int' } : {}),
       };
       const result = kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => character) }, blueParty: party });
@@ -743,6 +744,18 @@ describe('Kaggle arena bridge', () => {
     expect(hero.resources['magic-initiate:background']).toBe(1);
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...acolyte, originCantrips: ['Sacred Flame'] })) }, blueParty: party })).toThrow(/originCantrips/);
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...acolyte, background: 'Soldier', abilityIncreases: { str: 2, con: 1 } })) }, blueParty: party })).toThrow(/Magic Initiate/);
+  });
+
+  it('builds Human Magic Initiate (Druid) with engine-resolved cantrips and a free spell', () => {
+    const human = {
+      heroClass: 'Fighter', species: 'Human', background: 'Soldier', humanOriginFeat: 'Magic Initiate (Druid)', humanSkill: 'Perception',
+      abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 },
+      humanOriginCantrips: ['Poison Spray', 'Produce Flame'], humanOriginSpell: 'Entangle', humanOriginCastingAbility: 'wis',
+    };
+    const result = kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => human) }, blueParty: party });
+    const hero = result.state.battleState!.creatures.find(creature => creature.team === 'red')!;
+    expect(hero.monsterData.actions.map(action => action.name)).toEqual(expect.arrayContaining(['Poison Spray', 'Produce Flame', 'Entangle']));
+    expect(hero.resources['magic-initiate:human']).toBe(1);
   });
 
   it('gives Humans a second implemented Origin Feat with independent Magic Initiate use', () => {
