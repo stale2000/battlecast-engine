@@ -117,6 +117,14 @@ describe('Kaggle arena bridge', () => {
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...dexFighter, weapons: ['Greatsword'], shield: true })) }, blueParty: party })).toThrow(/two-handed/);
   });
 
+  it('exposes both legal melee and thrown attacks for catalog thrown weapons', () => {
+    const fighter = { heroClass: 'Fighter', species: 'Human', background: 'Soldier', humanOriginFeat: 'Alert', humanSkill: 'Perception', weapons: ['Javelin'], abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 } };
+    const party = { characters: Array.from({ length: 4 }, () => fighter) };
+    const creature = kaggleStep({ ...init(), redParty: party, blueParty: party }).state.battleState!.creatures.find(candidate => candidate.team === 'red')!;
+    expect(creature.monsterData.actions.find(action => action.name === 'Javelin (Melee)')?.reach).toBe(5);
+    expect(creature.monsterData.actions.find(action => action.name === 'Javelin (Thrown)')?.range).toEqual({ normal: 30, long: 120 });
+  });
+
   it('applies catalog armor and rejects unavailable heavy armor', () => {
     const fighter = { heroClass: 'Fighter', species: 'Human', background: 'Soldier', humanOriginFeat: 'Alert', humanSkill: 'Perception', armor: 'Plate', abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 } };
     const party = { characters: Array.from({ length: 4 }, () => fighter) };

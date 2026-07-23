@@ -1,5 +1,5 @@
 import { EncounterError, type AddCreatureOptions, type Team } from './encounter.js';
-import { buildHero, getAvailableSpells, HERO_CLASS_NAMES, type HeroSubclassName } from '../data/heroes.js';
+import { buildHero, getAvailableSpells, HERO_CLASS_NAMES, type HeroSubclassName, type WeaponOverride } from '../data/heroes.js';
 import {
   ARENA_BACKGROUNDS,
   ARENA_ARMOR,
@@ -42,6 +42,18 @@ function isWeaponProficient(heroClass: typeof HERO_CLASS_NAMES[number], weapon: 
   if (heroClass === 'Monk') return weapon.category === 'simple';
   if (heroClass === 'Rogue') return weapon.category === 'simple' || weapon.finesse === true;
   return weapon.category === 'simple';
+}
+
+function toWeaponOverrides(weapons: readonly (typeof ARENA_WEAPONS[string])[] | undefined): WeaponOverride[] | undefined {
+  return weapons?.flatMap<WeaponOverride>(weapon => {
+    const base = { name: weapon.name, die: weapon.die, damageType: weapon.damageType, attackAbility: weapon.attackAbility, finesse: weapon.finesse, loading: weapon.loading };
+    return weapon.thrownRange
+      ? [
+        { ...base, name: `${weapon.name} (Melee)`, type: 'melee' as const, reach: weapon.reach },
+        { ...base, name: `${weapon.name} (Thrown)`, type: 'ranged' as const, range: weapon.thrownRange },
+      ]
+      : [{ ...base, type: weapon.type, reach: weapon.reach, range: weapon.range } as WeaponOverride];
+  });
 }
 
 function speciesDarkvision(species: ArenaSpecies, elfLineage?: ElfLineage): string | undefined {
@@ -345,7 +357,7 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     return {
       heroClass, heroLevel: 5, team,
       heroOverrides: {
-        abilities, subclass: character.subclass as HeroSubclassName | undefined, spells, weapons, ...(armor ? { armorBaseOverride: ARENA_ARMOR[armor].armorBase, armorDexCapOverride: ARENA_ARMOR[armor].dexCap } : {}), ...(character.shield !== undefined ? { shieldOverride: character.shield as boolean } : {}),
+        abilities, subclass: character.subclass as HeroSubclassName | undefined, spells, weapons: toWeaponOverrides(weapons), ...(armor ? { armorBaseOverride: ARENA_ARMOR[armor].armorBase, armorDexCapOverride: ARENA_ARMOR[armor].dexCap } : {}), ...(character.shield !== undefined ? { shieldOverride: character.shield as boolean } : {}),
         ...(species && background ? {
           species, speciesChoice: elfLineage ?? gnomeLineage ?? goliathAncestry ?? tieflingLegacy ?? character.dragonAncestry as string | undefined, speciesCastingAbility, background, originFeat: BACKGROUNDS[background].originFeat, originFeats: [BACKGROUNDS[background].originFeat, ...(humanOriginFeat ? [humanOriginFeat] : [])], originSkills: [...new Set([...BACKGROUNDS[background].skills, ...(elfKeenSense ? [elfKeenSense] : []), ...(humanSkill ? [humanSkill] : []), ...selectedOriginSkills])], originTool: BACKGROUNDS[background].tool, originTools: [...new Set([BACKGROUNDS[background].tool, ...selectedOriginTools])],
           originEquipment: [...BACKGROUNDS[background].equipment], alignmentOverride: alignment, additionalSenses: speciesDarkvision(species, elfLineage), additionalLanguages: languages, speciesCantrips: lineageSpells(species, elfLineage ?? gnomeLineage ?? tieflingLegacy, selectedHighElfCantrip).cantrips, speciesPreparedSpells: lineageSpells(species, elfLineage ?? gnomeLineage ?? tieflingLegacy).prepared, sizeOverride: size ?? SPECIES[species].size, speedOverride: elfLineage === 'Wood Elf' ? 35 : SPECIES[species].speed,
