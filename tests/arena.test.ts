@@ -166,6 +166,13 @@ describe('Kaggle arena bridge', () => {
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...fighter, heroClass: 'Wizard' })) }, blueParty: party })).toThrow(/not proficient/);
   });
 
+  it('uses the engine Cleric Protector chassis for martial weapon and heavy armor validation', () => {
+    const spellCount = buildHero('Cleric', 5).actions.filter(action => (action.spellLevel ?? 0) > 0).length;
+    const cleric = { heroClass: 'Cleric', species: 'Human', background: 'Soldier', humanOriginFeat: 'Alert', humanSkill: 'Perception', armor: 'Plate', weapons: ['Glaive'], abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 }, spells: getAvailableSpells('Cleric', 5).filter(spell => spell.spellLevel > 0).slice(0, spellCount).map(spell => spell.name) };
+    const clericParty = { characters: Array.from({ length: 4 }, () => cleric) };
+    expect(() => kaggleStep({ ...init(), redParty: clericParty, blueParty: clericParty })).not.toThrow();
+  });
+
   it('supports the full catalog armor progression and applies heavy-armor speed penalties', () => {
     const dexRogue = { heroClass: 'Rogue', species: 'Human', background: 'Soldier', humanOriginFeat: 'Alert', humanSkill: 'Perception', armor: 'Studded Leather', abilities: { str: 8, dex: 15, con: 15, int: 13, wis: 12, cha: 8 }, abilityIncreases: { dex: 2, con: 1 } };
     const rogueParty = { characters: Array.from({ length: 4 }, () => dexRogue) };

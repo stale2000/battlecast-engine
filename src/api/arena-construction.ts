@@ -32,12 +32,12 @@ const TOOLS = ['Alchemist’s Supplies', 'Brewer’s Supplies', 'Calligrapher’
 const LANGUAGES = ['Common Sign Language', 'Draconic', 'Dwarvish', 'Elvish', 'Giant', 'Gnomish', 'Goblin', 'Halfling', 'Orc', 'Abyssal', 'Celestial', 'Deep Speech', 'Druidic', 'Infernal', 'Primordial', 'Sylvan', 'Thieves’ Cant', 'Undercommon'] as const;
 const ALIGNMENTS = ['Lawful Good', 'Neutral Good', 'Chaotic Good', 'Lawful Neutral', 'Neutral', 'Chaotic Neutral', 'Lawful Evil', 'Neutral Evil', 'Chaotic Evil'] as const;
 const ARMOR_TRAINING: Record<typeof HERO_CLASS_NAMES[number], readonly ('light' | 'medium' | 'heavy')[]> = {
-  Barbarian: ['light', 'medium'], Bard: ['light'], Cleric: ['light', 'medium'], Druid: ['light', 'medium'], Fighter: ['light', 'medium', 'heavy'], Monk: [], Paladin: ['light', 'medium', 'heavy'], Ranger: ['light', 'medium'], Rogue: ['light'], Sorcerer: [], Warlock: ['light'], Wizard: [],
+  Barbarian: ['light', 'medium'], Bard: ['light'], Cleric: ['light', 'medium', 'heavy'], Druid: ['light', 'medium'], Fighter: ['light', 'medium', 'heavy'], Monk: [], Paladin: ['light', 'medium', 'heavy'], Ranger: ['light', 'medium'], Rogue: ['light'], Sorcerer: [], Warlock: ['light'], Wizard: [],
 };
 const SHIELD_TRAINING = new Set<typeof HERO_CLASS_NAMES[number]>(['Barbarian', 'Cleric', 'Druid', 'Fighter', 'Paladin', 'Ranger']);
 
 function isWeaponProficient(heroClass: typeof HERO_CLASS_NAMES[number], weapon: typeof ARENA_WEAPONS[string]): boolean {
-  if (heroClass === 'Barbarian' || heroClass === 'Fighter' || heroClass === 'Paladin' || heroClass === 'Ranger') return true;
+  if (heroClass === 'Barbarian' || heroClass === 'Cleric' || heroClass === 'Fighter' || heroClass === 'Paladin' || heroClass === 'Ranger') return true;
   if (heroClass === 'Bard') return weapon.category === 'simple' || weapon.finesse === true;
   if (heroClass === 'Monk') return weapon.category === 'simple' || weapon.light === true;
   if (heroClass === 'Rogue') return weapon.category === 'simple' || weapon.finesse === true || weapon.light === true;
