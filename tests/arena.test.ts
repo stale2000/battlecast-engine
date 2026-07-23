@@ -239,6 +239,7 @@ describe('Kaggle arena bridge', () => {
     expect(hero.monsterData.actions.map(action => action.name)).toEqual(expect.arrayContaining(['Sacred Flame', 'Toll the Dead', 'Guiding Bolt']));
     expect(hero.resources['magic-initiate']).toBe(1);
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...acolyte, originCantrips: ['Sacred Flame'] })) }, blueParty: party })).toThrow(/originCantrips/);
+    expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...acolyte, background: 'Soldier', abilityIncreases: { str: 2, con: 1 } })) }, blueParty: party })).toThrow(/Magic Initiate/);
   });
 
   it('accepts only exact reachable move destinations and runs opportunity attacks', () => {

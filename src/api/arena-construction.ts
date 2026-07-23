@@ -152,6 +152,10 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     }
     const heroClass = character.heroClass as typeof HERO_CLASS_NAMES[number];
     const spells = parseSpells(character.spells, heroClass, label);
+    const hasOriginSpellChoice = character.originCantrips !== undefined || character.originSpell !== undefined || character.originCastingAbility !== undefined;
+    if (hasOriginSpellChoice && (!background || !['Magic Initiate (Cleric)', 'Magic Initiate (Wizard)'].includes(BACKGROUNDS[background].originFeat))) {
+      throw new EncounterError(`${label} origin spell choices require a Magic Initiate background.`);
+    }
     const origin = species && background ? magicInitiateActions(BACKGROUNDS[background].originFeat, character.originCantrips, character.originSpell, character.originCastingAbility, abilities, label) : undefined;
     return {
       heroClass, heroLevel: 5, team,
