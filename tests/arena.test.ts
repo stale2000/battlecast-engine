@@ -219,6 +219,20 @@ describe('Kaggle arena bridge', () => {
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...wizard, spells: ['Wish'] })) }, blueParty: casterParty })).toThrow(/spells/);
   });
 
+  it('builds Magic Initiate background spells with an authoritative free cast', () => {
+    const acolyte = {
+      heroClass: 'Fighter', species: 'Human', background: 'Acolyte', size: 'Medium',
+      abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { wis: 2, cha: 1 },
+      originCantrips: ['Sacred Flame', 'Toll the Dead'], originSpell: 'Guiding Bolt', originCastingAbility: 'wis',
+    };
+    const party = { characters: Array.from({ length: 4 }, () => acolyte) };
+    const result = kaggleStep({ ...init(), redParty: party, blueParty: party });
+    const hero = result.state.battleState!.creatures.find(creature => creature.team === 'red')!;
+    expect(hero.monsterData.actions.map(action => action.name)).toEqual(expect.arrayContaining(['Sacred Flame', 'Toll the Dead', 'Guiding Bolt']));
+    expect(hero.resources['magic-initiate']).toBe(1);
+    expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...acolyte, originCantrips: ['Sacred Flame'] })) }, blueParty: party })).toThrow(/originCantrips/);
+  });
+
   it('accepts only exact reachable move destinations and runs opportunity attacks', () => {
     const encounter = new Encounter({ seed: 1 });
     const [mover] = encounter.addCreature({ monster: 'Goblin Warrior', team: 'red', position: { x: 0, y: 0 } });

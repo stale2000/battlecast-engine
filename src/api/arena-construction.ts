@@ -11,8 +11,10 @@ import {
   type ArenaSpecies,
 } from '../data/arena-origins.js';
 import type { Abilities, MonsterAction } from '../types/monster.js';
+import { bless, burningHands, cureWounds, guidingBolt, healingWord, magicMissile, shieldOfFaith, sleep, thunderwave } from '../data/spells.js';
 
 type DragonAncestry = 'acid' | 'cold' | 'fire' | 'lightning' | 'poison';
+type CastingAbility = 'int' | 'wis' | 'cha';
 const ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 const POINT_COST: Record<number, number> = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
 const DRAGON_DAMAGE_TYPES = ['acid', 'cold', 'fire', 'lightning', 'poison'] as const;
@@ -63,6 +65,38 @@ function dragonbornBreath(ancestry: DragonAncestry, abilities: Abilities): Monst
   };
 }
 
+function magicInitiateActions(
+  feat: string | undefined,
+  cantrips: unknown,
+  spell: unknown,
+  castingAbility: unknown,
+  abilities: Abilities,
+  label: string,
+): { actions: MonsterAction[]; resources: Record<string, number> } | undefined {
+  if (feat !== 'Magic Initiate (Cleric)' && feat !== 'Magic Initiate (Wizard)') return undefined;
+  const list = feat === 'Magic Initiate (Cleric)' ? 'Cleric' : 'Wizard';
+  const allowedCantrips = list === 'Cleric' ? ['Sacred Flame', 'Toll the Dead'] : ['Fire Bolt', 'Ray of Frost'];
+  const allowedSpells = list === 'Cleric'
+    ? ['Bless', 'Cure Wounds', 'Healing Word', 'Shield of Faith', 'Guiding Bolt']
+    : ['Magic Missile', 'Burning Hands', 'Thunderwave', 'Sleep'];
+  if (!Array.isArray(cantrips) || cantrips.length !== 2 || cantrips.some(value => typeof value !== 'string') || new Set(cantrips).size !== 2 || cantrips.some(value => !allowedCantrips.includes(value))) {
+    throw new EncounterError(`${label}.originCantrips must select the two engine-supported ${list} cantrips.`);
+  }
+  if (typeof spell !== 'string' || !allowedSpells.includes(spell)) throw new EncounterError(`${label}.originSpell must select an engine-supported level-1 ${list} spell.`);
+  if (castingAbility !== 'int' && castingAbility !== 'wis' && castingAbility !== 'cha') throw new EncounterError(`${label}.originCastingAbility must be Intelligence, Wisdom, or Charisma.`);
+  const mod = Math.floor((abilities[castingAbility as CastingAbility] - 10) / 2);
+  const pb = 3;
+  const makeCantrip = (name: string): MonsterAction => name === 'Sacred Flame'
+    ? { name, type: 'special', description: `DEX save DC ${8 + mod + pb}; 2d8 radiant damage.`, spellLevel: 0, castingAbility: castingAbility as CastingAbility, damageType: 'radiant', savingThrow: { ability: 'dex', dc: 8 + mod + pb, damageOnFail: '2d8' }, range: { normal: 60, long: 60 }, targetScope: 'one_enemy' }
+    : name === 'Toll the Dead'
+      ? { name, type: 'special', description: `WIS save DC ${8 + mod + pb}; 2d8 necrotic damage.`, spellLevel: 0, castingAbility: castingAbility as CastingAbility, damageType: 'necrotic', savingThrow: { ability: 'wis', dc: 8 + mod + pb, damageOnFail: '2d8' }, range: { normal: 60, long: 60 }, targetScope: 'one_enemy' }
+      : name === 'Fire Bolt'
+        ? { name, type: 'ranged', description: `Ranged spell attack, 2d10 fire damage.`, spellLevel: 0, castingAbility: castingAbility as CastingAbility, attackBonus: mod + pb, damage: '2d10', damageType: 'fire', range: { normal: 120, long: 120 }, magical: true, targetScope: 'one_enemy' }
+        : { name, type: 'ranged', description: `Ranged spell attack, 2d8 cold damage.`, spellLevel: 0, castingAbility: castingAbility as CastingAbility, attackBonus: mod + pb, damage: '2d8', damageType: 'cold', range: { normal: 60, long: 60 }, magical: true, targetScope: 'one_enemy' };
+  const levelOne = spell === 'Bless' ? bless() : spell === 'Cure Wounds' ? cureWounds(castingAbility as CastingAbility, mod, pb) : spell === 'Healing Word' ? healingWord(castingAbility as CastingAbility, mod, pb) : spell === 'Shield of Faith' ? shieldOfFaith() : spell === 'Guiding Bolt' ? guidingBolt(castingAbility as CastingAbility, mod, pb) : spell === 'Magic Missile' ? magicMissile() : spell === 'Burning Hands' ? burningHands(castingAbility as CastingAbility, mod, pb) : spell === 'Thunderwave' ? thunderwave(castingAbility as CastingAbility, mod, pb) : sleep(castingAbility as CastingAbility, mod, pb);
+  return { actions: [...cantrips.map(makeCantrip), { ...levelOne, resourceCost: { key: 'magic-initiate', amount: 1 } }], resources: { 'magic-initiate': 1 } };
+}
+
 /** Validates a public arena party and converts it into trusted encounter options. */
 export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[] {
   const party = assertArenaObject(value, `${team}Party`);
@@ -83,7 +117,7 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     if (typeof character.heroClass !== 'string' || !HERO_CLASS_NAMES.includes(character.heroClass as typeof HERO_CLASS_NAMES[number])) {
       throw new EncounterError(`${label}.heroClass must be a supported hero class.`);
     }
-    if (!Object.keys(character).every(key => ['heroClass', 'abilities', 'subclass', 'spells', 'species', 'background', 'abilityIncreases', 'dragonAncestry', 'size'].includes(key))) {
+    if (!Object.keys(character).every(key => ['heroClass', 'abilities', 'subclass', 'spells', 'species', 'background', 'abilityIncreases', 'dragonAncestry', 'size', 'originCantrips', 'originSpell', 'originCastingAbility'].includes(key))) {
       throw new EncounterError(`${label} contains unsupported build choices.`);
     }
     const baseAbilities = parseAbilities(character.abilities, `${label}.abilities`);
@@ -118,6 +152,7 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     }
     const heroClass = character.heroClass as typeof HERO_CLASS_NAMES[number];
     const spells = parseSpells(character.spells, heroClass, label);
+    const origin = species && background ? magicInitiateActions(BACKGROUNDS[background].originFeat, character.originCantrips, character.originSpell, character.originCastingAbility, abilities, label) : undefined;
     return {
       heroClass, heroLevel: 5, team,
       heroOverrides: {
@@ -126,9 +161,9 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
           species, background, originFeat: BACKGROUNDS[background].originFeat, originSkills: [...BACKGROUNDS[background].skills], originTool: BACKGROUNDS[background].tool,
           originEquipment: [...BACKGROUNDS[background].equipment], sizeOverride: size ?? SPECIES[species].size, speedOverride: SPECIES[species].speed,
           hitPointBonus: SPECIES[species].maxHpBonusAtLevel5, additionalResistances: SPECIES[species].resistances ? [...SPECIES[species].resistances] : undefined,
-          additionalResources: species === 'Orc' ? { 'orc-adrenaline-rush': 3 } : undefined,
-          additionalActions: species === 'Dragonborn' ? [dragonbornBreath(character.dragonAncestry as DragonAncestry, abilities)] : undefined,
-          ...(species === 'Dragonborn' ? { additionalResistances: [character.dragonAncestry as DragonAncestry], additionalResources: { 'dragonborn-breath': 3, 'dragonborn-flight': 1 } } : {}),
+          additionalResources: { ...(species === 'Orc' ? { 'orc-adrenaline-rush': 3 } : {}), ...(origin?.resources ?? {}) },
+          additionalActions: [...(species === 'Dragonborn' ? [dragonbornBreath(character.dragonAncestry as DragonAncestry, abilities)] : []), ...(origin?.actions ?? [])],
+          ...(species === 'Dragonborn' ? { additionalResistances: [character.dragonAncestry as DragonAncestry], additionalResources: { ...(origin?.resources ?? {}), 'dragonborn-breath': 3, 'dragonborn-flight': 1 } } : {}),
         } : {}),
       },
     };
