@@ -80,6 +80,14 @@ function drowFaerieFire(castingAbility: CastingAbility, abilities: Abilities): M
   };
 }
 
+function tieflingCantrip(legacy: TieflingLegacy, castingAbility: CastingAbility, abilities: Abilities): MonsterAction {
+  const mod = Math.floor((abilities[castingAbility] - 10) / 2);
+  const attackBonus = mod + 3;
+  if (legacy === 'Infernal') return { name: 'Fire Bolt', type: 'ranged', description: 'Ranged spell attack, 2d10 fire damage.', spellLevel: 0, castingAbility, attackBonus, damage: '2d10', damageType: 'fire', range: { normal: 120, long: 120 }, magical: true, targetScope: 'one_enemy' };
+  if (legacy === 'Abyssal') return { name: 'Poison Spray', type: 'special', description: `CON save DC ${8 + attackBonus}; 2d12 poison damage.`, spellLevel: 0, castingAbility, damageType: 'poison', savingThrow: { ability: 'con', dc: 8 + attackBonus, damageOnFail: '2d12' }, range: { normal: 10, long: 10 }, targetScope: 'one_enemy' };
+  return { name: 'Chill Touch', type: 'ranged', description: 'Ranged spell attack, 2d8 necrotic damage. The target cannot regain HP until your next turn.', spellLevel: 0, castingAbility, attackBonus, damage: '2d8', damageType: 'necrotic', range: { normal: 120, long: 120 }, magical: true, targetScope: 'one_enemy', effects: [{ kind: 'blocksHealing', key: 'Chill Touch', tick: 'sourceTurnStart', expiresAfterRounds: 1 }] };
+}
+
 function magicInitiateActions(
   feat: string | undefined,
   cantrips: unknown,
@@ -210,7 +218,7 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
           originEquipment: [...BACKGROUNDS[background].equipment], sizeOverride: size ?? SPECIES[species].size, speedOverride: elfLineage === 'Wood Elf' ? 35 : SPECIES[species].speed,
           hitPointBonus: SPECIES[species].maxHpBonusAtLevel5, additionalResistances: tieflingLegacy ? [{ Abyssal: 'poison', Chthonic: 'necrotic', Infernal: 'fire' }[tieflingLegacy]] : SPECIES[species].resistances ? [...SPECIES[species].resistances] : undefined,
           additionalResources: { ...(species === 'Orc' ? { 'orc-adrenaline-rush': 3 } : {}), ...(species === 'Goliath' ? { 'goliath-large-form': 1, 'goliath-giant-ancestry': 3 } : {}), ...(species === 'Elf' && elfLineage === 'Drow' ? { 'drow-faerie-fire': 1 } : {}), ...(origin?.resources ?? {}), ...(humanOrigin?.resources ?? {}) },
-          additionalActions: [...(species === 'Dragonborn' ? [dragonbornBreath(character.dragonAncestry as DragonAncestry, abilities)] : []), ...(species === 'Elf' && elfLineage === 'Drow' ? [drowFaerieFire(speciesCastingAbility!, abilities)] : []), ...(origin?.actions ?? []), ...(humanOrigin?.actions ?? [])],
+          additionalActions: [...(species === 'Dragonborn' ? [dragonbornBreath(character.dragonAncestry as DragonAncestry, abilities)] : []), ...(species === 'Elf' && elfLineage === 'Drow' ? [drowFaerieFire(speciesCastingAbility!, abilities)] : []), ...(species === 'Tiefling' ? [tieflingCantrip(tieflingLegacy!, speciesCastingAbility!, abilities)] : []), ...(origin?.actions ?? []), ...(humanOrigin?.actions ?? [])],
           ...(species === 'Dragonborn' ? { additionalResistances: [character.dragonAncestry as DragonAncestry], additionalResources: { ...(origin?.resources ?? {}), ...(humanOrigin?.resources ?? {}), 'dragonborn-breath': 3, 'dragonborn-flight': 1 } } : {}),
         } : {}),
       },

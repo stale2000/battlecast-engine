@@ -133,6 +133,7 @@ describe('Kaggle arena bridge', () => {
     const party = { characters: Array.from({ length: 4 }, () => tiefling) };
     const result = kaggleStep({ ...init(), redParty: party, blueParty: party });
     expect(result.state.battleState!.creatures.find(creature => creature.team === 'red')!.monsterData.resistances).toContain('fire');
+    expect(result.state.battleState!.creatures.find(creature => creature.team === 'red')!.monsterData.actions.some(action => action.name === 'Fire Bolt')).toBe(true);
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...tiefling, tieflingLegacy: undefined })) }, blueParty: party })).toThrow(/tieflingLegacy/);
   });
 
