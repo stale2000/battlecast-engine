@@ -112,6 +112,14 @@ describe('Kaggle arena bridge', () => {
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...fighter, heroClass: 'Wizard' })) }, blueParty: party })).toThrow(/not proficient/);
   });
 
+  it('applies a selected shield and permits an explicit shield opt-out', () => {
+    const base = { heroClass: 'Fighter', species: 'Human', background: 'Soldier', humanOriginFeat: 'Alert', humanSkill: 'Perception', armor: 'Plate', abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 } };
+    const withShield = { characters: Array.from({ length: 4 }, () => ({ ...base, shield: true })) };
+    const withoutShield = { characters: Array.from({ length: 4 }, () => ({ ...base, shield: false })) };
+    const ac = (party: typeof withShield) => kaggleStep({ ...init(), redParty: party, blueParty: party }).state.battleState!.creatures.find(creature => creature.team === 'red')!.monsterData.ac;
+    expect(ac(withShield)).toBe(ac(withoutShield) + 2);
+  });
+
   it('preserves two validated SRD language choices', () => {
     const hero = { heroClass: 'Fighter', species: 'Dwarf', background: 'Soldier', languages: ['Dwarvish', 'Giant'], abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 } };
     const party = { characters: Array.from({ length: 4 }, () => hero) };
