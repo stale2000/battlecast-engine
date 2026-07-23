@@ -148,6 +148,17 @@ describe('Kaggle arena bridge', () => {
     expect(creature.resources['abyssal-hold-person']).toBe(1);
   });
 
+  it('adds Chthonic False Life as a self-targeted lineage free cast', () => {
+    const chthonic = {
+      heroClass: 'Fighter', species: 'Tiefling', tieflingLegacy: 'Chthonic', speciesCastingAbility: 'cha', background: 'Soldier',
+      abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 },
+    };
+    const party = { characters: Array.from({ length: 4 }, () => chthonic) };
+    const creature = kaggleStep({ ...init(), redParty: party, blueParty: party }).state.battleState!.creatures.find(candidate => candidate.team === 'red')!;
+    expect(creature.monsterData.actions.some(action => action.name === 'False Life' && action.resourceCost?.key === 'chthonic-false-life')).toBe(true);
+    expect(creature.resources['chthonic-false-life']).toBe(1);
+  });
+
   it('requires an Elf lineage and applies Wood Elf speed', () => {
     const elf = {
       heroClass: 'Fighter', species: 'Elf', elfLineage: 'Wood Elf', speciesCastingAbility: 'wis', background: 'Soldier',
