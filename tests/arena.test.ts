@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { Encounter } from '../src/api/encounter.js';
 import { getActiveCreature, getLegalActions, applyLegalAction, startArena } from '../src/api/arena.js';
 import { reachableMovementDestinations } from '../src/engine/ai-movement.js';
+import { processTurnStart } from '../src/engine/ai-turn.js';
 import { applyDamage, hasDisadvantage, resolveAttack } from '../src/engine/combat.js';
 import { rollSaveWithBuffs } from '../src/engine/combat-buffs.js';
 import { rollAttack } from '../src/engine/dice.js';
@@ -415,6 +416,9 @@ describe('Kaggle arena bridge', () => {
     applyLegalAction(encounter, getLegalActions(encounter, active.id).find(action => action.type === 'species_flight')!);
     expect(active.temporaryFlightSpeed).toBe(active.monsterData.speed.walk);
     expect(active.resources['dragonborn-flight']).toBe(0);
+    encounter.state!.round += 10;
+    encounter.runWithRng(() => processTurnStart(encounter.state!, active));
+    expect(active.temporaryFlightSpeed).toBeUndefined();
   });
 
   it('resolves Orc Adrenaline Rush through the legal-action catalogue', () => {

@@ -397,6 +397,17 @@ export function processTurnStart(state: BattleState, creature: Creature): boolea
     }
   }
   processConditionTimers(state, creature);
+  const incapacitated = creature.conditions.some(condition =>
+    condition === 'incapacitated' || condition === 'stunned' || condition === 'paralyzed' || condition === 'petrified' || condition === 'unconscious'
+  );
+  if (incapacitated || (creature.temporaryFlightExpiresRound !== undefined && state.round >= creature.temporaryFlightExpiresRound)) {
+    creature.temporaryFlightSpeed = undefined;
+    creature.temporaryFlightExpiresRound = undefined;
+  }
+  if (incapacitated || (creature.temporarySizeExpiresRound !== undefined && state.round >= creature.temporarySizeExpiresRound)) {
+    creature.temporarySize = undefined;
+    creature.temporarySizeExpiresRound = undefined;
+  }
   tryActivateSuperiorDefense(state, creature);
   processTargetTurnStartOngoingEffects(state, creature);
   if (!creature.isAlive) return false;

@@ -98,6 +98,7 @@ export function applyOriginLegalAction(state: BattleState, active: Creature, act
     }
     consumeResource(active, 'goliath-large-form');
     active.temporarySize = 'Large';
+    active.temporarySizeExpiresRound = state.round + 10;
     active.movementRemaining += 10;
     active.bonusActionUsed = true;
     pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Large Form', details: `${active.displayName} becomes Large and gains speed.`, type: 'special' });
@@ -150,6 +151,7 @@ export function applyOriginLegalAction(state: BattleState, active: Creature, act
     throw new Error('Illegal or stale arena Draconic Flight.');
   }
   active.temporaryFlightSpeed = active.monsterData.speed.walk;
+  active.temporaryFlightExpiresRound = state.round + 10;
   active.airborne = true;
   active.bonusActionUsed = true;
   pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Draconic Flight', details: `${active.displayName} sprouts spectral wings and gains a Fly Speed.`, type: 'special' });
