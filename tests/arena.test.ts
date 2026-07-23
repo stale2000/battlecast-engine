@@ -4,7 +4,7 @@ import { Encounter } from '../src/api/encounter.js';
 import { getActiveCreature, getLegalActions, applyLegalAction, startArena } from '../src/api/arena.js';
 import { reachableMovementDestinations } from '../src/engine/ai-movement.js';
 import { processTurnStart } from '../src/engine/ai-turn.js';
-import { applyDamage, applyDamageRollPenalty, hasDisadvantage, processTargetTurnEndOngoingEffects, resolveAttack } from '../src/engine/combat.js';
+import { applyDamage, applyDamageRollPenalty, getEffectiveMoveSpeed, hasDisadvantage, processTargetTurnEndOngoingEffects, resolveAttack } from '../src/engine/combat.js';
 import { dropConcentratedBuffsFrom } from '../src/engine/combat-buffs.js';
 import { canSee } from '../src/engine/ai-targeting.js';
 import { rollSaveWithBuffs } from '../src/engine/combat-buffs.js';
@@ -302,25 +302,38 @@ describe('Kaggle arena bridge', () => {
     expect(active.bonusActionUsed).toBe(true);
   });
 
-  it('preserves an engine-supported High Elf cantrip replacement as a legal action', () => {
+  it('preserves every engine-supported High Elf cantrip replacement as a legal action', () => {
     const highElf = {
       heroClass: 'Fighter', species: 'Elf', elfLineage: 'High Elf', highElfCantrip: 'Fire Bolt', speciesCastingAbility: 'wis', elfKeenSense: 'Perception', background: 'Soldier',
       abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 },
     };
-    const result = kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => highElf) }, blueParty: party });
-    const elf = result.state.battleState!.creatures.find(creature => creature.team === 'red')!;
-    expect(elf.monsterData.speciesCantrips).toEqual(['Fire Bolt']);
-    expect(elf.monsterData.actions.some(action => action.name === 'Fire Bolt')).toBe(true);
+    for (const highElfCantrip of ['Chill Touch', 'Fire Bolt', 'Poison Spray', 'Ray of Frost']) {
+      const result = kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...highElf, highElfCantrip })) }, blueParty: party });
+      const elf = result.state.battleState!.creatures.find(creature => creature.team === 'red')!;
+      expect(elf.monsterData.speciesCantrips).toEqual([highElfCantrip]);
+      expect(elf.monsterData.actions.some(action => action.name === highElfCantrip)).toBe(true);
+    }
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...highElf, highElfCantrip: 'Wish' })) }, blueParty: party })).toThrow(/highElfCantrip/);
   });
 
-  it('gives High Elf Ray of Frost its SRD speed reduction payload', () => {
+  it('applies High Elf Ray of Frost speed reduction through combat resolution', () => {
     const highElf = {
       heroClass: 'Fighter', species: 'Elf', elfLineage: 'High Elf', highElfCantrip: 'Ray of Frost', speciesCastingAbility: 'wis', elfKeenSense: 'Perception', background: 'Soldier',
       abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 },
     };
-    const hero = kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => highElf) }, blueParty: party }).state.battleState!.creatures.find(creature => creature.team === 'red')!;
-    expect(hero.monsterData.actions.find(action => action.name === 'Ray of Frost')?.buffOnHit).toMatchObject({ speedPenalty: 10, expiresOnSourceTurnStart: true });
+    const result = kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => highElf) }, blueParty: party });
+    const encounter = Encounter.fromJSON(result.state);
+    const state = encounter.state!;
+    const hero = state.creatures.find(creature => creature.team === 'red')!;
+    const target = state.creatures.find(creature => creature.team === 'blue')!;
+    const rayOfFrost = hero.monsterData.actions.find(action => action.name === 'Ray of Frost')!;
+    expect(rayOfFrost.buffOnHit).toMatchObject({ speedPenalty: 10, expiresOnSourceTurnStart: true });
+    rayOfFrost.attackBonus = 100;
+    hero.position = { x: 1, y: 1 };
+    target.position = { x: 6, y: 1 };
+    const baseSpeed = getEffectiveMoveSpeed(target, state);
+    encounter.runWithRng(() => resolveAttack(state, hero, target, rayOfFrost));
+    expect(getEffectiveMoveSpeed(target, state)).toBe(baseSpeed - 10);
   });
 
   it('casts Wood Elf Pass without Trace through the shared concentration path', () => {
