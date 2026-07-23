@@ -181,6 +181,18 @@ describe('Kaggle arena bridge', () => {
     expect(withRng({ next: () => damageRolls.shift()! }, () => rollDamage('1d4+2', false, true).total)).toBe(5);
   });
 
+  it('constructs Healer with its authoritative arena resources', () => {
+    const human = {
+      heroClass: 'Fighter', species: 'Human', background: 'Criminal', humanOriginFeat: 'Healer', humanSkill: 'Perception',
+      abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { dex: 2, con: 1 },
+    };
+    const result = kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => human) }, blueParty: party });
+    const healer = result.state.battleState!.creatures.find(creature => creature.team === 'red')!;
+    expect(healer.monsterData.originFeats).toContain('Healer');
+    expect(healer.monsterData.originSkills).toContain('Medicine');
+    expect(healer.resources).toMatchObject({ 'healer-kit': 10, 'hit-die': 5 });
+  });
+
   it('requires a Tiefling legacy and applies its automatic resistance', () => {
     const tiefling = {
       heroClass: 'Fighter', species: 'Tiefling', tieflingLegacy: 'Infernal', speciesCastingAbility: 'cha', background: 'Soldier', size: 'Small',
