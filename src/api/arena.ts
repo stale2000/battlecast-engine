@@ -194,6 +194,10 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
           actions.push(...darknessSpellActions(state, active, action, actionIndex));
           continue;
         }
+        if (action.targetScope === 'all_allies_in_area') {
+          actions.push({ id: `spell:${actionIndex}:${slug(action.name)}:allies`, type: 'spell', actionName: action.name, actionIndex, targetId: active.id });
+          continue;
+        }
         if (action.savingThrow?.area) {
           actions.push(...areaSpellActions(state, active, action, actionIndex));
           continue;
@@ -224,6 +228,10 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
     if (enemies.some(target => creatureDistance(active, target) <= 5)) {
       actions.push({ id: 'disengage', type: 'disengage', isBonusAction: false });
       if (active.monsterData.heroClass === 'Rogue' && !active.bonusActionUsed) actions.push({ id: 'bonus_disengage', type: 'disengage', isBonusAction: true });
+    }
+    if (enemies.some(target => !canSee(state, target, active))) {
+      actions.push({ id: 'hide', type: 'hide', isBonusAction: false });
+      if (active.monsterData.heroClass === 'Rogue' && !active.bonusActionUsed) actions.push({ id: 'bonus_hide', type: 'hide', isBonusAction: true });
     }
   }
   if (active.monsterData.heroClass === 'Rogue' && !active.bonusActionUsed && !active.hasMovedThisTurn && !active.turnFlags.steadyAim) {
@@ -351,6 +359,9 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       if (!reachableMovementDestinations(active, state).some(cell => cell.x === destination.x && cell.y === destination.y)) throw new EncounterError('Illegal or stale move destination.');
       const oldPosition = { ...active.position };
       moveToDestination(active, destination, state);
+      // A voluntary arena movement ends the current Hide. We only issue a
+      // new Hide after validating concealment at the creature's new point.
+      active.activeBuffs = active.activeBuffs.filter(buff => !buff.key.startsWith('hidden-from:'));
       active.hasMovedThisTurn = active.position.x !== oldPosition.x || active.position.y !== oldPosition.y;
       if ((active.position.x !== oldPosition.x || active.position.y !== oldPosition.y) && !active.turnFlags.arenaDisengaged && runOpportunityAttacks(state, active, oldPosition)) {
         checkBattleComplete(state);
@@ -370,6 +381,24 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       if (legal.isBonusAction) active.bonusActionUsed = true;
       else active.hasActed = true;
       pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Disengage', details: `${active.displayName} disengages.`, type: 'move' });
+    } else if (legal.type === 'hide') {
+      const stealth = (active.monsterData.skills?.Stealth ?? abilityModifier(active.monsterData.abilities.dex))
+        + Math.max(0, ...(active.activeBuffs ?? []).map(buff => buff.stealthBonus ?? 0));
+      const hiddenFrom = state.creatures.filter(target => target.team !== active.team && target.isAlive && !target.dying && !canSee(state, target, active));
+      let successes = 0;
+      for (const target of hiddenFrom) {
+        const passivePerception = 10 + (target.monsterData.skills?.Perception ?? abilityModifier(target.monsterData.abilities.wis));
+        if (rollDice('1d20').total + stealth < passivePerception) continue;
+        active.activeBuffs = active.activeBuffs.filter(buff => buff.key !== `hidden-from:${target.id}`);
+        active.activeBuffs.push({ name: 'Hidden', key: `hidden-from:${target.id}`, casterId: active.id, appliedRound: state.round, endRound: state.round + 600 });
+        successes++;
+      }
+      if (legal.isBonusAction) active.bonusActionUsed = true;
+      else active.hasActed = true;
+      pushLog(state, {
+        round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Hide',
+        details: successes ? `${active.displayName} hides from ${successes} foe${successes === 1 ? '' : 's'}.` : `${active.displayName} fails to hide.`, type: 'special',
+      });
     } else if (legal.type === 'help') {
       const target = state.creatures.find(creature => creature.id === legal.targetId);
       if (!target || !target.isAlive || target.team === active.team || creatureDistance(active, target) > 5) throw new EncounterError(`Illegal or stale arena help "${legal.id}".`);

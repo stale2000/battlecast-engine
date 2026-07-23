@@ -484,6 +484,7 @@ export function applyBuffFromSpell(
     saveDisadvantage: tmpl.saveDisadvantage,
     speedPenalty: tmpl.speedPenalty,
     speedBonus: tmpl.speedBonus,
+    stealthBonus: tmpl.stealthBonus,
     preventsOpportunityAttacks: tmpl.preventsOpportunityAttacks,
     attackBonusForAllAttackers: tmpl.attackBonusForAllAttackers,
     spellAttackAdvantage: tmpl.spellAttackAdvantage,

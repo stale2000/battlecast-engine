@@ -398,6 +398,8 @@ export interface BuffTemplate {
   speedPenalty?: number;
   /** Longstrider-style increase to all movement speeds. */
   speedBonus?: number;
+  /** Flat bonus to Dexterity (Stealth) checks, e.g. Pass without Trace. */
+  stealthBonus?: number;
   /** One-shot rider such as Barbarian Staggering Blow: no Opportunity Attacks. */
   preventsOpportunityAttacks?: boolean;
   /** One-shot rider such as Barbarian Sundering Blow: next other attacker gets a flat bonus. */
@@ -765,6 +767,8 @@ export interface ActiveBuff {
   speedPenalty?: number;
   /** Longstrider-style increase to all movement speeds. */
   speedBonus?: number;
+  /** Flat bonus to Dexterity (Stealth) checks, e.g. Pass without Trace. */
+  stealthBonus?: number;
   /** One-shot rider such as Barbarian Staggering Blow: no Opportunity Attacks. */
   preventsOpportunityAttacks?: boolean;
   /** One-shot rider such as Barbarian Sundering Blow: next other attacker gets a flat bonus. */

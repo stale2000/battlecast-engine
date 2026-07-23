@@ -381,6 +381,26 @@ describe('Kaggle arena bridge', () => {
     expect(canSee(encounter.state!, casterCreature, targetCreature)).toBe(true);
   });
 
+  it('resolves Hide against passive Perception and clears it after voluntary movement', () => {
+    const encounter = new Encounter({ seed: 1, gridSize: 12 });
+    const [rogue] = encounter.addCreature({ heroClass: 'Rogue', heroLevel: 5, team: 'red', position: { x: 0, y: 0 } });
+    const [target] = encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 4, y: 0 } });
+    encounter.start();
+    const state = encounter.state!;
+    const rogueCreature = state.creatures.find(creature => creature.id === rogue.id)!;
+    const targetCreature = state.creatures.find(creature => creature.id === target.id)!;
+    rogueCreature.monsterData.skills = { ...(rogueCreature.monsterData.skills ?? {}), Stealth: 50 };
+    state.darknessZones = [{ sourceId: target.id, x: 2, y: 0, radius: 5, endRound: 100, requiresConcentration: false }];
+    state.initiativeOrder = [rogue.id]; startArena(encounter);
+    applyLegalAction(encounter, getLegalActions(encounter, rogue.id).find(action => action.id === 'hide')!);
+    state.darknessZones = [];
+    expect(canSee(state, targetCreature, rogueCreature)).toBe(false);
+    const move = getLegalActions(encounter, rogue.id).find(action => action.type === 'move_to')!;
+    const destination = reachableMovementDestinations(rogueCreature, state)[0]!;
+    applyLegalAction(encounter, { ...move, destination });
+    expect(canSee(state, targetCreature, rogueCreature)).toBe(true);
+  });
+
   it('applies Gnomish Cunning automatically to mental saves', () => {
     const encounter = new Encounter({ seed: 1 });
     const [gnome] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { species: 'Gnome' }, team: 'red' });

@@ -285,6 +285,7 @@ export function adjustForResistance(dmg: number, damageType: string, target: Cre
  * when there's no terrain data - pre-terrain behavior.
  */
 export function canSee(state: BattleState, attacker: Creature, target: Creature): boolean {
+  if (target.activeBuffs?.some(buff => buff.key === `hidden-from:${attacker.id}`)) return false;
   const sightSet = state.terrainSightBlocked;
   const aFp = getFootprintSize(getActiveSize(attacker));
   const tFp = getFootprintSize(getActiveSize(target));

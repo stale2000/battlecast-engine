@@ -532,6 +532,11 @@ function hasAdjacentAlly(state: BattleState, creature: Creature, target: Creatur
 function hasAdvantage(state: BattleState, attacker: Creature, target: Creature, action: MonsterAction): boolean {
   let adv = false;
 
+  // A creature that successfully hid from this target attacks with
+  // Advantage. resolveAttack removes the hidden state immediately after
+  // the attempt, so the benefit cannot be reused for later attacks.
+  if (attacker.activeBuffs?.some(b => b.key === `hidden-from:${target.id}`)) adv = true;
+
   // Weapon Mastery: Vex gives this attacker Advantage on the next attack roll.
   if (target.activeBuffs?.some(b => b.advantageForAttackerId === attacker.id)) adv = true;
   // Guiding Bolt-style rider: the next attack roll against this target has Advantage.
@@ -3734,6 +3739,9 @@ function resolveAttack(
     .map(b => b.key);
 
   const adv = hasAdvantage(state, attacker, target, action);
+  // Making an attack reveals a hidden creature, hit or miss. Resolve the
+  // attack's Advantage first, then remove the state before any follow-up.
+  attacker.activeBuffs = attacker.activeBuffs.filter(buff => !buff.key.startsWith('hidden-from:'));
   const escapeTheHordeDisadvantage = opts?.cause === 'opportunity'
     && target.monsterData.heroClass === 'Ranger'
     && (target.monsterData.heroLevel ?? 0) >= 7
