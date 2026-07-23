@@ -2371,6 +2371,7 @@ export interface HeroOverrides {
   acOverride?: number;
   armorBaseOverride?: number;
   armorDexCapOverride?: number;
+  shieldOverride?: boolean;
   speedOverride?: number;
   sizeOverride?: MonsterData['size'];
   hitPointBonus?: number;
@@ -2603,7 +2604,8 @@ export function buildCustomHero(
   if (overrides.hpOverride === undefined) hp += overrides.hitPointBonus ?? 0;
   const rolledHpBonus = conMod * level + (className === 'Sorcerer' && level >= 3 ? level : 0) + (overrides.hitPointBonus ?? 0);
   const armorOverride = overrides.armorBaseOverride ?? ((className === 'Fighter' || className === 'Paladin' || className === 'Cleric') && level >= 5 ? 18 : undefined);
-  let ac = overrides.acOverride ?? (overrides.armorDexCapOverride === undefined ? computeAC(spec, dexMod, wisMod, conMod, armorOverride) : armorOverride! + Math.min(dexMod, overrides.armorDexCapOverride) + (spec.shield ? 2 : 0));
+  const shieldBonus = (overrides.shieldOverride ?? spec.shield) ? 2 : 0;
+  let ac = overrides.acOverride ?? (overrides.armorDexCapOverride === undefined ? computeAC({ ...spec, shield: shieldBonus > 0 }, dexMod, wisMod, conMod, armorOverride) : armorOverride! + Math.min(dexMod, overrides.armorDexCapOverride) + shieldBonus);
   if (!overrides.acOverride && className === 'Sorcerer' && level >= 3) ac = 10 + dexMod + abilityMod(abilities.cha);
   if (!overrides.acOverride && hasDefenseStyle(className, level)) ac += 1;
   if (!overrides.acOverride && className === 'Monk' && level >= 5) ac += 1;
