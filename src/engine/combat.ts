@@ -1332,7 +1332,11 @@ function applyWeaponMasteryOnHit(
       resolveToppleMastery(state, attacker, target, action);
       break;
     case 'push':
-      moveTargetByPush(state, attacker, target);
+      if (action.pushOnHitOncePerTurn && attacker.turnFlags?.[`push-on-hit:${action.name}`]) break;
+      moveTargetByPush(state, attacker, target, action.pushOnHit ?? 10);
+      if (action.pushOnHitOncePerTurn) {
+        attacker.turnFlags = { ...(attacker.turnFlags ?? {}), [`push-on-hit:${action.name}`]: true };
+      }
       break;
     case 'graze':
     case 'nick':
@@ -3885,9 +3889,9 @@ function resolveAttack(
 
     if (action.damage) {
       const overchannelDamage = tryConsumeWizardOverchannel(state, attacker, action, action.damage);
-      let totalDmg = applyDamageRollPenalty(attacker, overchannelDamage ?? rollDamage(action.damage, isCrit).total);
+      let totalDmg = applyDamageRollPenalty(attacker, overchannelDamage ?? rollDamage(action.damage, isCrit, action.rerollDamageOnes).total);
       if (overchannelDamage === null && hasOriginFeat(attacker, 'Savage Attacker') && !attacker.turnFlags.savageAttackerUsed && action.spellLevel === undefined && (action.type === 'melee' || action.type === 'ranged')) {
-        totalDmg = Math.max(totalDmg, applyDamageRollPenalty(attacker, rollDamage(action.damage, isCrit).total));
+        totalDmg = Math.max(totalDmg, applyDamageRollPenalty(attacker, rollDamage(action.damage, isCrit, action.rerollDamageOnes).total));
         attacker.turnFlags.savageAttackerUsed = true;
       }
       const mainType = action.damageType || 'bludgeoning';
@@ -3947,7 +3951,7 @@ function resolveAttack(
       }
 
       if (autoCrit && !isCrit) {
-        const critDmg = rollDamage(action.damage, true);
+        const critDmg = rollDamage(action.damage, true, action.rerollDamageOnes);
         totalDmg = applyDamageRollPenalty(attacker, critDmg.total);
         pushLog(state, {
           round: state.round, turn: state.turnIndex,

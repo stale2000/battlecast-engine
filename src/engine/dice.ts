@@ -12,7 +12,7 @@ export interface RollResult {
 }
 
 // Parse and roll dice expressions like "2d6+3", "1d20", "4d8+2d6+5"
-export function rollDice(expression: string): RollResult {
+export function rollDice(expression: string, rerollOnes = false): RollResult {
   const cleaned = expression.replace(/\s/g, '');
   let total = 0;
   const allRolls: number[] = [];
@@ -31,7 +31,8 @@ export function rollDice(expression: string): RollResult {
       const sides = parseInt(sidesStr);
 
       for (let i = 0; i < count; i++) {
-        const roll = Math.floor(engineRandom() * sides) + 1;
+        let roll = Math.floor(engineRandom() * sides) + 1;
+        if (rerollOnes && roll === 1) roll = Math.floor(engineRandom() * sides) + 1;
         allRolls.push(roll * sign);
         total += roll * sign;
       }
@@ -119,9 +120,9 @@ export function rollInitiative(dexMod: number): number {
 }
 
 // Roll damage with possible critical (double dice)
-export function rollDamage(expression: string, critical: boolean = false): RollResult {
+export function rollDamage(expression: string, critical: boolean = false, rerollOnes = false): RollResult {
   if (!critical) {
-    return rollDice(expression);
+    return rollDice(expression, rerollOnes);
   }
 
   // On critical, double the dice but not the modifier
@@ -143,7 +144,7 @@ export function rollDamage(expression: string, critical: boolean = false): RollR
   }
 
   if (critExpression.startsWith('+')) critExpression = critExpression.slice(1);
-  return rollDice(critExpression);
+  return rollDice(critExpression, rerollOnes);
 }
 
 // Parse a damage string to get average damage

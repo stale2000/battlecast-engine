@@ -219,6 +219,12 @@ export interface MonsterAction {
   buffOnSuccessfulSave?: BuffTemplate;
   /** Failed-save forced movement in feet away from the caster, e.g. Thunderwave. */
   pushOnFailedSave?: number;
+  /** Forced movement after this attack hits, e.g. Tavern Brawler's 5-foot push. */
+  pushOnHit?: number;
+  /** Limit pushOnHit to one successful hit per turn. */
+  pushOnHitOncePerTurn?: boolean;
+  /** Reroll damage dice that show 1, keeping the replacement roll. */
+  rerollDamageOnes?: boolean;
   /** On-hit forced movement in feet toward the attacker, e.g. Balor Flame Whip. */
   pullTowardAttackerOnHit?: number;
   /** Restrict this spell to targets of a specific creature type
