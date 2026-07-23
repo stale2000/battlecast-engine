@@ -743,6 +743,11 @@ export function executeSpell(
   }
   const castAction = scaleAttackSpellForSlot(action, slotLevelUsed);
 
+  if (castAction.buffOnFailedSave?.requiresConcentration) {
+    dropConcentratedBuffsFrom(state, caster.id);
+    caster.concentratingOn = castAction.buffOnFailedSave.key;
+  }
+
   if (castAction.powerWord) {
     return executePowerWord(state, caster, castAction, primaryTarget);
   }

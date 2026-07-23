@@ -69,6 +69,17 @@ function dragonbornBreath(ancestry: DragonAncestry, abilities: Abilities): Monst
   };
 }
 
+function drowFaerieFire(castingAbility: CastingAbility, abilities: Abilities): MonsterAction {
+  const dc = 8 + Math.floor((abilities[castingAbility] - 10) / 2) + 3;
+  return {
+    name: 'Faerie Fire', type: 'special', description: `20-foot Cube, DEX save DC ${dc}; failed targets grant Advantage on attacks against them for 1 minute.`,
+    spellLevel: 1, castingAbility, resourceCost: { key: 'drow-faerie-fire', amount: 1 }, range: { normal: 60, long: 60 }, targetScope: 'area_enemies',
+    savingThrow: { ability: 'dex', dc, area: '20-foot Cube' },
+    durationRounds: 10,
+    buffOnFailedSave: { name: 'Faerie Fire', key: 'drow-faerie-fire', requiresConcentration: true, advantageForAllAttackers: true },
+  };
+}
+
 function magicInitiateActions(
   feat: string | undefined,
   cantrips: unknown,
@@ -122,7 +133,7 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     if (typeof character.heroClass !== 'string' || !HERO_CLASS_NAMES.includes(character.heroClass as typeof HERO_CLASS_NAMES[number])) {
       throw new EncounterError(`${label}.heroClass must be a supported hero class.`);
     }
-    if (!Object.keys(character).every(key => ['heroClass', 'abilities', 'subclass', 'spells', 'species', 'background', 'abilityIncreases', 'dragonAncestry', 'elfLineage', 'gnomeLineage', 'goliathAncestry', 'tieflingLegacy', 'size', 'originCantrips', 'originSpell', 'originCastingAbility', 'humanOriginFeat', 'humanOriginCantrips', 'humanOriginSpell', 'humanOriginCastingAbility'].includes(key))) {
+    if (!Object.keys(character).every(key => ['heroClass', 'abilities', 'subclass', 'spells', 'species', 'background', 'abilityIncreases', 'dragonAncestry', 'elfLineage', 'gnomeLineage', 'goliathAncestry', 'tieflingLegacy', 'speciesCastingAbility', 'size', 'originCantrips', 'originSpell', 'originCastingAbility', 'humanOriginFeat', 'humanOriginCantrips', 'humanOriginSpell', 'humanOriginCastingAbility'].includes(key))) {
       throw new EncounterError(`${label} contains unsupported build choices.`);
     }
     const baseAbilities = parseAbilities(character.abilities, `${label}.abilities`);
@@ -155,6 +166,9 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     const tieflingLegacy = character.tieflingLegacy as TieflingLegacy | undefined;
     if (species === 'Tiefling' && !['Abyssal', 'Chthonic', 'Infernal'].includes(tieflingLegacy ?? '')) throw new EncounterError(`${label}.tieflingLegacy must be Abyssal, Chthonic, or Infernal.`);
     if (species !== 'Tiefling' && character.tieflingLegacy !== undefined) throw new EncounterError(`${label}.tieflingLegacy requires Tiefling.`);
+    const speciesCastingAbility = character.speciesCastingAbility as CastingAbility | undefined;
+    if ((species === 'Elf' || species === 'Tiefling') && !['int', 'wis', 'cha'].includes(speciesCastingAbility ?? '')) throw new EncounterError(`${label}.speciesCastingAbility must be Intelligence, Wisdom, or Charisma.`);
+    if (species !== 'Elf' && species !== 'Tiefling' && character.speciesCastingAbility !== undefined) throw new EncounterError(`${label}.speciesCastingAbility requires Elf or Tiefling.`);
     const humanOriginFeat = character.humanOriginFeat as string | undefined;
     if (species === 'Human' && !['Alert', 'Magic Initiate (Cleric)', 'Magic Initiate (Wizard)', 'Savage Attacker'].includes(humanOriginFeat ?? '')) {
       throw new EncounterError(`${label}.humanOriginFeat must be an engine-supported Origin Feat.`);
@@ -192,11 +206,11 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
       heroOverrides: {
         abilities, subclass: character.subclass as 'Circle of the Land' | 'Circle of the Moon' | undefined, spells,
         ...(species && background ? {
-          species, speciesChoice: elfLineage ?? gnomeLineage ?? goliathAncestry ?? tieflingLegacy ?? character.dragonAncestry as string | undefined, background, originFeat: BACKGROUNDS[background].originFeat, originFeats: [BACKGROUNDS[background].originFeat, ...(humanOriginFeat ? [humanOriginFeat] : [])], originSkills: [...BACKGROUNDS[background].skills], originTool: BACKGROUNDS[background].tool,
+          species, speciesChoice: elfLineage ?? gnomeLineage ?? goliathAncestry ?? tieflingLegacy ?? character.dragonAncestry as string | undefined, speciesCastingAbility, background, originFeat: BACKGROUNDS[background].originFeat, originFeats: [BACKGROUNDS[background].originFeat, ...(humanOriginFeat ? [humanOriginFeat] : [])], originSkills: [...BACKGROUNDS[background].skills], originTool: BACKGROUNDS[background].tool,
           originEquipment: [...BACKGROUNDS[background].equipment], sizeOverride: size ?? SPECIES[species].size, speedOverride: elfLineage === 'Wood Elf' ? 35 : SPECIES[species].speed,
           hitPointBonus: SPECIES[species].maxHpBonusAtLevel5, additionalResistances: tieflingLegacy ? [{ Abyssal: 'poison', Chthonic: 'necrotic', Infernal: 'fire' }[tieflingLegacy]] : SPECIES[species].resistances ? [...SPECIES[species].resistances] : undefined,
-          additionalResources: { ...(species === 'Orc' ? { 'orc-adrenaline-rush': 3 } : {}), ...(species === 'Goliath' ? { 'goliath-large-form': 1, 'goliath-giant-ancestry': 3 } : {}), ...(origin?.resources ?? {}), ...(humanOrigin?.resources ?? {}) },
-          additionalActions: [...(species === 'Dragonborn' ? [dragonbornBreath(character.dragonAncestry as DragonAncestry, abilities)] : []), ...(origin?.actions ?? []), ...(humanOrigin?.actions ?? [])],
+          additionalResources: { ...(species === 'Orc' ? { 'orc-adrenaline-rush': 3 } : {}), ...(species === 'Goliath' ? { 'goliath-large-form': 1, 'goliath-giant-ancestry': 3 } : {}), ...(species === 'Elf' && elfLineage === 'Drow' ? { 'drow-faerie-fire': 1 } : {}), ...(origin?.resources ?? {}), ...(humanOrigin?.resources ?? {}) },
+          additionalActions: [...(species === 'Dragonborn' ? [dragonbornBreath(character.dragonAncestry as DragonAncestry, abilities)] : []), ...(species === 'Elf' && elfLineage === 'Drow' ? [drowFaerieFire(speciesCastingAbility!, abilities)] : []), ...(origin?.actions ?? []), ...(humanOrigin?.actions ?? [])],
           ...(species === 'Dragonborn' ? { additionalResistances: [character.dragonAncestry as DragonAncestry], additionalResources: { ...(origin?.resources ?? {}), ...(humanOrigin?.resources ?? {}), 'dragonborn-breath': 3, 'dragonborn-flight': 1 } } : {}),
         } : {}),
       },

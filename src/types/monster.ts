@@ -469,6 +469,7 @@ export interface MonsterData {
   heroSpecies?: string;
   /** Chosen lineage, legacy, or ancestry for a species with an SRD choice. */
   heroSpeciesChoice?: string;
+  heroSpeciesCastingAbility?: keyof Abilities;
   heroBackground?: string;
   originFeat?: string;
   /** All Origin Feats, including the Human Versatile choice. */

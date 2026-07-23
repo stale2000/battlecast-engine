@@ -127,7 +127,7 @@ describe('Kaggle arena bridge', () => {
 
   it('requires a Tiefling legacy and applies its automatic resistance', () => {
     const tiefling = {
-      heroClass: 'Fighter', species: 'Tiefling', tieflingLegacy: 'Infernal', background: 'Soldier', size: 'Small',
+      heroClass: 'Fighter', species: 'Tiefling', tieflingLegacy: 'Infernal', speciesCastingAbility: 'cha', background: 'Soldier', size: 'Small',
       abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 },
     };
     const party = { characters: Array.from({ length: 4 }, () => tiefling) };
@@ -138,12 +138,25 @@ describe('Kaggle arena bridge', () => {
 
   it('requires an Elf lineage and applies Wood Elf speed', () => {
     const elf = {
-      heroClass: 'Fighter', species: 'Elf', elfLineage: 'Wood Elf', background: 'Soldier',
+      heroClass: 'Fighter', species: 'Elf', elfLineage: 'Wood Elf', speciesCastingAbility: 'wis', background: 'Soldier',
       abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 },
     };
     const party = { characters: Array.from({ length: 4 }, () => elf) };
     const result = kaggleStep({ ...init(), redParty: party, blueParty: party });
     expect(result.state.battleState!.creatures.find(creature => creature.team === 'red')!.monsterData.speed.walk).toBe(35);
+  });
+
+  it('requires an Elf casting ability and resolves Drow Faerie Fire through the shared spell path', () => {
+    const drow = {
+      heroClass: 'Fighter', species: 'Elf', elfLineage: 'Drow', speciesCastingAbility: 'cha', background: 'Soldier',
+      abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 },
+    };
+    const party = { characters: Array.from({ length: 4 }, () => drow) };
+    const result = kaggleStep({ ...init(), redParty: party, blueParty: party });
+    const drowCreature = result.state.battleState!.creatures.find(creature => creature.team === 'red')!;
+    expect(drowCreature.monsterData.heroSpeciesCastingAbility).toBe('cha');
+    expect(drowCreature.monsterData.actions.some(action => action.name === 'Faerie Fire')).toBe(true);
+    expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...drow, speciesCastingAbility: undefined })) }, blueParty: party })).toThrow(/speciesCastingAbility/);
   });
 
   it('applies Gnomish Cunning automatically to mental saves', () => {

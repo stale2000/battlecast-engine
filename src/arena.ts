@@ -42,7 +42,7 @@ function observation(encounter: Encounter, team: Team) {
         position: { ...c.position }, size: getActiveSize(c), conditions: [...c.conditions], status: status(c), resources: { ...c.resources },
         build: {
           heroClass: c.monsterData.heroClass, heroLevel: c.monsterData.heroLevel, heroSubclass: c.monsterData.heroSubclass,
-          species: c.monsterData.heroSpecies, speciesChoice: c.monsterData.heroSpeciesChoice, background: c.monsterData.heroBackground, originFeat: c.monsterData.originFeat, originFeats: c.monsterData.originFeats,
+          species: c.monsterData.heroSpecies, speciesChoice: c.monsterData.heroSpeciesChoice, speciesCastingAbility: c.monsterData.heroSpeciesCastingAbility, background: c.monsterData.heroBackground, originFeat: c.monsterData.originFeat, originFeats: c.monsterData.originFeats,
           abilities: { ...c.monsterData.abilities }, ac: c.monsterData.ac, speed: { ...c.monsterData.speed },
           equipment: visibleEquipment(c), preparedSpells: preparedSpells(c),
         },
