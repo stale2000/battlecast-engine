@@ -157,6 +157,15 @@ describe('Kaggle arena bridge', () => {
     const creature = kaggleStep({ ...init(), redParty: party, blueParty: party }).state.battleState!.creatures.find(candidate => candidate.team === 'red')!;
     expect(creature.monsterData.actions.some(action => action.name === 'False Life' && action.resourceCost?.key === 'chthonic-false-life')).toBe(true);
     expect(creature.resources['chthonic-false-life']).toBe(1);
+
+    const encounter = new Encounter({ seed: 1 });
+    const [hero] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { species: 'Tiefling', speciesChoice: 'Chthonic', additionalResources: { 'chthonic-false-life': 1 }, additionalActions: [{ name: 'False Life', type: 'special', description: 'test', spellLevel: 1, temporaryHp: { dice: '2d4', addCastingMod: true }, resourceCost: { key: 'chthonic-false-life', amount: 1 }, targetScope: 'self' }] }, team: 'red', position: { x: 0, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 10, y: 0 } });
+    encounter.start(); encounter.state!.initiativeOrder = [hero.id]; startArena(encounter);
+    const active = getActiveCreature(encounter)!;
+    applyLegalAction(encounter, getLegalActions(encounter, active.id).find(action => action.type === 'spell' && action.actionName === 'False Life')!);
+    expect(active.temporaryHp).toBeGreaterThan(0);
+    expect(active.resources['chthonic-false-life']).toBe(0);
   });
 
   it('requires an Elf lineage and applies Wood Elf speed', () => {
