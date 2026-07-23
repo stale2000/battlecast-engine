@@ -51,9 +51,10 @@ export type HeroClassName =
   | 'Paladin' | 'Ranger' | 'Rogue' | 'Sorcerer' | 'Warlock' | 'Wizard';
 
 export type DruidSubclassName = 'Circle of the Land' | 'Circle of the Moon';
+export type HeroSubclassName = DruidSubclassName | 'Path of the Berserker' | 'College of Lore' | 'Life Domain' | 'Champion' | 'Warrior of the Open Hand' | 'Oath of Devotion' | 'Hunter' | 'Thief' | 'Draconic Sorcery' | 'Fiend Patron' | 'Evoker';
 
 export interface BuildHeroOptions {
-  subclass?: DruidSubclassName;
+  subclass?: HeroSubclassName;
   preferredWildShapeBeast?: string;
 }
 
@@ -2362,7 +2363,7 @@ export interface WeaponOverride {
 export interface HeroOverrides {
   displayName?: string;
   alignmentOverride?: string;
-  subclass?: DruidSubclassName;
+  subclass?: HeroSubclassName;
   preferredWildShapeBeast?: string;
   abilities?: Abilities;
   hpOverride?: number;
@@ -2379,6 +2380,7 @@ export interface HeroOverrides {
   originFeats?: string[];
   originSkills?: string[];
   originTool?: string;
+  originTools?: string[];
   originEquipment?: string[];
   speciesCantrips?: string[];
   speciesPreparedSpells?: string[];
@@ -2491,7 +2493,7 @@ export function getAvailableSpells(
       repertoire.push(stormOfVengeance(spellAbility, mod, pb));
       break;
     case 'Bard':
-      repertoire.push(dissonantWhispers(spellAbility, mod, pb), healingWord(spellAbility, mod, pb), bane(spellAbility, mod, pb), aid(spellAbility, mod, pb));
+      repertoire.push(dissonantWhispers(spellAbility, mod, pb), healingWord(spellAbility, mod, pb), cureWounds(spellAbility, mod, pb), bane(spellAbility, mod, pb), aid(spellAbility, mod, pb));
       repertoire.push(holdPerson(spellAbility, mod, pb), shatter(spellAbility, mod, pb));
       repertoire.push(hypnoticPattern(spellAbility, mod, pb));
       repertoire.push(banishment(spellAbility, mod, pb));
@@ -2505,7 +2507,7 @@ export function getAvailableSpells(
       repertoire.push(flameStrike(spellAbility, mod, pb));
       break;
     case 'Ranger':
-      repertoire.push(huntersMark(spellAbility, mod, pb), cureWounds(spellAbility, mod, pb));
+      repertoire.push(huntersMark(spellAbility, mod, pb), cureWounds(spellAbility, mod, pb), entangle(spellAbility, mod, pb));
       repertoire.push(aid(spellAbility, mod, pb), conjureBarrage(spellAbility, mod, pb), protectionFromEnergy(spellAbility, mod, pb));
       break;
   }
@@ -2761,6 +2763,7 @@ export function buildCustomHero(
     originFeats: overrides.originFeats,
     originSkills: overrides.originSkills,
     originTool: overrides.originTool,
+    originTools: overrides.originTools,
     originEquipment: overrides.originEquipment,
     speciesCantrips: overrides.speciesCantrips,
     speciesPreparedSpells: overrides.speciesPreparedSpells,

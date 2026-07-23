@@ -500,6 +500,8 @@ export interface MonsterData {
   originFeats?: string[];
   originSkills?: string[];
   originTool?: string;
+  /** All tool proficiencies, including the background tool and Skilled picks. */
+  originTools?: string[];
   originEquipment?: string[];
   /** Healer Origin Feat permits rerolling 1s on healing dice. */
   healingRerollOnes?: boolean;

@@ -11,7 +11,7 @@ import { rollSaveWithBuffs } from '../src/engine/combat-buffs.js';
 import { rollAttack, rollDamage } from '../src/engine/dice.js';
 import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
-import { HERO_CLASS_NAMES } from '../src/data/heroes.js';
+import { buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
@@ -500,6 +500,46 @@ describe('Kaggle arena bridge', () => {
       const hero = result.state.battleState!.creatures.find(creature => creature.team === 'red')!;
       expect(hero.monsterData.originFeats).toContain(feat);
       expect(hero.monsterData.skills?.Stealth).toBe(hero.monsterData.proficiencyBonus + Math.floor((hero.monsterData.abilities.dex - 10) / 2));
+    }
+  });
+
+  it('allows Skilled to select any mix of three SRD skills and tools', () => {
+    const character = {
+      heroClass: 'Fighter', species: 'Human', background: 'Criminal', humanSkill: 'Stealth', humanOriginFeat: 'Skilled',
+      humanOriginSkills: ['Arcana'], humanOriginTools: ['Alchemist’s Supplies', 'Musical Instrument'],
+      abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { dex: 2, con: 1 },
+    };
+    const result = kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => character) }, blueParty: party });
+    const hero = result.state.battleState!.creatures.find(creature => creature.team === 'red')!;
+    expect(hero.monsterData.originSkills).toContain('Arcana');
+    expect(hero.monsterData.originTools).toEqual(expect.arrayContaining(['Thieves’ Tools', 'Alchemist’s Supplies', 'Musical Instrument']));
+    expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...character, humanOriginTools: ['Alchemist’s Supplies'] })) }, blueParty: party })).toThrow(/three distinct SRD skills or tools/);
+    expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...character, humanOriginSkills: { length: 1 } })) }, blueParty: party })).toThrow(/humanOriginSkills must be an array/);
+  });
+
+  it('accepts the SRD subclass for every arena class and rejects cross-class choices', () => {
+    const subclasses = {
+      Barbarian: 'Path of the Berserker', Bard: 'College of Lore', Cleric: 'Life Domain', Druid: 'Circle of the Moon', Fighter: 'Champion', Monk: 'Warrior of the Open Hand', Paladin: 'Oath of Devotion', Ranger: 'Hunter', Rogue: 'Thief', Sorcerer: 'Draconic Sorcery', Warlock: 'Fiend Patron', Wizard: 'Evoker',
+    } as const;
+    for (const [heroClass, subclass] of Object.entries(subclasses)) {
+      const spellCount = buildHero(heroClass as typeof HERO_CLASS_NAMES[number], 5).actions.filter(action => (action.spellLevel ?? 0) > 0).length;
+      const character = {
+        heroClass, subclass, species: 'Human', background: 'Soldier', humanSkill: 'Stealth', humanOriginFeat: 'Tough',
+        abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 },
+        ...(spellCount ? { spells: getAvailableSpells(heroClass as typeof HERO_CLASS_NAMES[number], 5).filter(spell => (spell.spellLevel ?? 0) > 0).slice(0, spellCount).map(spell => spell.name) } : {}),
+      };
+      const result = kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => character) }, blueParty: party });
+      expect(result.state.battleState!.creatures.find(creature => creature.team === 'red')!.monsterData.heroSubclass).toBe(subclass);
+    }
+    const invalid = { heroClass: 'Fighter', subclass: 'Circle of the Moon', species: 'Human', background: 'Soldier', humanSkill: 'Stealth', humanOriginFeat: 'Tough', abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 } };
+    expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => invalid) }, blueParty: party })).toThrow(/not an SRD subclass/);
+  });
+
+  it('offers every default level-five spell in its class selection catalogue', () => {
+    for (const heroClass of HERO_CLASS_NAMES) {
+      const defaultSpells = buildHero(heroClass, 5).actions.filter(action => (action.spellLevel ?? 0) > 0).map(action => action.name);
+      const available = new Set(getAvailableSpells(heroClass, 5).filter(action => action.spellLevel > 0).map(action => action.name));
+      expect(defaultSpells.every(spell => available.has(spell))).toBe(true);
     }
   });
 

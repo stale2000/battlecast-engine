@@ -1,5 +1,5 @@
 import { EncounterError, type AddCreatureOptions, type Team } from './encounter.js';
-import { buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../data/heroes.js';
+import { buildHero, getAvailableSpells, HERO_CLASS_NAMES, type HeroSubclassName } from '../data/heroes.js';
 import {
   ARENA_BACKGROUNDS,
   ARENA_SPECIES,
@@ -19,10 +19,14 @@ type TieflingLegacy = 'Abyssal' | 'Chthonic' | 'Infernal';
 type ElfLineage = 'Drow' | 'High Elf' | 'Wood Elf';
 type GnomeLineage = 'Forest Gnome' | 'Rock Gnome';
 type GoliathAncestry = 'Cloud' | 'Fire' | 'Frost' | 'Hill' | 'Stone' | 'Storm';
+const SRD_SUBCLASSES: Record<typeof HERO_CLASS_NAMES[number], readonly string[]> = {
+  Barbarian: ['Path of the Berserker'], Bard: ['College of Lore'], Cleric: ['Life Domain'], Druid: ['Circle of the Land', 'Circle of the Moon'], Fighter: ['Champion'], Monk: ['Warrior of the Open Hand'], Paladin: ['Oath of Devotion'], Ranger: ['Hunter'], Rogue: ['Thief'], Sorcerer: ['Draconic Sorcery'], Warlock: ['Fiend Patron'], Wizard: ['Evoker'],
+};
 const ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 const POINT_COST: Record<number, number> = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
 const DRAGON_DAMAGE_TYPES = ['acid', 'cold', 'fire', 'lightning', 'poison'] as const;
 const SKILLS = ['Acrobatics', 'Animal Handling', 'Arcana', 'Athletics', 'Deception', 'History', 'Insight', 'Intimidation', 'Investigation', 'Medicine', 'Nature', 'Perception', 'Performance', 'Persuasion', 'Religion', 'Sleight of Hand', 'Stealth', 'Survival'] as const;
+const TOOLS = ['Alchemist’s Supplies', 'Brewer’s Supplies', 'Calligrapher’s Supplies', 'Carpenter’s Tools', 'Cartographer’s Tools', 'Cobbler’s Tools', 'Cook’s Utensils', 'Disguise Kit', 'Forgery Kit', 'Gaming Set', 'Glassblower’s Tools', 'Herbalism Kit', 'Jeweler’s Tools', 'Leatherworker’s Tools', 'Mason’s Tools', 'Musical Instrument', 'Navigator’s Tools', 'Painter’s Supplies', 'Poisoner’s Kit', 'Potter’s Tools', 'Smith’s Tools', 'Thieves’ Tools', 'Tinker’s Tools', 'Weaver’s Tools', 'Woodcarver’s Tools'] as const;
 const LANGUAGES = ['Common Sign Language', 'Draconic', 'Dwarvish', 'Elvish', 'Giant', 'Gnomish', 'Goblin', 'Halfling', 'Orc', 'Abyssal', 'Celestial', 'Deep Speech', 'Druidic', 'Infernal', 'Primordial', 'Sylvan', 'Thieves’ Cant', 'Undercommon'] as const;
 const ALIGNMENTS = ['Lawful Good', 'Neutral Good', 'Chaotic Good', 'Lawful Neutral', 'Neutral', 'Chaotic Neutral', 'Lawful Evil', 'Neutral Evil', 'Chaotic Evil'] as const;
 
@@ -213,7 +217,7 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     if (typeof character.heroClass !== 'string' || !HERO_CLASS_NAMES.includes(character.heroClass as typeof HERO_CLASS_NAMES[number])) {
       throw new EncounterError(`${label}.heroClass must be a supported hero class.`);
     }
-    if (!Object.keys(character).every(key => ['heroClass', 'abilities', 'subclass', 'spells', 'species', 'background', 'abilityIncreases', 'alignment', 'dragonAncestry', 'elfLineage', 'gnomeLineage', 'goliathAncestry', 'tieflingLegacy', 'speciesCastingAbility', 'size', 'languages', 'elfKeenSense', 'humanSkill', 'originCantrips', 'originSpell', 'originCastingAbility', 'humanOriginFeat', 'humanOriginAbility', 'humanOriginSkills', 'humanOriginCantrips', 'humanOriginSpell', 'humanOriginCastingAbility'].includes(key))) {
+    if (!Object.keys(character).every(key => ['heroClass', 'abilities', 'subclass', 'spells', 'species', 'background', 'abilityIncreases', 'alignment', 'dragonAncestry', 'elfLineage', 'gnomeLineage', 'goliathAncestry', 'tieflingLegacy', 'speciesCastingAbility', 'size', 'languages', 'elfKeenSense', 'humanSkill', 'originCantrips', 'originSpell', 'originCastingAbility', 'humanOriginFeat', 'humanOriginAbility', 'humanOriginSkills', 'humanOriginTools', 'humanOriginCantrips', 'humanOriginSpell', 'humanOriginCastingAbility'].includes(key))) {
       throw new EncounterError(`${label} contains unsupported build choices.`);
     }
     const baseAbilities = parseAbilities(character.abilities, `${label}.abilities`);
@@ -276,10 +280,16 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     if (humanOriginFeat === 'Tavern Brawler' && humanOriginAbility !== 'str' && humanOriginAbility !== 'con') throw new EncounterError(`${label}.humanOriginAbility must be Strength or Constitution for Tavern Brawler.`);
     if (humanOriginFeat !== 'Tavern Brawler' && humanOriginAbility !== undefined) throw new EncounterError(`${label}.humanOriginAbility requires Tavern Brawler.`);
     const humanOriginSkills = character.humanOriginSkills as string[] | undefined;
-    if (humanOriginFeat === 'Skilled' && (!Array.isArray(humanOriginSkills) || humanOriginSkills.length !== 3 || new Set(humanOriginSkills).size !== 3 || humanOriginSkills.some(skill => !SKILLS.includes(skill as typeof SKILLS[number])))) {
-      throw new EncounterError(`${label}.humanOriginSkills must select three distinct SRD skills for Skilled.`);
+    const humanOriginTools = character.humanOriginTools as string[] | undefined;
+    if (humanOriginSkills !== undefined && !Array.isArray(humanOriginSkills)) throw new EncounterError(`${label}.humanOriginSkills must be an array.`);
+    if (humanOriginTools !== undefined && !Array.isArray(humanOriginTools)) throw new EncounterError(`${label}.humanOriginTools must be an array.`);
+    const selectedOriginSkills = humanOriginSkills ?? [];
+    const selectedOriginTools = humanOriginTools ?? [];
+    if (humanOriginFeat === 'Skilled' && (selectedOriginSkills.length + selectedOriginTools.length !== 3 || new Set(selectedOriginSkills).size !== selectedOriginSkills.length || new Set(selectedOriginTools).size !== selectedOriginTools.length || selectedOriginSkills.some(skill => !SKILLS.includes(skill as typeof SKILLS[number])) || selectedOriginTools.some(tool => !TOOLS.includes(tool as typeof TOOLS[number])))) {
+      throw new EncounterError(`${label}.humanOriginSkills and .humanOriginTools must select three distinct SRD skills or tools for Skilled.`);
     }
     if (humanOriginFeat !== 'Skilled' && humanOriginSkills !== undefined) throw new EncounterError(`${label}.humanOriginSkills requires Skilled.`);
+    if (humanOriginFeat !== 'Skilled' && humanOriginTools !== undefined) throw new EncounterError(`${label}.humanOriginTools requires Skilled.`);
     let abilities = baseAbilities;
     if (hasOrigin) {
       const increases = assertArenaObject(character.abilityIncreases, `${label}.abilityIncreases`) as Partial<Record<AbilityName, 0 | 1 | 2>>;
@@ -293,10 +303,10 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
       if (abilities[humanOriginAbility] >= 20) throw new EncounterError(`${label}.humanOriginAbility cannot raise an ability above 20.`);
       abilities = { ...abilities, [humanOriginAbility]: abilities[humanOriginAbility] + 1 };
     }
-    if (character.subclass !== undefined && (character.heroClass !== 'Druid' || (character.subclass !== 'Circle of the Land' && character.subclass !== 'Circle of the Moon'))) {
-      throw new EncounterError(`${label}.subclass is not supported.`);
-    }
     const heroClass = character.heroClass as typeof HERO_CLASS_NAMES[number];
+    if (character.subclass !== undefined && (typeof character.subclass !== 'string' || !SRD_SUBCLASSES[heroClass].includes(character.subclass))) {
+      throw new EncounterError(`${label}.subclass is not an SRD subclass for ${heroClass}.`);
+    }
     const spells = parseSpells(character.spells, heroClass, label);
     const hasOriginSpellChoice = character.originCantrips !== undefined || character.originSpell !== undefined || character.originCastingAbility !== undefined;
     if (hasOriginSpellChoice && (!background || !['Magic Initiate (Cleric)', 'Magic Initiate (Wizard)'].includes(BACKGROUNDS[background].originFeat))) {
@@ -308,9 +318,9 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     return {
       heroClass, heroLevel: 5, team,
       heroOverrides: {
-        abilities, subclass: character.subclass as 'Circle of the Land' | 'Circle of the Moon' | undefined, spells,
+        abilities, subclass: character.subclass as HeroSubclassName | undefined, spells,
         ...(species && background ? {
-          species, speciesChoice: elfLineage ?? gnomeLineage ?? goliathAncestry ?? tieflingLegacy ?? character.dragonAncestry as string | undefined, speciesCastingAbility, background, originFeat: BACKGROUNDS[background].originFeat, originFeats: [BACKGROUNDS[background].originFeat, ...(humanOriginFeat ? [humanOriginFeat] : [])], originSkills: [...new Set([...BACKGROUNDS[background].skills, ...(elfKeenSense ? [elfKeenSense] : []), ...(humanSkill ? [humanSkill] : []), ...(humanOriginFeat === 'Healer' ? ['Medicine'] : []), ...(humanOriginSkills ?? [])])], originTool: BACKGROUNDS[background].tool,
+          species, speciesChoice: elfLineage ?? gnomeLineage ?? goliathAncestry ?? tieflingLegacy ?? character.dragonAncestry as string | undefined, speciesCastingAbility, background, originFeat: BACKGROUNDS[background].originFeat, originFeats: [BACKGROUNDS[background].originFeat, ...(humanOriginFeat ? [humanOriginFeat] : [])], originSkills: [...new Set([...BACKGROUNDS[background].skills, ...(elfKeenSense ? [elfKeenSense] : []), ...(humanSkill ? [humanSkill] : []), ...(humanOriginFeat === 'Healer' ? ['Medicine'] : []), ...selectedOriginSkills])], originTool: BACKGROUNDS[background].tool, originTools: [...new Set([BACKGROUNDS[background].tool, ...selectedOriginTools])],
           originEquipment: [...BACKGROUNDS[background].equipment], alignmentOverride: alignment, additionalSenses: speciesDarkvision(species, elfLineage), additionalLanguages: languages, speciesCantrips: lineageSpells(species, elfLineage ?? gnomeLineage ?? tieflingLegacy).cantrips, speciesPreparedSpells: lineageSpells(species, elfLineage ?? gnomeLineage ?? tieflingLegacy).prepared, sizeOverride: size ?? SPECIES[species].size, speedOverride: elfLineage === 'Wood Elf' ? 35 : SPECIES[species].speed,
           hitPointBonus: (SPECIES[species].maxHpBonusAtLevel5 ?? 0) + (humanOriginFeat === 'Tough' ? 10 : 0), additionalResistances: tieflingLegacy ? [{ Abyssal: 'poison', Chthonic: 'necrotic', Infernal: 'fire' }[tieflingLegacy]] : SPECIES[species].resistances ? [...SPECIES[species].resistances] : undefined,
           additionalResources: { 'hit-die': 5, ...(species === 'Human' ? { 'heroic-inspiration': 1 } : {}), ...(humanOriginFeat === 'Healer' ? { 'healer-kit': 10 } : {}), ...(species === 'Orc' ? { 'orc-adrenaline-rush': 3 } : {}), ...(species === 'Goliath' ? { 'goliath-large-form': 1, 'goliath-giant-ancestry': 3 } : {}), ...(species === 'Elf' && elfLineage === 'Drow' ? { 'drow-faerie-fire': 1, 'drow-darkness': 1 } : {}), ...(species === 'Elf' && elfLineage === 'High Elf' ? { 'high-elf-misty-step': 1 } : {}), ...(species === 'Elf' && elfLineage === 'Wood Elf' ? { 'wood-elf-longstrider': 1, 'wood-elf-pass-without-trace': 1 } : {}), ...(species === 'Tiefling' && tieflingLegacy === 'Abyssal' ? { 'abyssal-ray-of-sickness': 1, 'abyssal-hold-person': 1 } : {}), ...(species === 'Tiefling' && tieflingLegacy === 'Chthonic' ? { 'chthonic-false-life': 1, 'chthonic-ray-of-enfeeblement': 1 } : {}), ...(species === 'Tiefling' && tieflingLegacy === 'Infernal' ? { 'infernal-hellish-rebuke': 1, 'infernal-darkness': 1 } : {}), ...(origin?.resources ?? {}), ...(humanOrigin?.resources ?? {}) },
