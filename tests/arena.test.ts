@@ -611,7 +611,9 @@ describe('Kaggle arena bridge', () => {
     for (const variant of variants) {
       const character = { ...base, ...variant };
       const result = kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => character) }, blueParty: party });
-      expect(result.state.battleState!.creatures.filter(creature => creature.team === 'red')).toHaveLength(4);
+      const heroes = result.state.battleState!.creatures.filter(creature => creature.team === 'red');
+      expect(heroes).toHaveLength(4);
+      expect(heroes.every(hero => hero.resources['hit-die'] === 5)).toBe(true);
     }
   });
 
