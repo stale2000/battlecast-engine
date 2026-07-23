@@ -87,6 +87,10 @@ function parseAction(value: unknown): ArenaAction {
     if (!Number.isInteger(action.x) || !Number.isInteger(action.y)) throw new EncounterError('move_to requires integer x and y.');
     return { id: 'move_to', type: 'move_to', destination: { x: action.x as number, y: action.y as number } };
   }
+  if (action.id === 'species:cloud_jaunt') {
+    if (!Number.isInteger(action.x) || !Number.isInteger(action.y)) throw new EncounterError("Cloud's Jaunt requires integer x and y.");
+    return { id: 'species:cloud_jaunt', type: 'species_teleport', destination: { x: action.x as number, y: action.y as number } };
+  }
   return action as ArenaAction;
 }
 
@@ -117,8 +121,8 @@ export function kaggleStep(value: unknown) {
     if (!active || active.team !== request.team) throw new EncounterError('The submitted team does not own the active creature.');
     const requested = parseAction(request.action);
     const legal = getLegalActions(encounter, active.id).find(action => action.id === requested.id);
-    if (!legal || (legal.type !== 'move_to' && typeof request.action === 'object' && !sameArenaAction(legal, requested))) throw new EncounterError(`Illegal or stale arena action "${requested.id}".`);
-    applyLegalAction(encounter, legal.type === 'move_to' ? requested : legal);
+    if (!legal || (legal.type !== 'move_to' && legal.type !== 'species_teleport' && typeof request.action === 'object' && !sameArenaAction(legal, requested))) throw new EncounterError(`Illegal or stale arena action "${requested.id}".`);
+    applyLegalAction(encounter, legal.type === 'move_to' || legal.type === 'species_teleport' ? requested : legal);
     return response(encounter);
   }
   throw new EncounterError('mode must be init or step.');

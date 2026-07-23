@@ -233,6 +233,21 @@ describe('Kaggle arena bridge', () => {
     else expect(targetCreature.conditions).not.toContain('prone');
   });
 
+  it("resolves Cloud's Jaunt with only a legal server-validated destination", () => {
+    const encounter = new Encounter({ seed: 1 });
+    const [goliath] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { species: 'Goliath', speciesChoice: 'Cloud', additionalResources: { 'goliath-giant-ancestry': 3 } }, team: 'red', position: { x: 0, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 10, y: 0 } });
+    encounter.start();
+    encounter.state!.initiativeOrder = [goliath.id];
+    startArena(encounter);
+    const active = getActiveCreature(encounter)!;
+    const jaunt = getLegalActions(encounter, active.id).find(action => action.type === 'species_teleport')!;
+    applyLegalAction(encounter, { ...jaunt, destination: { x: 5, y: 0 } });
+    expect(active.position).toEqual({ x: 5, y: 0 });
+    expect(active.resources['goliath-giant-ancestry']).toBe(2);
+    expect(() => applyLegalAction(encounter, { ...jaunt, destination: { x: 19, y: 19 } })).toThrow(/stale|Cloud/);
+  });
+
   it('rerolls Halfling natural ones in the shared d20 primitive', () => {
     const values = [0, 0.5, 0.9];
     const rng = { next: () => values.shift()! };

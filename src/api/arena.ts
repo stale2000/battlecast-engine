@@ -273,7 +273,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
   const active = getActiveCreature(encounter);
   if (!state || !active) throw new EncounterError('No active creature.');
   const legal = getLegalActions(encounter, active.id).find(candidate => candidate.id === action.id);
-  if (!legal || (legal.type !== 'move_to' && !sameArenaAction(legal, action))) {
+  if (!legal || (legal.type !== 'move_to' && legal.type !== 'species_teleport' && !sameArenaAction(legal, action))) {
     throw new EncounterError(`Illegal or stale arena action "${action.id}".`);
   }
   encounter.runWithRng(() => {
@@ -346,9 +346,9 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       } catch (error) {
         throw new EncounterError(error instanceof Error ? error.message : 'Illegal or stale arena class feature.');
       }
-    } else if (legal.type === 'species_dash' || legal.type === 'species_flight' || legal.type === 'species_large_form') {
+    } else if (legal.type === 'species_dash' || legal.type === 'species_flight' || legal.type === 'species_large_form' || legal.type === 'species_teleport') {
       try {
-        applyOriginLegalAction(state, active, legal);
+        applyOriginLegalAction(state, active, legal.type === 'species_teleport' && action.type === 'species_teleport' ? action : legal);
       } catch (error) {
         throw new EncounterError(error instanceof Error ? error.message : 'Illegal or stale arena origin action.');
       }
