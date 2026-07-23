@@ -696,7 +696,7 @@ export function runOpportunityAttacks(
     // the user sees why a goblin walked past the Fighter unscathed.
     const reactionLimit = getHydraHeadCount(enemy) ?? 1;
     const reactionsUsed = enemy.reactionsUsed ?? (enemy.reactionUsed ? 1 : 0);
-    if (!canTakeReactions(enemy) || enemy.activeBuffs?.some(b => b.preventsOpportunityAttacks)) {
+    if (enemy.activeBuffs?.some(b => b.preventsReactions || b.preventsOpportunityAttacks)) {
       state.events.push({
         kind: 'oaAvoided', moverId: creature.id, enemyId: enemy.id,
         reason: 'stunned', durationMs: BASE_DURATIONS.oaAvoided,
