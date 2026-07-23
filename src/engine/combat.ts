@@ -615,6 +615,12 @@ function paySorcererMetamagic(attacker: Creature, cost: number): 'free' | 'paid'
   return 'paid';
 }
 
+function rollAttackForCreature(attacker: Creature, modifier: number, advantage: boolean, disadvantage: boolean): ReturnType<typeof rollAttack> {
+  return attacker.monsterData.heroSpecies === 'Halfling'
+    ? rollAttack(modifier, advantage, disadvantage, true)
+    : rollAttack(modifier, advantage, disadvantage);
+}
+
 function trySeekingSpell(
   state: BattleState,
   attacker: Creature,
@@ -632,7 +638,7 @@ function trySeekingSpell(
   const payment = paySorcererMetamagic(attacker, 1);
   if (!payment) return null;
 
-  const reroll = rollAttack(action.attackBonus!, effectiveAdvantage, effectiveDisadvantage, attacker.monsterData.heroSpecies === 'Halfling');
+  const reroll = rollAttackForCreature(attacker, action.attackBonus!, effectiveAdvantage, effectiveDisadvantage);
   reroll.roll.total += buffBonus + targetAttackBonus;
   reroll.roll.modifier += buffBonus + targetAttackBonus;
   attacker.stats.actionUsage['Seeking Spell'] = (attacker.stats.actionUsage['Seeking Spell'] || 0) + 1;
@@ -3664,7 +3670,7 @@ function resolveAttack(
   const attackHasDisadvantage = effectiveDis && (!adv || advantageBlocked);
 
   // Base d20 roll. Bless etc. dice bonuses are added on top of the total.
-  let { roll, naturalRoll } = rollAttack(action.attackBonus!, effectiveAdv, attackHasDisadvantage, attacker.monsterData.heroSpecies === 'Halfling');
+  let { roll, naturalRoll } = rollAttackForCreature(attacker, action.attackBonus!, effectiveAdv, attackHasDisadvantage);
   if (consumesSteadyAim) attacker.turnFlags.steadyAimConsumed = true;
   const buffBonus = rollAttackBuffBonus(attacker);
   if (buffBonus !== 0) {
@@ -3680,7 +3686,7 @@ function resolveAttack(
 
   // Heroic Warrior (Fighter L10): reroll a missed attack once per turn
   if (naturalRoll !== 20 && roll.total < ac && attacker.turnFlags?.heroicInspiration) {
-    const reroll = rollAttack(action.attackBonus!, effectiveAdv, attackHasDisadvantage, attacker.monsterData.heroSpecies === 'Halfling');
+    const reroll = rollAttackForCreature(attacker, action.attackBonus!, effectiveAdv, attackHasDisadvantage);
     const rerollBuff = rollAttackBuffBonus(attacker);
     reroll.roll.total += rerollBuff + targetAttackBonus;
     if (reroll.roll.total > roll.total) {
