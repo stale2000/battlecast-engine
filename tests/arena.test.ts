@@ -453,6 +453,7 @@ describe('Kaggle arena bridge', () => {
         heroClass: 'Fighter', species: 'Human', background, humanSkill: 'Stealth', humanOriginFeat: feat,
         abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: background === 'Soldier' ? { str: 2, con: 1 } : { dex: 2, con: 1 },
         ...(feat === 'Tavern Brawler' ? { humanOriginAbility: 'str' } : {}),
+        ...(feat === 'Skilled' ? { humanOriginSkills: ['Acrobatics', 'Arcana', 'Survival'] } : {}),
       };
       const result = kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => character) }, blueParty: party });
       const hero = result.state.battleState!.creatures.find(creature => creature.team === 'red')!;
