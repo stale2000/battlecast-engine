@@ -117,18 +117,18 @@ describe('Kaggle arena bridge', () => {
 
   it('accepts the SRD Small-or-Medium choice only for Human and Tiefling', () => {
     const human = {
-      heroClass: 'Fighter', species: 'Human', background: 'Soldier', humanOriginFeat: 'Alert', size: 'Small',
+      heroClass: 'Fighter', species: 'Human', background: 'Soldier', humanOriginFeat: 'Alert', humanSkill: 'Perception', size: 'Small',
       abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 },
     };
     const party = { characters: Array.from({ length: 4 }, () => human) };
     const result = kaggleStep({ ...init(), redParty: party, blueParty: party });
     expect(result.state.battleState!.creatures.find(creature => creature.team === 'red')!.monsterData.size).toBe('Small');
-    expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...human, species: 'Dwarf' })) }, blueParty: party })).toThrow(/size is selectable/);
+    expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...human, species: 'Dwarf', humanSkill: undefined })) }, blueParty: party })).toThrow(/size is selectable/);
   });
 
   it('applies the Human Tough Origin Feat hit point bonus', () => {
     const human = {
-      heroClass: 'Fighter', species: 'Human', background: 'Soldier', humanOriginFeat: 'Tough',
+      heroClass: 'Fighter', species: 'Human', background: 'Soldier', humanOriginFeat: 'Tough', humanSkill: 'Perception',
       abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 },
     };
     const party = { characters: Array.from({ length: 4 }, () => human) };
@@ -218,12 +218,20 @@ describe('Kaggle arena bridge', () => {
 
   it('requires an Elf lineage and applies Wood Elf speed', () => {
     const elf = {
-      heroClass: 'Fighter', species: 'Elf', elfLineage: 'Wood Elf', speciesCastingAbility: 'wis', background: 'Soldier',
+      heroClass: 'Fighter', species: 'Elf', elfLineage: 'Wood Elf', speciesCastingAbility: 'wis', elfKeenSense: 'Perception', background: 'Soldier',
       abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 },
     };
     const party = { characters: Array.from({ length: 4 }, () => elf) };
     const result = kaggleStep({ ...init(), redParty: party, blueParty: party });
     expect(result.state.battleState!.creatures.find(creature => creature.team === 'red')!.monsterData.speed.walk).toBe(35);
+  });
+
+  it('preserves Elf Keen Senses and Human Skillful selections', () => {
+    const elf = { heroClass: 'Fighter', species: 'Elf', elfLineage: 'Wood Elf', speciesCastingAbility: 'wis', elfKeenSense: 'Survival', background: 'Soldier', abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 } };
+    const human = { heroClass: 'Fighter', species: 'Human', humanOriginFeat: 'Alert', humanSkill: 'Perception', background: 'Soldier', abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 } };
+    const result = kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => elf) }, blueParty: { characters: Array.from({ length: 4 }, () => human) } });
+    expect(result.state.battleState!.creatures.find(creature => creature.team === 'red')!.monsterData.originSkills).toContain('Survival');
+    expect(result.state.battleState!.creatures.find(creature => creature.team === 'blue')!.monsterData.originSkills).toContain('Perception');
   });
 
   it('resolves Wood Elf Longstrider through the shared speed buff path', () => {
@@ -253,7 +261,7 @@ describe('Kaggle arena bridge', () => {
 
   it('requires an Elf casting ability and resolves Drow Faerie Fire through the shared spell path', () => {
     const drow = {
-      heroClass: 'Fighter', species: 'Elf', elfLineage: 'Drow', speciesCastingAbility: 'cha', background: 'Soldier',
+      heroClass: 'Fighter', species: 'Elf', elfLineage: 'Drow', speciesCastingAbility: 'cha', elfKeenSense: 'Perception', background: 'Soldier',
       abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 },
     };
     const party = { characters: Array.from({ length: 4 }, () => drow) };
@@ -506,7 +514,7 @@ describe('Kaggle arena bridge', () => {
 
   it('builds Magic Initiate background spells with an authoritative free cast', () => {
     const acolyte = {
-      heroClass: 'Fighter', species: 'Human', background: 'Acolyte', humanOriginFeat: 'Alert', size: 'Medium',
+      heroClass: 'Fighter', species: 'Human', background: 'Acolyte', humanOriginFeat: 'Alert', humanSkill: 'Perception', size: 'Medium',
       abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { wis: 2, cha: 1 },
       originCantrips: ['Sacred Flame', 'Toll the Dead'], originSpell: 'Guiding Bolt', originCastingAbility: 'wis',
     };
@@ -521,7 +529,7 @@ describe('Kaggle arena bridge', () => {
 
   it('gives Humans a second implemented Origin Feat with independent Magic Initiate use', () => {
     const human = {
-      heroClass: 'Fighter', species: 'Human', background: 'Acolyte', humanOriginFeat: 'Magic Initiate (Wizard)',
+      heroClass: 'Fighter', species: 'Human', background: 'Acolyte', humanOriginFeat: 'Magic Initiate (Wizard)', humanSkill: 'Perception',
       abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { wis: 2, cha: 1 },
       originCantrips: ['Sacred Flame', 'Toll the Dead'], originSpell: 'Guiding Bolt', originCastingAbility: 'wis',
       humanOriginCantrips: ['Fire Bolt', 'Ray of Frost'], humanOriginSpell: 'Magic Missile', humanOriginCastingAbility: 'int',

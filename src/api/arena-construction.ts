@@ -22,6 +22,7 @@ type GoliathAncestry = 'Cloud' | 'Fire' | 'Frost' | 'Hill' | 'Stone' | 'Storm';
 const ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 const POINT_COST: Record<number, number> = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
 const DRAGON_DAMAGE_TYPES = ['acid', 'cold', 'fire', 'lightning', 'poison'] as const;
+const SKILLS = ['Acrobatics', 'Animal Handling', 'Arcana', 'Athletics', 'Deception', 'History', 'Insight', 'Intimidation', 'Investigation', 'Medicine', 'Nature', 'Perception', 'Performance', 'Persuasion', 'Religion', 'Sleight of Hand', 'Stealth', 'Survival'] as const;
 
 const SLOT_PARTY: Record<1 | 2 | 3 | 4, AddCreatureOptions> = {
   1: { heroClass: 'Fighter', heroLevel: 5, team: 'red' },
@@ -159,7 +160,7 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     if (typeof character.heroClass !== 'string' || !HERO_CLASS_NAMES.includes(character.heroClass as typeof HERO_CLASS_NAMES[number])) {
       throw new EncounterError(`${label}.heroClass must be a supported hero class.`);
     }
-    if (!Object.keys(character).every(key => ['heroClass', 'abilities', 'subclass', 'spells', 'species', 'background', 'abilityIncreases', 'dragonAncestry', 'elfLineage', 'gnomeLineage', 'goliathAncestry', 'tieflingLegacy', 'speciesCastingAbility', 'size', 'originCantrips', 'originSpell', 'originCastingAbility', 'humanOriginFeat', 'humanOriginCantrips', 'humanOriginSpell', 'humanOriginCastingAbility'].includes(key))) {
+    if (!Object.keys(character).every(key => ['heroClass', 'abilities', 'subclass', 'spells', 'species', 'background', 'abilityIncreases', 'dragonAncestry', 'elfLineage', 'gnomeLineage', 'goliathAncestry', 'tieflingLegacy', 'speciesCastingAbility', 'size', 'elfKeenSense', 'humanSkill', 'originCantrips', 'originSpell', 'originCastingAbility', 'humanOriginFeat', 'humanOriginCantrips', 'humanOriginSpell', 'humanOriginCastingAbility'].includes(key))) {
       throw new EncounterError(`${label} contains unsupported build choices.`);
     }
     const baseAbilities = parseAbilities(character.abilities, `${label}.abilities`);
@@ -169,6 +170,12 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     }
     const species = character.species as ArenaSpecies | undefined;
     const background = character.background as ArenaBackground | undefined;
+    const elfKeenSense = character.elfKeenSense as string | undefined;
+    const humanSkill = character.humanSkill as string | undefined;
+    if (species === 'Elf' && (typeof elfKeenSense !== 'string' || !['Insight', 'Perception', 'Survival'].includes(elfKeenSense))) throw new EncounterError(`${label}.elfKeenSense must be Insight, Perception, or Survival.`);
+    if (species !== 'Elf' && elfKeenSense !== undefined) throw new EncounterError(`${label}.elfKeenSense requires Elf.`);
+    if (species === 'Human' && (typeof humanSkill !== 'string' || !SKILLS.includes(humanSkill as typeof SKILLS[number]))) throw new EncounterError(`${label}.humanSkill must be an SRD skill.`);
+    if (species !== 'Human' && humanSkill !== undefined) throw new EncounterError(`${label}.humanSkill requires Human.`);
     const size = character.size as 'Small' | 'Medium' | undefined;
     if (character.size !== undefined && (typeof character.size !== 'string' || !['Small', 'Medium'].includes(character.size))) {
       throw new EncounterError(`${label}.size must be Small or Medium.`);
@@ -232,7 +239,7 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
       heroOverrides: {
         abilities, subclass: character.subclass as 'Circle of the Land' | 'Circle of the Moon' | undefined, spells,
         ...(species && background ? {
-          species, speciesChoice: elfLineage ?? gnomeLineage ?? goliathAncestry ?? tieflingLegacy ?? character.dragonAncestry as string | undefined, speciesCastingAbility, background, originFeat: BACKGROUNDS[background].originFeat, originFeats: [BACKGROUNDS[background].originFeat, ...(humanOriginFeat ? [humanOriginFeat] : [])], originSkills: [...BACKGROUNDS[background].skills], originTool: BACKGROUNDS[background].tool,
+          species, speciesChoice: elfLineage ?? gnomeLineage ?? goliathAncestry ?? tieflingLegacy ?? character.dragonAncestry as string | undefined, speciesCastingAbility, background, originFeat: BACKGROUNDS[background].originFeat, originFeats: [BACKGROUNDS[background].originFeat, ...(humanOriginFeat ? [humanOriginFeat] : [])], originSkills: [...new Set([...BACKGROUNDS[background].skills, ...(elfKeenSense ? [elfKeenSense] : []), ...(humanSkill ? [humanSkill] : [])])], originTool: BACKGROUNDS[background].tool,
           originEquipment: [...BACKGROUNDS[background].equipment], sizeOverride: size ?? SPECIES[species].size, speedOverride: elfLineage === 'Wood Elf' ? 35 : SPECIES[species].speed,
           hitPointBonus: (SPECIES[species].maxHpBonusAtLevel5 ?? 0) + (humanOriginFeat === 'Tough' ? 10 : 0), additionalResistances: tieflingLegacy ? [{ Abyssal: 'poison', Chthonic: 'necrotic', Infernal: 'fire' }[tieflingLegacy]] : SPECIES[species].resistances ? [...SPECIES[species].resistances] : undefined,
           additionalResources: { ...(species === 'Orc' ? { 'orc-adrenaline-rush': 3 } : {}), ...(species === 'Goliath' ? { 'goliath-large-form': 1, 'goliath-giant-ancestry': 3 } : {}), ...(species === 'Elf' && elfLineage === 'Drow' ? { 'drow-faerie-fire': 1 } : {}), ...(species === 'Elf' && elfLineage === 'High Elf' ? { 'high-elf-misty-step': 1 } : {}), ...(species === 'Elf' && elfLineage === 'Wood Elf' ? { 'wood-elf-longstrider': 1 } : {}), ...(species === 'Tiefling' && tieflingLegacy === 'Abyssal' ? { 'abyssal-ray-of-sickness': 1, 'abyssal-hold-person': 1 } : {}), ...(species === 'Tiefling' && tieflingLegacy === 'Chthonic' ? { 'chthonic-false-life': 1 } : {}), ...(species === 'Tiefling' && tieflingLegacy === 'Infernal' ? { 'infernal-hellish-rebuke': 1 } : {}), ...(origin?.resources ?? {}), ...(humanOrigin?.resources ?? {}) },
