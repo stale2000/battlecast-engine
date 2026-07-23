@@ -446,6 +446,23 @@ describe('Kaggle arena bridge', () => {
     }
   });
 
+  it('constructs every supported SRD species variant', () => {
+    const base = { heroClass: 'Fighter', background: 'Soldier', abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 } };
+    const variants = [
+      { species: 'Dragonborn', dragonAncestry: 'acid' }, { species: 'Dragonborn', dragonAncestry: 'cold' }, { species: 'Dragonborn', dragonAncestry: 'fire' }, { species: 'Dragonborn', dragonAncestry: 'lightning' }, { species: 'Dragonborn', dragonAncestry: 'poison' },
+      { species: 'Dwarf' }, { species: 'Halfling' }, { species: 'Human', humanSkill: 'Stealth', humanOriginFeat: 'Tough' }, { species: 'Orc' },
+      { species: 'Elf', elfLineage: 'Drow', speciesCastingAbility: 'wis', elfKeenSense: 'Perception' }, { species: 'Elf', elfLineage: 'High Elf', speciesCastingAbility: 'wis', elfKeenSense: 'Perception' }, { species: 'Elf', elfLineage: 'Wood Elf', speciesCastingAbility: 'wis', elfKeenSense: 'Perception' },
+      { species: 'Gnome', gnomeLineage: 'Forest Gnome', speciesCastingAbility: 'wis' }, { species: 'Gnome', gnomeLineage: 'Rock Gnome', speciesCastingAbility: 'wis' },
+      ...(['Cloud', 'Fire', 'Frost', 'Hill', 'Stone', 'Storm'] as const).map(goliathAncestry => ({ species: 'Goliath', goliathAncestry })),
+      ...(['Abyssal', 'Chthonic', 'Infernal'] as const).map(tieflingLegacy => ({ species: 'Tiefling', tieflingLegacy, speciesCastingAbility: 'wis' })),
+    ];
+    for (const variant of variants) {
+      const character = { ...base, ...variant };
+      const result = kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => character) }, blueParty: party });
+      expect(result.state.battleState!.creatures.filter(creature => creature.team === 'red')).toHaveLength(4);
+    }
+  });
+
   it('accepts and preserves every non-spell Human Origin Feat', () => {
     for (const feat of ['Alert', 'Crafter', 'Healer', 'Lucky', 'Musician', 'Savage Attacker', 'Skilled', 'Tavern Brawler', 'Tough']) {
       const background = feat === 'Alert' ? 'Soldier' : 'Criminal';
