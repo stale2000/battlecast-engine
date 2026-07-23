@@ -314,6 +314,15 @@ describe('Kaggle arena bridge', () => {
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...highElf, highElfCantrip: 'Wish' })) }, blueParty: party })).toThrow(/highElfCantrip/);
   });
 
+  it('gives High Elf Ray of Frost its SRD speed reduction payload', () => {
+    const highElf = {
+      heroClass: 'Fighter', species: 'Elf', elfLineage: 'High Elf', highElfCantrip: 'Ray of Frost', speciesCastingAbility: 'wis', elfKeenSense: 'Perception', background: 'Soldier',
+      abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 },
+    };
+    const hero = kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => highElf) }, blueParty: party }).state.battleState!.creatures.find(creature => creature.team === 'red')!;
+    expect(hero.monsterData.actions.find(action => action.name === 'Ray of Frost')?.buffOnHit).toMatchObject({ speedPenalty: 10, expiresOnSourceTurnStart: true });
+  });
+
   it('casts Wood Elf Pass without Trace through the shared concentration path', () => {
     const encounter = new Encounter({ seed: 1 });
     const passWithoutTrace = { name: 'Pass without Trace', type: 'special' as const, spellLevel: 2, castingAbility: 'wis' as const, resourceCost: { key: 'wood-elf-pass-without-trace', amount: 1 }, range: { normal: 30, long: 30 }, targetScope: 'all_allies_in_area' as const, durationRounds: 600, buff: { name: 'Pass without Trace', key: 'wood-elf-pass-without-trace', requiresConcentration: true, stealthBonus: 10 }, description: 'Stealth bonus.' };

@@ -131,7 +131,7 @@ function highElfCantrip(name: 'Fire Bolt' | 'Ray of Frost', castingAbility: Cast
   const attackBonus = Math.floor((abilities[castingAbility] - 10) / 2) + 3;
   return name === 'Fire Bolt'
     ? { name, type: 'ranged', description: 'Ranged spell attack, 2d10 fire damage.', spellLevel: 0, castingAbility, attackBonus, damage: '2d10', damageType: 'fire', range: { normal: 120, long: 120 }, magical: true, targetScope: 'one_enemy' }
-    : { name, type: 'ranged', description: 'Ranged spell attack, 2d8 cold damage.', spellLevel: 0, castingAbility, attackBonus, damage: '2d8', damageType: 'cold', range: { normal: 60, long: 60 }, magical: true, targetScope: 'one_enemy' };
+    : { name, type: 'ranged', description: 'Ranged spell attack, 2d8 cold damage and the target’s Speed is reduced by 10 feet until your next turn.', spellLevel: 0, castingAbility, attackBonus, damage: '2d8', damageType: 'cold', range: { normal: 60, long: 60 }, magical: true, targetScope: 'one_enemy', buffOnHit: { name: 'Ray of Frost', key: 'ray-of-frost', speedPenalty: 10, expiresOnSourceTurnStart: true } };
 }
 
 function chthonicFalseLife(castingAbility: CastingAbility): MonsterAction {
@@ -200,7 +200,7 @@ function magicInitiateActions(
           ? { name, type: 'special', description: `CON save DC ${8 + mod + pb}; 2d12 poison damage.`, spellLevel: 0, castingAbility: castingAbility as CastingAbility, damageType: 'poison', savingThrow: { ability: 'con', dc: 8 + mod + pb, damageOnFail: '2d12' }, range: { normal: 10, long: 10 }, targetScope: 'one_enemy' }
       : name === 'Fire Bolt'
         ? { name, type: 'ranged', description: `Ranged spell attack, 2d10 fire damage.`, spellLevel: 0, castingAbility: castingAbility as CastingAbility, attackBonus: mod + pb, damage: '2d10', damageType: 'fire', range: { normal: 120, long: 120 }, magical: true, targetScope: 'one_enemy' }
-        : { name, type: 'ranged', description: `Ranged spell attack, 2d8 cold damage.`, spellLevel: 0, castingAbility: castingAbility as CastingAbility, attackBonus: mod + pb, damage: '2d8', damageType: 'cold', range: { normal: 60, long: 60 }, magical: true, targetScope: 'one_enemy' };
+        : { name, type: 'ranged', description: `Ranged spell attack, 2d8 cold damage and the target’s Speed is reduced by 10 feet until your next turn.`, spellLevel: 0, castingAbility: castingAbility as CastingAbility, attackBonus: mod + pb, damage: '2d8', damageType: 'cold', range: { normal: 60, long: 60 }, magical: true, targetScope: 'one_enemy', buffOnHit: { name: 'Ray of Frost', key: 'ray-of-frost', speedPenalty: 10, expiresOnSourceTurnStart: true } };
   const levelOne = spell === 'Bless' ? bless() : spell === 'Cure Wounds' ? cureWounds(castingAbility as CastingAbility, mod, pb) : spell === 'Healing Word' ? healingWord(castingAbility as CastingAbility, mod, pb) : spell === 'Shield of Faith' ? shieldOfFaith() : spell === 'Guiding Bolt' ? guidingBolt(castingAbility as CastingAbility, mod, pb) : spell === 'Entangle' ? entangle(castingAbility as CastingAbility, mod, pb) : spell === 'Magic Missile' ? magicMissile() : spell === 'Burning Hands' ? burningHands(castingAbility as CastingAbility, mod, pb) : spell === 'Thunderwave' ? thunderwave(castingAbility as CastingAbility, mod, pb) : sleep(castingAbility as CastingAbility, mod, pb);
   return { actions: [...cantrips.map(makeCantrip), { ...levelOne, resourceCost: { key: resourceKey, amount: 1 } }], resources: { [resourceKey]: 1 } };
 }
