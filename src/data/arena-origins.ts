@@ -13,6 +13,7 @@ export interface ArenaWeapon {
 
 export const ARENA_ARMOR = {
   Leather: { armorBase: 11, dexCap: Infinity },
+  'Scale Mail': { armorBase: 14, dexCap: 2 },
   'Chain Mail': { armorBase: 16, dexCap: 0 },
   Plate: { armorBase: 18, dexCap: 0 },
 } as const;
