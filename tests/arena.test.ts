@@ -935,6 +935,18 @@ describe('Kaggle arena bridge', () => {
     expect(hero.resources['magic-initiate:human']).toBe(1);
   });
 
+  it('also exposes Magic Initiate spells through the caster’s spell slots', () => {
+    const wizard = {
+      heroClass: 'Wizard', species: 'Human', background: 'Soldier', humanOriginFeat: 'Magic Initiate (Cleric)', humanSkill: 'Perception',
+      abilities: { str: 8, dex: 14, con: 14, int: 15, wis: 12, cha: 8 }, abilityIncreases: { dex: 2, con: 1 },
+      spells: getAvailableSpells('Wizard', 5).filter(spell => spell.spellLevel > 0).slice(0, 8).map(spell => spell.name),
+      humanOriginCantrips: ['Sacred Flame', 'Toll the Dead'], humanOriginSpell: 'Guiding Bolt', humanOriginCastingAbility: 'wis',
+    };
+    const party = { characters: Array.from({ length: 4 }, () => wizard) };
+    const hero = kaggleStep({ ...init(), redParty: party, blueParty: party }).state.battleState!.creatures.find(creature => creature.team === 'red')!;
+    expect(hero.monsterData.actions.map(action => action.name)).toContain('Guiding Bolt (Spell Slot)');
+  });
+
   it('gives Humans a second implemented Origin Feat with independent Magic Initiate use', () => {
     const human = {
       heroClass: 'Fighter', species: 'Human', background: 'Acolyte', humanOriginFeat: 'Magic Initiate (Wizard)', humanSkill: 'Perception',

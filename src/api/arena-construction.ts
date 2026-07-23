@@ -230,7 +230,14 @@ function magicInitiateActions(
       ? { name, type: 'special', description: `WIS save DC ${8 + mod + pb}; 2d8 necrotic damage.`, spellLevel: 0, castingAbility: castingAbility as CastingAbility, damageType: 'necrotic', savingThrow: { ability: 'wis', dc: 8 + mod + pb, damageOnFail: '2d8' }, range: { normal: 60, long: 60 }, targetScope: 'one_enemy' }
     : damagingCantrip(name as SupportedDamageCantrip, castingAbility as CastingAbility, abilities);
   const levelOne = spell === 'Bless' ? bless() : spell === 'Cure Wounds' ? cureWounds(castingAbility as CastingAbility, mod, pb) : spell === 'Healing Word' ? healingWord(castingAbility as CastingAbility, mod, pb) : spell === 'Shield of Faith' ? shieldOfFaith() : spell === 'Guiding Bolt' ? guidingBolt(castingAbility as CastingAbility, mod, pb) : spell === 'Entangle' ? entangle(castingAbility as CastingAbility, mod, pb) : spell === 'Magic Missile' ? magicMissile() : spell === 'Burning Hands' ? burningHands(castingAbility as CastingAbility, mod, pb) : spell === 'Thunderwave' ? thunderwave(castingAbility as CastingAbility, mod, pb) : sleep(castingAbility as CastingAbility, mod, pb);
-  return { actions: [...cantrips.map(makeCantrip), { ...levelOne, resourceCost: { key: resourceKey, amount: 1 } }], resources: { [resourceKey]: 1 } };
+  return {
+    actions: [
+      ...cantrips.map(makeCantrip),
+      { ...levelOne, resourceCost: { key: resourceKey, amount: 1 } },
+      { ...levelOne, name: `${levelOne.name} (Spell Slot)` },
+    ],
+    resources: { [resourceKey]: 1 },
+  };
 }
 
 /** Validates a public arena party and converts it into trusted encounter options. */
