@@ -446,6 +446,19 @@ describe('Kaggle arena bridge', () => {
     }
   });
 
+  it('accepts and preserves every non-spell Human Origin Feat', () => {
+    for (const feat of ['Alert', 'Crafter', 'Healer', 'Lucky', 'Musician', 'Savage Attacker', 'Skilled', 'Tavern Brawler', 'Tough']) {
+      const background = feat === 'Alert' ? 'Soldier' : 'Criminal';
+      const character = {
+        heroClass: 'Fighter', species: 'Human', background, humanSkill: 'Stealth', humanOriginFeat: feat,
+        abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: background === 'Soldier' ? { str: 2, con: 1 } : { dex: 2, con: 1 },
+        ...(feat === 'Tavern Brawler' ? { humanOriginAbility: 'str' } : {}),
+      };
+      const result = kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => character) }, blueParty: party });
+      expect(result.state.battleState!.creatures.find(creature => creature.team === 'red')!.monsterData.originFeats).toContain(feat);
+    }
+  });
+
   it('requires and preserves the Gnome lineage spellcasting ability', () => {
     const gnome = {
       heroClass: 'Fighter', species: 'Gnome', gnomeLineage: 'Forest Gnome', speciesCastingAbility: 'wis', background: 'Soldier',

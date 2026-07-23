@@ -262,8 +262,8 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     if ((species === 'Elf' || species === 'Gnome' || species === 'Tiefling') && !['int', 'wis', 'cha'].includes(speciesCastingAbility ?? '')) throw new EncounterError(`${label}.speciesCastingAbility must be Intelligence, Wisdom, or Charisma.`);
     if (species !== 'Elf' && species !== 'Gnome' && species !== 'Tiefling' && character.speciesCastingAbility !== undefined) throw new EncounterError(`${label}.speciesCastingAbility requires Elf, Gnome, or Tiefling.`);
     const humanOriginFeat = character.humanOriginFeat as string | undefined;
-    if (species === 'Human' && !['Alert', 'Healer', 'Magic Initiate (Cleric)', 'Magic Initiate (Wizard)', 'Savage Attacker', 'Tavern Brawler', 'Tough'].includes(humanOriginFeat ?? '')) {
-      throw new EncounterError(`${label}.humanOriginFeat must be an engine-supported Origin Feat.`);
+    if (species === 'Human' && !['Alert', 'Crafter', 'Healer', 'Lucky', 'Magic Initiate (Cleric)', 'Magic Initiate (Wizard)', 'Musician', 'Savage Attacker', 'Skilled', 'Tavern Brawler', 'Tough'].includes(humanOriginFeat ?? '')) {
+      throw new EncounterError(`${label}.humanOriginFeat must be an SRD Origin Feat.`);
     }
     if (species !== 'Human' && (humanOriginFeat !== undefined || character.humanOriginCantrips !== undefined || character.humanOriginSpell !== undefined || character.humanOriginCastingAbility !== undefined)) {
       throw new EncounterError(`${label}.humanOriginFeat requires Human.`);
