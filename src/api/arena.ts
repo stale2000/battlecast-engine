@@ -22,28 +22,12 @@ import { getEligibleWildShapeBeasts } from '../data/heroes.js';
 import { abilityModifier } from '../engine/dice.js';
 import { getFootprintSize } from '../engine/combat-geometry.js';
 import type { Creature, MonsterAction } from '../types/monster.js';
-
-export type ArenaAction =
-  | { id: string; type: 'attack'; actionName: string; actionIndex: number; targetId: string }
-  | { id: string; type: 'spell'; actionName: string; actionIndex: number; targetId: string; targetIds?: string[]; center?: { x: number; y: number } }
-  | { id: 'dash' | 'bonus_dash'; type: 'dash'; isBonusAction: boolean }
-  | { id: 'dodge'; type: 'dodge' }
-  | { id: 'disengage' | 'bonus_disengage'; type: 'disengage'; isBonusAction: boolean }
-  | { id: string; type: 'help'; targetId: string }
-  | { id: 'class_feature:action_surge'; type: 'action_surge' }
-  | { id: 'class_feature:steady_aim'; type: 'steady_aim' }
-  | { id: 'species:adrenaline_rush'; type: 'species_dash' }
-  | { id: 'species:draconic_flight'; type: 'species_flight' }
-  | { id: string; type: 'wild_shape'; beastName: string }
-  | { id: string; type: 'monk_strike'; actionIndex: number; targetId: string; flurry: boolean }
-  | { id: 'move_to'; type: 'move_to'; destination?: { x: number; y: number } }
-  | { id: 'end_turn'; type: 'end_turn' };
+import { applyOriginLegalAction, getOriginLegalActions } from './arena-origin-actions.js';
+import { applyClassFeatureLegalAction, getClassFeatureLegalActions } from './arena-class-actions.js';
+import { sameArenaAction, type ArenaAction } from './arena-actions.js';
+export { sameArenaAction, type ArenaAction } from './arena-actions.js';
 
 const slug = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-
-export function sameArenaAction(left: ArenaAction, right: ArenaAction): boolean {
-  return JSON.stringify(left) === JSON.stringify(right);
-}
 
 export function getActiveCreature(encounter: Encounter): Creature | undefined {
   const state = encounter.state;
@@ -184,9 +168,7 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
     }
   }
   if (reachableMovementDestinations(active, state).length) actions.push({ id: 'move_to', type: 'move_to' });
-  if (active.monsterData.heroClass === 'Fighter' && active.hasActed && !active.turnFlags.arenaActionSurge && hasResource(active, 'action-surge')) {
-    actions.push({ id: 'class_feature:action_surge', type: 'action_surge' });
-  }
+  actions.push(...getClassFeatureLegalActions(active));
   if (!active.hasActed && !attackInProgress) {
     if (active.movementRemaining > 0) actions.push({ id: 'dash', type: 'dash', isBonusAction: false });
     actions.push({ id: 'dodge', type: 'dodge' });
@@ -199,15 +181,9 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
     }
   }
   if (active.monsterData.heroClass === 'Rogue' && !active.bonusActionUsed && !active.hasMovedThisTurn && !active.turnFlags.steadyAim) {
-    actions.push({ id: 'class_feature:steady_aim', type: 'steady_aim' });
     if (active.movementRemaining > 0) actions.push({ id: 'bonus_dash', type: 'dash', isBonusAction: true });
   }
-  if (active.monsterData.heroSpecies === 'Orc' && !active.bonusActionUsed && active.movementRemaining > 0 && hasResource(active, 'orc-adrenaline-rush')) {
-    actions.push({ id: 'species:adrenaline_rush', type: 'species_dash' });
-  }
-  if (active.monsterData.heroSpecies === 'Dragonborn' && (active.monsterData.heroLevel ?? 0) >= 5 && !active.bonusActionUsed && !active.temporaryFlightSpeed && hasResource(active, 'dragonborn-flight')) {
-    actions.push({ id: 'species:draconic_flight', type: 'species_flight' });
-  }
+  actions.push(...getOriginLegalActions(active));
   actions.push(...wildShapeActions(active, state));
   const monk = monkUnarmedAction(active);
   const flurryStrikes = Object.keys(active.turnFlags).filter(key => key.startsWith('arena-flurry-')).length;
@@ -336,30 +312,18 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       target.activeBuffs.push({ name: 'Help', key: `help:${active.id}:${target.id}`, casterId: active.id, appliedRound: state.round, endRound: state.round + 2, advantageForAllAttackers: true, expiresOnSourceTurnStart: true });
       active.hasActed = true;
       pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Help', details: `${active.displayName} helps against ${target.displayName}.`, type: 'special' });
-    } else if (legal.type === 'action_surge') {
-      if (!active.hasActed || active.turnFlags.arenaActionSurge || !consumeResource(active, 'action-surge')) throw new EncounterError('Illegal or stale arena Action Surge.');
-      active.turnFlags.arenaActionSurge = true;
-      for (const key of Object.keys(active.turnFlags)) if (key.startsWith('arena-attack-')) delete active.turnFlags[key];
-      active.hasActed = false;
-      pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Action Surge', details: `${active.displayName} gains another action.`, type: 'special' });
-    } else if (legal.type === 'steady_aim') {
-      if (active.monsterData.heroClass !== 'Rogue' || active.bonusActionUsed || active.hasMovedThisTurn || active.turnFlags.steadyAim) throw new EncounterError('Illegal or stale arena Steady Aim.');
-      active.turnFlags.steadyAim = true;
-      active.bonusActionUsed = true;
-      active.movementRemaining = 0;
-      pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Steady Aim', details: `${active.displayName} gains advantage on their next attack.`, type: 'special' });
-    } else if (legal.type === 'species_dash') {
-      if (active.monsterData.heroSpecies !== 'Orc' || active.bonusActionUsed || !consumeResource(active, 'orc-adrenaline-rush')) throw new EncounterError('Illegal or stale arena Adrenaline Rush.');
-      active.movementRemaining += getEffectiveMoveSpeed(active, state);
-      active.temporaryHp = Math.max(active.temporaryHp ?? 0, active.monsterData.proficiencyBonus);
-      active.bonusActionUsed = true;
-      pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Adrenaline Rush', details: `${active.displayName} dashes and gains temporary HP.`, type: 'move' });
-    } else if (legal.type === 'species_flight') {
-      if (active.monsterData.heroSpecies !== 'Dragonborn' || (active.monsterData.heroLevel ?? 0) < 5 || active.bonusActionUsed || active.temporaryFlightSpeed || !consumeResource(active, 'dragonborn-flight')) throw new EncounterError('Illegal or stale arena Draconic Flight.');
-      active.temporaryFlightSpeed = active.monsterData.speed.walk;
-      active.airborne = true;
-      active.bonusActionUsed = true;
-      pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Draconic Flight', details: `${active.displayName} sprouts spectral wings and gains a Fly Speed.`, type: 'special' });
+    } else if (legal.type === 'action_surge' || legal.type === 'steady_aim') {
+      try {
+        applyClassFeatureLegalAction(state, active, legal);
+      } catch (error) {
+        throw new EncounterError(error instanceof Error ? error.message : 'Illegal or stale arena class feature.');
+      }
+    } else if (legal.type === 'species_dash' || legal.type === 'species_flight') {
+      try {
+        applyOriginLegalAction(state, active, legal);
+      } catch (error) {
+        throw new EncounterError(error instanceof Error ? error.message : 'Illegal or stale arena origin action.');
+      }
     } else if (legal.type === 'wild_shape') {
       const level = active.monsterData.heroLevel ?? 0;
       const beast = getEligibleWildShapeBeasts({ level, subclass: active.monsterData.heroSubclass }).find(candidate => candidate.name === legal.beastName);
