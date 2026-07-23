@@ -55,7 +55,7 @@ function rollHealingTotal(caster: Creature, action: MonsterAction, slotLevelUsed
   const shouldMaximizeDice = isLifeDomainCleric(caster, 17);
   let amount = shouldMaximizeDice
     ? maxDiceTotal(action.heal!.dice)
-    : rollDice(action.heal!.dice).total;
+    : rollDice(action.heal!.dice, caster.monsterData.healingRerollOnes === true).total;
   if (action.heal!.addCastingMod && action.castingAbility) {
     amount += abilityModifier(caster.monsterData.abilities[action.castingAbility]);
   }

@@ -15,6 +15,7 @@ export type ArenaAction =
   | { id: 'dodge'; type: 'dodge' }
   | { id: 'disengage' | 'bonus_disengage'; type: 'disengage'; isBonusAction: boolean }
   | { id: string; type: 'help'; targetId: string }
+  | { id: string; type: 'healer_battle_medic'; targetId: string }
   | ClassFeatureArenaAction
   | OriginArenaAction
   | { id: string; type: 'wild_shape'; beastName: string }

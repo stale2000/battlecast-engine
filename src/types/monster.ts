@@ -493,6 +493,8 @@ export interface MonsterData {
   originSkills?: string[];
   originTool?: string;
   originEquipment?: string[];
+  /** Healer Origin Feat permits rerolling 1s on healing dice. */
+  healingRerollOnes?: boolean;
   /** Known lineage cantrips, including noncombat spells omitted from actions. */
   speciesCantrips?: string[];
   /** Always-prepared lineage spells, including effects not yet arena-playable. */

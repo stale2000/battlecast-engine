@@ -1,6 +1,7 @@
 import { Encounter, EncounterError, type Team } from './encounter.js';
 import {
   checkBattleComplete,
+  applyHealing,
   consumeResource,
   creatureDistance,
   getAliveCreatures,
@@ -19,7 +20,7 @@ import { canSee, getActiveActions } from '../engine/ai-targeting.js';
 import { moveToDestination, reachableMovementDestinations } from '../engine/ai-movement.js';
 import { executeLegendaryAction, handlePassiveAuras, processTurnStart, runOpportunityAttacks } from '../engine/ai-turn.js';
 import { getEligibleWildShapeBeasts } from '../data/heroes.js';
-import { abilityModifier } from '../engine/dice.js';
+import { abilityModifier, rollDice } from '../engine/dice.js';
 import { getFootprintSize } from '../engine/combat-geometry.js';
 import type { Creature, MonsterAction } from '../types/monster.js';
 import { applyGoliathAttackFeature, applyOriginLegalAction, getGoliathAttackFeatures, getOriginLegalActions } from './arena-origin-actions.js';
@@ -112,6 +113,15 @@ function originalArea(action: MonsterAction): string {
   return action.savingThrow?.area?.toLowerCase() ?? '';
 }
 
+function hasOriginFeat(creature: Creature, feat: string): boolean {
+  return creature.monsterData.originFeats?.includes(feat) || creature.monsterData.originFeat === feat;
+}
+
+function heroHitDie(creature: Creature): number | undefined {
+  const match = creature.monsterData.hpFormula.match(/^\d+d(6|8|10|12)/i);
+  return match ? Number(match[1]) : undefined;
+}
+
 function autoDartSpellActions(active: Creature, state: NonNullable<Encounter['state']>, action: MonsterAction, actionIndex: number): ArenaAction[] {
   const targets = state.creatures
     .filter(target => target.team !== active.team && target.isAlive && !target.dying && attackInRange(active, target, action) && (action.type !== 'ranged' || canSee(state, active, target)))
@@ -196,6 +206,11 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
   }
   if (active.monsterData.heroClass === 'Rogue' && !active.bonusActionUsed && !active.hasMovedThisTurn && !active.turnFlags.steadyAim) {
     if (active.movementRemaining > 0) actions.push({ id: 'bonus_dash', type: 'dash', isBonusAction: true });
+  }
+  if (!active.hasActed && hasOriginFeat(active, 'Healer') && hasResource(active, 'healer-kit')) {
+    for (const target of state.creatures.filter(candidate => candidate.team === active.team && candidate.isAlive && !candidate.dying && candidate.currentHp < candidate.maxHp && creatureDistance(active, candidate) <= 5 && hasResource(candidate, 'hit-die') && !candidate.activeBuffs?.some(buff => buff.key === 'healer-battle-medic'))) {
+      if (heroHitDie(target)) actions.push({ id: `healer_battle_medic:${target.id}`, type: 'healer_battle_medic', targetId: target.id });
+    }
   }
   actions.push(...getOriginLegalActions(active));
   actions.push(...wildShapeActions(active, state));
@@ -340,6 +355,13 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       target.activeBuffs.push({ name: 'Help', key: `help:${active.id}:${target.id}`, casterId: active.id, appliedRound: state.round, endRound: state.round + 2, advantageForAllAttackers: true, expiresOnSourceTurnStart: true });
       active.hasActed = true;
       pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Help', details: `${active.displayName} helps against ${target.displayName}.`, type: 'special' });
+    } else if (legal.type === 'healer_battle_medic') {
+      const target = state.creatures.find(creature => creature.id === legal.targetId);
+      const die = target ? heroHitDie(target) : undefined;
+      if (!target || !die || !consumeResource(active, 'healer-kit') || !consumeResource(target, 'hit-die')) throw new EncounterError('Illegal or stale arena Battle Medic.');
+      applyHealing(state, target, rollDice(`1d${die}`, active.monsterData.healingRerollOnes === true).total + active.monsterData.proficiencyBonus, active, 'Battle Medic');
+      target.activeBuffs.push({ name: 'Battle Medic', key: 'healer-battle-medic', casterId: active.id, appliedRound: state.round, endRound: Infinity });
+      active.hasActed = true;
     } else if (legal.type === 'action_surge' || legal.type === 'steady_aim') {
       try {
         applyClassFeatureLegalAction(state, active, legal);
