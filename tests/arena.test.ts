@@ -424,6 +424,20 @@ describe('Kaggle arena bridge', () => {
     expect(getLegalActions(encounter, halfling.id).some(action => action.id === 'hide')).toBe(true);
   });
 
+  it('offers Goliath a Powerful Build grapple escape action', () => {
+    const encounter = new Encounter({ seed: 1 });
+    const [goliath] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { species: 'Goliath' }, team: 'red', position: { x: 0, y: 0 } });
+    const [source] = encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
+    encounter.start(); encounter.state!.initiativeOrder = [goliath.id]; startArena(encounter);
+    const active = getActiveCreature(encounter)!;
+    active.conditions.push('grappled');
+    active.conditionTimers.push({ condition: 'grappled', duration: 'permanent', appliedRound: 1, sourceId: source.id, saveDC: 1 });
+    const escape = getLegalActions(encounter, active.id).find(action => action.type === 'escape_grapple' && action.ability === 'str')!;
+    applyLegalAction(encounter, escape);
+    expect(active.conditions).not.toContain('grappled');
+    expect(active.hasActed).toBe(true);
+  });
+
   it('applies Gnomish Cunning automatically to mental saves', () => {
     const encounter = new Encounter({ seed: 1 });
     const [gnome] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { species: 'Gnome' }, team: 'red' });

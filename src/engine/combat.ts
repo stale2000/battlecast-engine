@@ -625,6 +625,31 @@ function paySorcererMetamagic(attacker: Creature, cost: number): 'free' | 'paid'
   return 'paid';
 }
 
+/** Resolve the standard action to escape one source's Grappled condition. */
+export function escapeGrapple(
+  state: BattleState,
+  target: Creature,
+  sourceId: string,
+  ability: 'str' | 'dex',
+): boolean {
+  const timer = target.conditionTimers.find(entry => entry.condition === 'grappled' && entry.sourceId === sourceId);
+  const source = getCreatureById(state, sourceId);
+  if (!timer || !source?.isAlive) return false;
+  const dc = timer.saveDC ?? 8 + source.monsterData.proficiencyBonus + abilityModifier(getEffectiveAbilityScore(source, 'str'));
+  const advantage = target.monsterData.heroSpecies === 'Goliath';
+  const rolled = rollAttack(0, advantage, false);
+  const total = rolled.naturalRoll + abilityModifier(getEffectiveAbilityScore(target, ability));
+  const success = total >= dc;
+  state.events.push({ kind: 'save', targetId: target.id, success, durationMs: BASE_DURATIONS.save });
+  if (success) removeConditionFromSource(state, target, 'grappled', sourceId);
+  pushLog(state, {
+    round: state.round, turn: state.turnIndex, actor: target.displayName, action: 'Escape Grapple',
+    details: `${target.displayName} ${success ? 'escapes' : 'fails to escape'} ${source.displayName}'s grapple (${total} vs DC ${dc}).`,
+    type: success ? 'special' : 'condition',
+  });
+  return true;
+}
+
 function hasOriginFeat(creature: Creature, feat: string): boolean {
   return creature.monsterData.originFeat === feat || creature.monsterData.originFeats?.includes(feat) === true;
 }

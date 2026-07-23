@@ -15,6 +15,7 @@ import {
   processTargetTurnEndOngoingEffects,
   pushLog,
   resolveAttack,
+  escapeGrapple,
 } from '../engine/combat.js';
 import { canSee, getActiveActions } from '../engine/ai-targeting.js';
 import { canSeePoint, revealVisibleHiddenCreatures } from '../engine/visibility.js';
@@ -248,6 +249,10 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
       actions.push({ id: 'hide', type: 'hide', isBonusAction: false });
       if (active.monsterData.heroClass === 'Rogue' && !active.bonusActionUsed) actions.push({ id: 'bonus_hide', type: 'hide', isBonusAction: true });
     }
+    for (const timer of active.conditionTimers.filter(timer => timer.condition === 'grappled')) {
+      actions.push({ id: `escape_grapple:${timer.sourceId}:str`, type: 'escape_grapple', sourceId: timer.sourceId, ability: 'str' });
+      actions.push({ id: `escape_grapple:${timer.sourceId}:dex`, type: 'escape_grapple', sourceId: timer.sourceId, ability: 'dex' });
+    }
   }
   if (active.monsterData.heroClass === 'Rogue' && !active.bonusActionUsed && !active.hasMovedThisTurn && !active.turnFlags.steadyAim) {
     if (active.movementRemaining > 0) actions.push({ id: 'bonus_dash', type: 'dash', isBonusAction: true });
@@ -412,6 +417,9 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
         round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Hide',
         details: successes ? `${active.displayName} hides from ${successes} foe${successes === 1 ? '' : 's'}.` : `${active.displayName} fails to hide.`, type: 'special',
       });
+    } else if (legal.type === 'escape_grapple') {
+      if (!escapeGrapple(state, active, legal.sourceId, legal.ability)) throw new EncounterError('Illegal or stale arena grapple escape.');
+      active.hasActed = true;
     } else if (legal.type === 'help') {
       const target = state.creatures.find(creature => creature.id === legal.targetId);
       if (!target || !target.isAlive || target.team === active.team || creatureDistance(active, target) > 5) throw new EncounterError(`Illegal or stale arena help "${legal.id}".`);
