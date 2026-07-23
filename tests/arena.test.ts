@@ -368,6 +368,7 @@ describe('Kaggle arena bridge', () => {
     expect(drowCreature.monsterData.heroSpeciesCastingAbility).toBe('cha');
     expect(drowCreature.monsterData.actions.some(action => action.name === 'Faerie Fire')).toBe(true);
     expect(drowCreature.monsterData.actions.some(action => action.name === 'Darkness')).toBe(true);
+    expect(drowCreature.monsterData.actions.find(action => action.name === 'Darkness')!.darkness?.durationRounds).toBe(100);
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...drow, speciesCastingAbility: undefined })) }, blueParty: party })).toThrow(/speciesCastingAbility/);
   });
 
