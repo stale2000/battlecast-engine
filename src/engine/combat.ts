@@ -3136,6 +3136,21 @@ function applyDamage(state: BattleState, target: Creature, damage: number, damag
     target.stats.actionUsage["Storm's Thunder"] = (target.stats.actionUsage["Storm's Thunder"] || 0) + 1;
   }
 
+  if (damage > 0 && target.isAlive && target.currentHp > 0 && attacker && attacker.isAlive
+      && target.monsterData.heroSpecies === 'Tiefling' && target.monsterData.heroSpeciesChoice === 'Infernal'
+      && !target.reactionUsed && creatureDistance(target, attacker) <= 60
+      && consumeResource(target, 'infernal-hellish-rebuke')) {
+    target.reactionUsed = true;
+    const ability = target.monsterData.heroSpeciesCastingAbility ?? 'cha';
+    const dc = 8 + target.monsterData.proficiencyBonus + abilityModifier(getEffectiveAbilityScore(target, ability));
+    const save = rollSaveWithBuffs(attacker, getEffectiveSaveModifier(attacker, 'dex', state), false, dc, 'dex');
+    const amount = save.total >= dc ? Math.floor(rollDice('2d10').total / 2) : rollDice('2d10').total;
+    const event = pushHitEvent(state, attacker.id, amount, 'fire', false, attacker.currentHp);
+    applyDamage(state, attacker, amount, 'fire', target, false, true);
+    event.targetHpAfter = attacker.currentHp;
+    target.stats.actionUsage['Hellish Rebuke'] = (target.stats.actionUsage['Hellish Rebuke'] || 0) + 1;
+  }
+
   // Retaliation (Barbarian L10): reaction melee attack when damaged by adjacent creature
   if (damage > 0 && target.isAlive && target.currentHp > 0 && attacker && attacker.isAlive
       && target.monsterData.heroClass === 'Barbarian' && (target.monsterData.heroLevel ?? 0) >= 10
