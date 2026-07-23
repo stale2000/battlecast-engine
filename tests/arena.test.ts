@@ -98,6 +98,13 @@ describe('Kaggle arena bridge', () => {
     expect(() => kaggleStep({ ...init(), redParty: { characters: [{ heroClass: 'Fighter', abilities: { str: 15, dex: 15, con: 15, int: 15, wis: 15, cha: 15 } }] } })).toThrow(/exactly four/);
   });
 
+  it('accepts only catalog weapons that the class is proficient with', () => {
+    const fighter = { heroClass: 'Fighter', species: 'Human', background: 'Soldier', humanOriginFeat: 'Alert', humanSkill: 'Perception', weapons: ['Greatsword'], abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 } };
+    const party = { characters: Array.from({ length: 4 }, () => fighter) };
+    expect(kaggleStep({ ...init(), redParty: party, blueParty: party }).state.battleState!.creatures.some(creature => creature.monsterData.actions.some(action => action.name === 'Greatsword'))).toBe(true);
+    expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...fighter, heroClass: 'Wizard' })) }, blueParty: party })).toThrow(/not proficient/);
+  });
+
   it('preserves two validated SRD language choices', () => {
     const hero = { heroClass: 'Fighter', species: 'Dwarf', background: 'Soldier', languages: ['Dwarvish', 'Giant'], abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 } };
     const party = { characters: Array.from({ length: 4 }, () => hero) };
