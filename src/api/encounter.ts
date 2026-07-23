@@ -17,6 +17,7 @@ import {
   applyHealing,
   checkBattleComplete,
   createCreature,
+  getActiveSize,
   getFootprintSize,
   initBattle,
   isPositionBlocked,
@@ -368,7 +369,7 @@ export class Encounter {
   moveCreature(id: string, to: { x: number; y: number }): { position: { x: number; y: number } } {
     const state = this.requireActiveState();
     const creature = this.findCreature(id);
-    this.validatePosition(to, creature.monsterData.size, creature.id);
+    this.validatePosition(to, getActiveSize(creature), creature.id);
     creature.position = { x: to.x, y: to.y };
     pushLog(state, {
       round: state.round, turn: state.turnIndex,

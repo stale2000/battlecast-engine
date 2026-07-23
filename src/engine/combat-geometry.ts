@@ -36,8 +36,8 @@ export function distance(a: { x: number; y: number }, b: { x: number; y: number 
  * Honors size: a Large vs Large at adjacent corners returns 0 ft.
  */
 export function creatureDistance(a: Creature, b: Creature): number {
-  const fpA = getFootprintSize(a.wildShape?.size ?? a.monsterData.size);
-  const fpB = getFootprintSize(b.wildShape?.size ?? b.monsterData.size);
+  const fpA = getFootprintSize(a.wildShape?.size ?? a.temporarySize ?? a.monsterData.size);
+  const fpB = getFootprintSize(b.wildShape?.size ?? b.temporarySize ?? b.monsterData.size);
   const dx = Math.max(0, Math.max(a.position.x - (b.position.x + fpB - 1), b.position.x - (a.position.x + fpA - 1)));
   const dy = Math.max(0, Math.max(a.position.y - (b.position.y + fpB - 1), b.position.y - (a.position.y + fpA - 1)));
   return Math.max(dx, dy) * 5;
@@ -73,7 +73,7 @@ export function isPositionBlocked(
   // Creature collision (AABB)
   for (const c of creatures) {
     if (!c.isAlive || c.id === excludeId) continue;
-    const cfp = getFootprintSize(c.wildShape?.size ?? c.monsterData.size);
+    const cfp = getFootprintSize(c.wildShape?.size ?? c.temporarySize ?? c.monsterData.size);
     if (pos.x < c.position.x + cfp && pos.x + fp > c.position.x &&
         pos.y < c.position.y + cfp && pos.y + fp > c.position.y) {
       return true;

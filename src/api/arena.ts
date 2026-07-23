@@ -335,7 +335,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       } catch (error) {
         throw new EncounterError(error instanceof Error ? error.message : 'Illegal or stale arena class feature.');
       }
-    } else if (legal.type === 'species_dash' || legal.type === 'species_flight') {
+    } else if (legal.type === 'species_dash' || legal.type === 'species_flight' || legal.type === 'species_large_form') {
       try {
         applyOriginLegalAction(state, active, legal);
       } catch (error) {

@@ -214,7 +214,7 @@ export function createCreatureWithFixedHp(
 }
 
 export function getActiveSize(creature: Creature): MonsterData['size'] {
-  return creature.wildShape?.size ?? creature.monsterData.size;
+  return creature.wildShape?.size ?? creature.temporarySize ?? creature.monsterData.size;
 }
 
 export function getActiveSpeed(creature: Creature): MonsterData['speed'] {

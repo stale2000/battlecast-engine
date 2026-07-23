@@ -164,6 +164,21 @@ describe('Kaggle arena bridge', () => {
     }
   });
 
+  it('resolves Goliath Large Form through the legal-action catalogue', () => {
+    const encounter = new Encounter({ seed: 1 });
+    const [goliath] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { species: 'Goliath', additionalResources: { 'goliath-large-form': 1 } }, team: 'red', position: { x: 0, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 10, y: 0 } });
+    encounter.start();
+    encounter.state!.initiativeOrder = [goliath.id];
+    startArena(encounter);
+    const active = getActiveCreature(encounter)!;
+    const before = active.movementRemaining;
+    applyLegalAction(encounter, getLegalActions(encounter, active.id).find(action => action.type === 'species_large_form')!);
+    expect(active.temporarySize).toBe('Large');
+    expect(active.movementRemaining).toBe(before + 10);
+    expect(active.resources['goliath-large-form']).toBe(0);
+  });
+
   it('rerolls Halfling natural ones in the shared d20 primitive', () => {
     const values = [0, 0.5, 0.9];
     const rng = { next: () => values.shift()! };

@@ -505,6 +505,8 @@ export interface Creature {
   hasMovedThisTurn: boolean;
   movementRemaining: number;
   temporaryFlightSpeed?: number;
+  /** A temporary size change, such as a Goliath's Large Form. */
+  temporarySize?: MonsterData['size'];
   legendaryActionsRemaining?: number;
   superiorHunterDefense?: { damageType: string; round: number; turnIndex: number };
   recharges: Record<string, boolean>; // track recharge abilities

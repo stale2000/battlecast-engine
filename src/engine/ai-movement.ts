@@ -239,7 +239,7 @@ function findPath(
  * regardless of which corner of the large footprint is closest.
  */
 export function nearestFootprintEdge(from: { x: number; y: number }, target: Creature): { x: number; y: number } {
-  const fp = getFootprintSize(target.monsterData.size);
+  const fp = getFootprintSize(target.wildShape?.size ?? target.temporarySize ?? target.monsterData.size);
   if (fp <= 1) return target.position;
   let bestDist = Infinity;
   let best = target.position;
@@ -261,7 +261,7 @@ export function reachableMovementDestinations(
   const maxSquares = Math.floor(creature.movementRemaining / 5);
   if (maxSquares <= 0) return [];
   const from = { ...creature.position };
-  const size = creature.wildShape?.size ?? creature.monsterData.size;
+  const size = creature.wildShape?.size ?? creature.temporarySize ?? creature.monsterData.size;
   const fp = getFootprintSize(size);
   const gridSize = state.gridSize;
   const movementBlocked = movementBlockedSetFor(creature, state);
@@ -282,7 +282,7 @@ export function moveToDestination(creature: Creature, destination: { x: number; 
   const reachable = reachableMovementDestinations(creature, state);
   if (!reachable.some(cell => cell.x === destination.x && cell.y === destination.y)) return creature.position;
   const from = { ...creature.position };
-  const size = creature.wildShape?.size ?? creature.monsterData.size;
+  const size = creature.wildShape?.size ?? creature.temporarySize ?? creature.monsterData.size;
   const fp = getFootprintSize(size);
   const movementBlocked = movementBlockedSetFor(creature, state);
   const path = findPath(from, destination, size, fp, state.creatures, creature.id, state.gridSize, movementBlocked, Math.floor(creature.movementRemaining / 5), { exactGoal: true });
@@ -321,7 +321,7 @@ export function moveToward(creature: Creature, target: { x: number; y: number },
   if (maxSquares <= 0) return creature.position;
 
   const from = { ...creature.position };
-  const size = creature.wildShape?.size ?? creature.monsterData.size;
+  const size = creature.wildShape?.size ?? creature.temporarySize ?? creature.monsterData.size;
   const fp = getFootprintSize(size);
   const gridSize = state.gridSize;
 

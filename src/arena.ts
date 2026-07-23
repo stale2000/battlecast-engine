@@ -3,6 +3,7 @@ import { applyLegalAction, getActiveCreature, getLegalActions, sameArenaAction, 
 import { assertArenaObject, parseArenaParty } from './api/arena-construction.js';
 export { validateArenaParty } from './api/arena-construction.js';
 import type { Creature } from './types/monster.js';
+import { getActiveSize } from './engine/combat.js';
 
 export const ARENA_PROTOCOL_VERSION = 1;
 export const ARENA_ROUND_CAP = 20;
@@ -38,7 +39,7 @@ function observation(encounter: Encounter, team: Team) {
   const creature = (c: Creature) => c.team === team
     ? {
         id: c.id, name: c.displayName, team: c.team, hp: `${c.currentHp}/${c.maxHp}`, temporaryHp: c.temporaryHp ?? 0,
-        position: { ...c.position }, size: c.monsterData.size, conditions: [...c.conditions], status: status(c), resources: { ...c.resources },
+        position: { ...c.position }, size: getActiveSize(c), conditions: [...c.conditions], status: status(c), resources: { ...c.resources },
         build: {
           heroClass: c.monsterData.heroClass, heroLevel: c.monsterData.heroLevel, heroSubclass: c.monsterData.heroSubclass,
           species: c.monsterData.heroSpecies, speciesChoice: c.monsterData.heroSpeciesChoice, background: c.monsterData.heroBackground, originFeat: c.monsterData.originFeat,
@@ -47,7 +48,7 @@ function observation(encounter: Encounter, team: Team) {
         },
       }
     : {
-        id: c.id, name: c.displayName, team: c.team, position: { ...c.position }, size: c.monsterData.size,
+        id: c.id, name: c.displayName, team: c.team, position: { ...c.position }, size: getActiveSize(c),
         conditions: [...c.conditions], status: status(c), creatureType: c.monsterData.type, visibleEquipment: visibleEquipment(c),
       };
   return {
