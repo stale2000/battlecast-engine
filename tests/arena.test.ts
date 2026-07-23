@@ -8,7 +8,7 @@ import { applyDamage, applyDamageRollPenalty, hasDisadvantage, processTargetTurn
 import { dropConcentratedBuffsFrom } from '../src/engine/combat-buffs.js';
 import { canSee } from '../src/engine/ai-targeting.js';
 import { rollSaveWithBuffs } from '../src/engine/combat-buffs.js';
-import { rollAttack, rollDamage } from '../src/engine/dice.js';
+import { rollAttack } from '../src/engine/dice.js';
 import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
@@ -144,55 +144,14 @@ describe('Kaggle arena bridge', () => {
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...human, species: 'Dwarf', humanSkill: undefined })) }, blueParty: party })).toThrow(/size is selectable/);
   });
 
-  it('applies the Human Tough Origin Feat hit point bonus', () => {
+  it('rejects Origin Feats outside SRD 5.2', () => {
     const human = {
-      heroClass: 'Fighter', species: 'Human', background: 'Soldier', humanOriginFeat: 'Tough', humanSkill: 'Perception',
-      abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 },
-    };
-    const party = { characters: Array.from({ length: 4 }, () => human) };
-    const tough = kaggleStep({ ...init(), redParty: party, blueParty: party }).state.battleState!.creatures.find(creature => creature.team === 'red')!;
-    const baseline = kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...human, humanOriginFeat: 'Alert' })) }, blueParty: party }).state.battleState!.creatures.find(creature => creature.team === 'red')!;
-    expect(tough.maxHp).toBe(baseline.maxHp + 10);
-    expect(tough.resources['heroic-inspiration']).toBe(1);
-  });
-
-  it('constructs Tavern Brawler with its required ability increase and complete unarmed action', () => {
-    const human = {
-      heroClass: 'Fighter', species: 'Human', background: 'Criminal', humanOriginFeat: 'Tavern Brawler', humanOriginAbility: 'con', humanSkill: 'Perception',
+      heroClass: 'Fighter', species: 'Human', background: 'Criminal', humanSkill: 'Perception',
       abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { dex: 2, con: 1 },
     };
-    const result = kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => human) }, blueParty: party });
-    const brawler = result.state.battleState!.creatures.find(creature => creature.team === 'red')!;
-    const strike = brawler.monsterData.actions.find(action => action.name === 'Tavern Brawler Unarmed Strike')!;
-    expect(brawler.monsterData.abilities.con).toBe(15);
-    expect(strike).toMatchObject({ damage: '1d4+2', pushOnHit: 5, pushOnHitOncePerTurn: true, rerollDamageOnes: true });
-    expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...human, humanOriginAbility: 'dex' })) }, blueParty: party })).toThrow(/Strength or Constitution/);
-
-    const encounter = new Encounter({ seed: 1 });
-    const [fighter] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { additionalActions: [{ ...strike, attackBonus: 100 }] }, team: 'red', position: { x: 0, y: 0 } });
-    const [ogre] = encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
-    encounter.start();
-    const attacker = encounter.state!.creatures.find(creature => creature.id === fighter.id)!;
-    const target = encounter.state!.creatures.find(creature => creature.id === ogre.id)!;
-    const before = target.currentHp;
-    const values = [0.9, 0.1, 0, 0.5, ...Array(8).fill(0.5)];
-    withRng({ next: () => values.shift()! }, () => resolveAttack(encounter.state!, attacker, target, { ...strike, attackBonus: 100 }));
-    expect(target.currentHp).toBeLessThan(before);
-    expect(target.position).toEqual({ x: 2, y: 0 });
-    const damageRolls = [0, 0.5];
-    expect(withRng({ next: () => damageRolls.shift()! }, () => rollDamage('1d4+2', false, true).total)).toBe(5);
-  });
-
-  it('constructs Healer with its authoritative arena resources', () => {
-    const human = {
-      heroClass: 'Fighter', species: 'Human', background: 'Criminal', humanOriginFeat: 'Healer', humanSkill: 'Perception',
-      abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { dex: 2, con: 1 },
-    };
-    const result = kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => human) }, blueParty: party });
-    const healer = result.state.battleState!.creatures.find(creature => creature.team === 'red')!;
-    expect(healer.monsterData.originFeats).toContain('Healer');
-    expect(healer.monsterData.originSkills).toContain('Medicine');
-    expect(healer.resources).toMatchObject({ 'healer-kit': 10, 'hit-die': 5 });
+    for (const humanOriginFeat of ['Crafter', 'Healer', 'Lucky', 'Musician', 'Tavern Brawler', 'Tough']) {
+      expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...human, humanOriginFeat })) }, blueParty: party })).toThrow(/SRD Origin Feat/);
+    }
   });
 
   it('requires a Tiefling legacy and applies its automatic resistance', () => {
@@ -474,7 +433,7 @@ describe('Kaggle arena bridge', () => {
     const base = { heroClass: 'Fighter', background: 'Soldier', abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 } };
     const variants = [
       { species: 'Dragonborn', dragonAncestry: 'acid' }, { species: 'Dragonborn', dragonAncestry: 'cold' }, { species: 'Dragonborn', dragonAncestry: 'fire' }, { species: 'Dragonborn', dragonAncestry: 'lightning' }, { species: 'Dragonborn', dragonAncestry: 'poison' },
-      { species: 'Dwarf' }, { species: 'Halfling' }, { species: 'Human', humanSkill: 'Stealth', humanOriginFeat: 'Tough' }, { species: 'Orc' },
+      { species: 'Dwarf' }, { species: 'Halfling' }, { species: 'Human', humanSkill: 'Stealth', humanOriginFeat: 'Skilled', humanOriginSkills: ['Acrobatics', 'Arcana', 'Survival'] }, { species: 'Orc' },
       { species: 'Elf', elfLineage: 'Drow', speciesCastingAbility: 'wis', elfKeenSense: 'Perception' }, { species: 'Elf', elfLineage: 'High Elf', speciesCastingAbility: 'wis', elfKeenSense: 'Perception' }, { species: 'Elf', elfLineage: 'Wood Elf', speciesCastingAbility: 'wis', elfKeenSense: 'Perception' },
       { species: 'Gnome', gnomeLineage: 'Forest Gnome', speciesCastingAbility: 'wis' }, { species: 'Gnome', gnomeLineage: 'Rock Gnome', speciesCastingAbility: 'wis' },
       ...(['Cloud', 'Fire', 'Frost', 'Hill', 'Stone', 'Storm'] as const).map(goliathAncestry => ({ species: 'Goliath', goliathAncestry })),
@@ -488,13 +447,14 @@ describe('Kaggle arena bridge', () => {
   });
 
   it('accepts and preserves every non-spell Human Origin Feat', () => {
-    for (const feat of ['Alert', 'Crafter', 'Healer', 'Lucky', 'Musician', 'Savage Attacker', 'Skilled', 'Tavern Brawler', 'Tough']) {
+    for (const feat of ['Alert', 'Magic Initiate (Cleric)', 'Magic Initiate (Wizard)', 'Savage Attacker', 'Skilled']) {
       const background = feat === 'Alert' ? 'Soldier' : 'Criminal';
       const character = {
         heroClass: 'Fighter', species: 'Human', background, humanSkill: 'Stealth', humanOriginFeat: feat,
         abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: background === 'Soldier' ? { str: 2, con: 1 } : { dex: 2, con: 1 },
-        ...(feat === 'Tavern Brawler' ? { humanOriginAbility: 'str' } : {}),
         ...(feat === 'Skilled' ? { humanOriginSkills: ['Acrobatics', 'Arcana', 'Survival'] } : {}),
+        ...(feat === 'Magic Initiate (Cleric)' ? { humanOriginCantrips: ['Sacred Flame', 'Toll the Dead'], humanOriginSpell: 'Guiding Bolt', humanOriginCastingAbility: 'wis' } : {}),
+        ...(feat === 'Magic Initiate (Wizard)' ? { humanOriginCantrips: ['Fire Bolt', 'Ray of Frost'], humanOriginSpell: 'Magic Missile', humanOriginCastingAbility: 'int' } : {}),
       };
       const result = kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => character) }, blueParty: party });
       const hero = result.state.battleState!.creatures.find(creature => creature.team === 'red')!;
@@ -524,14 +484,14 @@ describe('Kaggle arena bridge', () => {
     for (const [heroClass, subclass] of Object.entries(subclasses)) {
       const spellCount = buildHero(heroClass as typeof HERO_CLASS_NAMES[number], 5).actions.filter(action => (action.spellLevel ?? 0) > 0).length;
       const character = {
-        heroClass, subclass, species: 'Human', background: 'Soldier', humanSkill: 'Stealth', humanOriginFeat: 'Tough',
+        heroClass, subclass, species: 'Human', background: 'Soldier', humanSkill: 'Stealth', humanOriginFeat: 'Skilled', humanOriginSkills: ['Acrobatics', 'Arcana', 'Survival'],
         abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 },
         ...(spellCount ? { spells: getAvailableSpells(heroClass as typeof HERO_CLASS_NAMES[number], 5).filter(spell => (spell.spellLevel ?? 0) > 0).slice(0, spellCount).map(spell => spell.name) } : {}),
       };
       const result = kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => character) }, blueParty: party });
       expect(result.state.battleState!.creatures.find(creature => creature.team === 'red')!.monsterData.heroSubclass).toBe(subclass);
     }
-    const invalid = { heroClass: 'Fighter', subclass: 'Circle of the Moon', species: 'Human', background: 'Soldier', humanSkill: 'Stealth', humanOriginFeat: 'Tough', abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 } };
+    const invalid = { heroClass: 'Fighter', subclass: 'Circle of the Moon', species: 'Human', background: 'Soldier', humanSkill: 'Stealth', humanOriginFeat: 'Skilled', humanOriginSkills: ['Acrobatics', 'Arcana', 'Survival'], abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 } };
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => invalid) }, blueParty: party })).toThrow(/not an SRD subclass/);
   });
 
