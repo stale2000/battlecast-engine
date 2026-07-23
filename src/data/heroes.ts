@@ -2382,6 +2382,7 @@ export interface HeroOverrides {
   speciesCantrips?: string[];
   speciesPreparedSpells?: string[];
   additionalSenses?: string;
+  additionalLanguages?: string[];
   additionalResources?: Record<string, number>;
   additionalActions?: MonsterAction[];
   weapon?: WeaponOverride;
@@ -2737,7 +2738,7 @@ export function buildCustomHero(
     resistances: resistances.length ? resistances : undefined,
     conditionImmunities,
     senses,
-    languages: 'Common',
+    languages: ['Common', ...(overrides.additionalLanguages ?? [])].join(', '),
     cr: '-', xp: 0,
     proficiencyBonus: pb,
     traits: traits.length ? traits : undefined,

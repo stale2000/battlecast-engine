@@ -96,6 +96,14 @@ describe('Kaggle arena bridge', () => {
     expect(() => kaggleStep({ ...init(), redParty: { characters: [{ heroClass: 'Fighter', abilities: { str: 15, dex: 15, con: 15, int: 15, wis: 15, cha: 15 } }] } })).toThrow(/exactly four/);
   });
 
+  it('preserves two validated SRD language choices', () => {
+    const hero = { heroClass: 'Fighter', species: 'Dwarf', background: 'Soldier', languages: ['Dwarvish', 'Giant'], abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 } };
+    const party = { characters: Array.from({ length: 4 }, () => hero) };
+    const creature = kaggleStep({ ...init(), redParty: party, blueParty: party }).state.battleState!.creatures.find(candidate => candidate.team === 'red')!;
+    expect(creature.monsterData.languages).toBe('Common, Dwarvish, Giant');
+    expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...hero, languages: ['Dwarvish', 'Dwarvish'] })) }, blueParty: party })).toThrow(/languages/);
+  });
+
   it('applies SRD 5.2.1 background increases and static species traits', () => {
     const dwarfSoldier = {
       heroClass: 'Fighter', species: 'Dwarf', background: 'Soldier',
