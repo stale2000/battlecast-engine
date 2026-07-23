@@ -3,6 +3,7 @@ import { monsters } from '../src/data/monsters';
 import { buildHero } from '../src/data/heroes';
 import { runBattle } from '../src/engine/ai';
 import { createCreatureWithFixedHp, DEFAULT_TACTICS, executeSpell, type BattleState } from '../src/engine/combat';
+import { SeededRng, withRng } from '../src/engine/rng';
 
 function md(name: string) { return monsters.find(x => x.name === name)!; }
 
@@ -141,7 +142,7 @@ describe('Monk: Stunning Strike', () => {
         createCreatureWithFixedHp(ogre, 'red', { x: 10, y: 10 }, 0),
         createCreatureWithFixedHp(monk, 'blue', { x: 9, y: 10 }, 0),
       ];
-      const state = runBattle(creatures, 20);
+      const state = withRng(new SeededRng(10_000 + i), () => runBattle(creatures, 20));
       stunAttempts += state.logs.filter(l => l.details?.includes('Stunning Strike')).length;
       stunsLanded += state.logs.filter(l => l.action === 'Stunning Strike' && l.details?.includes('stunned')).length;
     }
