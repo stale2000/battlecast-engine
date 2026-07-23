@@ -122,6 +122,17 @@ describe('Kaggle arena bridge', () => {
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...human, species: 'Dwarf' })) }, blueParty: party })).toThrow(/size is selectable/);
   });
 
+  it('requires a Tiefling legacy and applies its automatic resistance', () => {
+    const tiefling = {
+      heroClass: 'Fighter', species: 'Tiefling', tieflingLegacy: 'Infernal', background: 'Soldier', size: 'Small',
+      abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 },
+    };
+    const party = { characters: Array.from({ length: 4 }, () => tiefling) };
+    const result = kaggleStep({ ...init(), redParty: party, blueParty: party });
+    expect(result.state.battleState!.creatures.find(creature => creature.team === 'red')!.monsterData.resistances).toContain('fire');
+    expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...tiefling, tieflingLegacy: undefined })) }, blueParty: party })).toThrow(/tieflingLegacy/);
+  });
+
   it('constructs a Dragonborn Breath Weapon with its chosen ancestry', () => {
     const dragonborn = {
       heroClass: 'Fighter', species: 'Dragonborn', background: 'Soldier', dragonAncestry: 'fire',

@@ -15,6 +15,7 @@ import { bless, burningHands, cureWounds, guidingBolt, healingWord, magicMissile
 
 type DragonAncestry = 'acid' | 'cold' | 'fire' | 'lightning' | 'poison';
 type CastingAbility = 'int' | 'wis' | 'cha';
+type TieflingLegacy = 'Abyssal' | 'Chthonic' | 'Infernal';
 const ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 const POINT_COST: Record<number, number> = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
 const DRAGON_DAMAGE_TYPES = ['acid', 'cold', 'fire', 'lightning', 'poison'] as const;
@@ -117,7 +118,7 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     if (typeof character.heroClass !== 'string' || !HERO_CLASS_NAMES.includes(character.heroClass as typeof HERO_CLASS_NAMES[number])) {
       throw new EncounterError(`${label}.heroClass must be a supported hero class.`);
     }
-    if (!Object.keys(character).every(key => ['heroClass', 'abilities', 'subclass', 'spells', 'species', 'background', 'abilityIncreases', 'dragonAncestry', 'size', 'originCantrips', 'originSpell', 'originCastingAbility'].includes(key))) {
+    if (!Object.keys(character).every(key => ['heroClass', 'abilities', 'subclass', 'spells', 'species', 'background', 'abilityIncreases', 'dragonAncestry', 'tieflingLegacy', 'size', 'originCantrips', 'originSpell', 'originCastingAbility'].includes(key))) {
       throw new EncounterError(`${label} contains unsupported build choices.`);
     }
     const baseAbilities = parseAbilities(character.abilities, `${label}.abilities`);
@@ -138,6 +139,9 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
       throw new EncounterError(`${label}.dragonAncestry must be an SRD damage type.`);
     }
     if (species !== 'Dragonborn' && character.dragonAncestry !== undefined) throw new EncounterError(`${label}.dragonAncestry requires Dragonborn.`);
+    const tieflingLegacy = character.tieflingLegacy as TieflingLegacy | undefined;
+    if (species === 'Tiefling' && !['Abyssal', 'Chthonic', 'Infernal'].includes(tieflingLegacy ?? '')) throw new EncounterError(`${label}.tieflingLegacy must be Abyssal, Chthonic, or Infernal.`);
+    if (species !== 'Tiefling' && character.tieflingLegacy !== undefined) throw new EncounterError(`${label}.tieflingLegacy requires Tiefling.`);
     let abilities = baseAbilities;
     if (hasOrigin) {
       const increases = assertArenaObject(character.abilityIncreases, `${label}.abilityIncreases`) as Partial<Record<AbilityName, 0 | 1 | 2>>;
@@ -164,7 +168,7 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
         ...(species && background ? {
           species, background, originFeat: BACKGROUNDS[background].originFeat, originSkills: [...BACKGROUNDS[background].skills], originTool: BACKGROUNDS[background].tool,
           originEquipment: [...BACKGROUNDS[background].equipment], sizeOverride: size ?? SPECIES[species].size, speedOverride: SPECIES[species].speed,
-          hitPointBonus: SPECIES[species].maxHpBonusAtLevel5, additionalResistances: SPECIES[species].resistances ? [...SPECIES[species].resistances] : undefined,
+          hitPointBonus: SPECIES[species].maxHpBonusAtLevel5, additionalResistances: tieflingLegacy ? [{ Abyssal: 'poison', Chthonic: 'necrotic', Infernal: 'fire' }[tieflingLegacy]] : SPECIES[species].resistances ? [...SPECIES[species].resistances] : undefined,
           additionalResources: { ...(species === 'Orc' ? { 'orc-adrenaline-rush': 3 } : {}), ...(origin?.resources ?? {}) },
           additionalActions: [...(species === 'Dragonborn' ? [dragonbornBreath(character.dragonAncestry as DragonAncestry, abilities)] : []), ...(origin?.actions ?? [])],
           ...(species === 'Dragonborn' ? { additionalResistances: [character.dragonAncestry as DragonAncestry], additionalResources: { ...(origin?.resources ?? {}), 'dragonborn-breath': 3, 'dragonborn-flight': 1 } } : {}),
