@@ -7,6 +7,8 @@ export const ARENA_SPECIES = [
 ] as const;
 export type ArenaSpecies = typeof ARENA_SPECIES[number];
 
+// SRD 5.2 publishes these four backgrounds. The wider 2024 PHB catalogue
+// is not SRD content and must not enter the deterministic arena allowlist.
 export const ARENA_BACKGROUNDS = ['Acolyte', 'Criminal', 'Sage', 'Soldier'] as const;
 export type ArenaBackground = typeof ARENA_BACKGROUNDS[number];
 export type AbilityName = keyof Abilities;
