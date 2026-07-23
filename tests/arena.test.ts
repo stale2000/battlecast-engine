@@ -3,15 +3,17 @@ import { spawnSync } from 'node:child_process';
 import { Encounter } from '../src/api/encounter.js';
 import { getActiveCreature, getLegalActions, applyLegalAction, startArena } from '../src/api/arena.js';
 import { reachableMovementDestinations } from '../src/engine/ai-movement.js';
-import { kaggleStep } from '../src/arena.js';
+import { hasDisadvantage, resolveAttack } from '../src/engine/combat.js';
+import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { HERO_CLASS_NAMES } from '../src/data/heroes.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
-const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: 2, redParty: party, blueParty: party });
+const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
 
 describe('Kaggle arena bridge', () => {
   it('is deterministic and validates the fixed four-member party', () => {
     expect(kaggleStep(init())).toEqual(kaggleStep(init()));
+    expect(() => kaggleStep({ ...init(), roundCap: ARENA_ROUND_CAP - 1 })).toThrow(/roundCap/);
     expect(() => kaggleStep({ ...init(), redParty: { characters: [{ slot: 1 }] } })).toThrow(/exactly four/);
     expect(() => kaggleStep({ ...init(), blueParty: { characters: [{ slot: 1 }, { slot: 1 }, { slot: 3 }, { slot: 4 }] } })).toThrow(/once/);
   });
@@ -44,6 +46,31 @@ describe('Kaggle arena bridge', () => {
     expect(active).toBeTruthy();
   });
 
+  it('rejects a restored arena state with a changed round cap', () => {
+    const initial = kaggleStep(init());
+    const team = initial.statuses.red === 'ACTIVE' ? 'red' : 'blue';
+    const tampered = structuredClone(initial.state);
+    tampered.arenaRoundCap = 1;
+    expect(() => kaggleStep({ version: 1, mode: 'step', state: tampered, team, action: 'end_turn' })).toThrow(/roundCap/);
+  });
+
+  it('makes Dodge impose disadvantage and consumes Steady Aim after one attack', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Rogue', heroLevel: 5, team: 'red', position: { x: 0, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
+    encounter.start();
+    const state = encounter.state!;
+    const rogue = state.creatures.find(creature => creature.team === 'red')!;
+    const target = state.creatures.find(creature => creature.team === 'blue')!;
+    const attack = rogue.monsterData.actions.find(action => action.attackBonus !== undefined)!;
+    target.turnFlags.dodge = true;
+    expect(hasDisadvantage(rogue, target, attack)).toBe(true);
+    delete target.turnFlags.dodge;
+    rogue.turnFlags.steadyAim = true;
+    encounter.runWithRng(() => resolveAttack(state, rogue, target, attack));
+    expect(rogue.turnFlags.steadyAimConsumed).toBe(true);
+  });
+
   it('keeps opponent build details out of team observations and validates custom point-buy heroes', () => {
     const customParty = {
       characters: Array.from({ length: 4 }, () => ({
@@ -52,7 +79,8 @@ describe('Kaggle arena bridge', () => {
       })),
     };
     const result = kaggleStep({ ...init(), redParty: customParty, blueParty: customParty });
-    expect(result.observations.red.publicCombatState.creatures.filter(c => c.team === 'blue').every(c => !('build' in c) && !('hp' in c))).toBe(true);
+    expect(result.observations.red.publicCombatState.creatures.filter(c => c.team === 'blue').every(c => !('build' in c) && !('hp' in c) && 'creatureType' in c && 'visibleEquipment' in c)).toBe(true);
+    expect(result.observations.red.publicCombatState.creatures.filter(c => c.team === 'red').every(c => 'build' in c && 'preparedSpells' in c.build && 'equipment' in c.build)).toBe(true);
     expect(() => kaggleStep({ ...init(), redParty: { characters: [{ heroClass: 'Fighter', abilities: { str: 15, dex: 15, con: 15, int: 15, wis: 15, cha: 15 } }] } })).toThrow(/exactly four/);
   });
 

@@ -540,7 +540,7 @@ function hasAdvantage(state: BattleState, attacker: Creature, target: Creature, 
   }
   // Rogue L3 Steady Aim: no movement this turn, spend bonus action for
   // Advantage on the next attack.
-  if (attacker.turnFlags?.steadyAim && (action.type === 'melee' || action.type === 'ranged')) adv = true;
+  if (attacker.turnFlags?.steadyAim && !attacker.turnFlags.steadyAimConsumed && (action.type === 'melee' || action.type === 'ranged')) adv = true;
 
   // Pack tactics
   const hasPT = hasActiveTrait(attacker, 'Pack Tactics');
@@ -920,6 +920,11 @@ function seedQuiveringPalm(state: BattleState, attacker: Creature, target: Creat
 
 function hasDisadvantage(attacker: Creature, target: Creature, action: MonsterAction): boolean {
   let dis = false;
+
+  // Dodge imposes Disadvantage on attacks while the dodger can see the attacker.
+  // Visibility is not modeled as a separate creature sense, so the arena's open
+  // map uses the engine's existing line-of-sight gate before attacks reach here.
+  if (target.turnFlags?.dodge) dis = true;
 
   // Weapon Mastery: Sap gives the target Disadvantage on its next attack roll.
   if (attacker.activeBuffs?.some(b => b.attackDisadvantage)) dis = true;
@@ -3581,6 +3586,9 @@ function resolveAttack(
   const dist = validateAttackRange(state, attacker, target, action);
   if (dist === null) return;
 
+  // Steady Aim grants Advantage on one attack, not every attack this turn.
+  const consumesSteadyAim = Boolean(attacker.turnFlags?.steadyAim && !attacker.turnFlags.steadyAimConsumed && (action.type === 'melee' || action.type === 'ranged'));
+
   // A valid melee swing engages the attacker this turn. Used by the
   // flying-OA-exemption rule (a flyer that bit something had to drop to
   // engage, so it provokes OAs from grounded enemies on departure), and it
@@ -3640,6 +3648,7 @@ function resolveAttack(
 
   // Base d20 roll. Bless etc. dice bonuses are added on top of the total.
   let { roll, naturalRoll } = rollAttack(action.attackBonus!, effectiveAdv, attackHasDisadvantage);
+  if (consumesSteadyAim) attacker.turnFlags.steadyAimConsumed = true;
   const buffBonus = rollAttackBuffBonus(attacker);
   if (buffBonus !== 0) {
     roll.total += buffBonus;

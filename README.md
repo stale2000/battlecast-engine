@@ -79,6 +79,12 @@ It regenerates legal actions from authoritative encounter state; submitted
 actions cannot supply damage, targets, or state mutations. Library callers can
 import the same bridge from `battlecast-engine/arena`.
 
+Arena v1 is a trusted-host interface. The host, not an agent, retains and
+submits serialized state between steps. It supports the fixed `open-arena` map
+and a 20-round cap. Party construction currently supports four fixed slots or
+the engine's validated level-5 class, point-buy, supported-subclass, and spell
+selection model; it is not a complete SRD character-sheet builder.
+
 A typical session: `create_encounter` (optionally seeded), `add_creature` a
 few times, `start_battle`, then either `run_round` for narrated round-by-round
 play or `run_battle` for an instant result. `get_state` returns a compact

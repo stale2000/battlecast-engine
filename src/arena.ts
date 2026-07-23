@@ -4,6 +4,7 @@ import { buildHero, getAvailableSpells, HERO_CLASS_NAMES } from './data/heroes.j
 import type { Abilities, Creature } from './types/monster.js';
 
 export const ARENA_PROTOCOL_VERSION = 1;
+export const ARENA_ROUND_CAP = 20;
 
 type SlotCharacter = { slot: 1 | 2 | 3 | 4 };
 type ArenaHero = { heroClass: string; abilities: Abilities; subclass?: string; spells?: string[] };
@@ -97,6 +98,18 @@ function status(creature: Creature): 'ok' | 'bloodied' | 'dying' | 'dead' {
   return creature.currentHp * 2 <= creature.maxHp ? 'bloodied' : 'ok';
 }
 
+function visibleEquipment(creature: Creature): string[] {
+  return [...new Set(creature.monsterData.actions
+    .filter(action => action.attackBonus !== undefined && action.spellLevel === undefined)
+    .map(action => action.name))];
+}
+
+function preparedSpells(creature: Creature): string[] {
+  return [...new Set(creature.monsterData.actions
+    .filter(action => (action.spellLevel ?? 0) > 0)
+    .map(action => action.name))];
+}
+
 function observation(encounter: Encounter, team: Team) {
   const state = encounter.state!;
   const active = getActiveCreature(encounter);
@@ -105,11 +118,15 @@ function observation(encounter: Encounter, team: Team) {
     ? {
         id: c.id, name: c.displayName, team: c.team, hp: `${c.currentHp}/${c.maxHp}`, temporaryHp: c.temporaryHp ?? 0,
         position: { ...c.position }, size: c.monsterData.size, conditions: [...c.conditions], status: status(c), resources: { ...c.resources },
-        build: { heroClass: c.monsterData.heroClass, heroLevel: c.monsterData.heroLevel, heroSubclass: c.monsterData.heroSubclass, abilities: { ...c.monsterData.abilities }, ac: c.monsterData.ac, speed: { ...c.monsterData.speed } },
+        build: {
+          heroClass: c.monsterData.heroClass, heroLevel: c.monsterData.heroLevel, heroSubclass: c.monsterData.heroSubclass,
+          abilities: { ...c.monsterData.abilities }, ac: c.monsterData.ac, speed: { ...c.monsterData.speed },
+          equipment: visibleEquipment(c), preparedSpells: preparedSpells(c),
+        },
       }
     : {
         id: c.id, name: c.displayName, team: c.team, position: { ...c.position }, size: c.monsterData.size,
-        conditions: [...c.conditions], status: status(c),
+        conditions: [...c.conditions], status: status(c), creatureType: c.monsterData.type, visibleEquipment: visibleEquipment(c),
       };
   return {
     phase: complete ? 'complete' : 'combat',
@@ -155,8 +172,8 @@ export function kaggleStep(value: unknown) {
   const request = assertObject(value, 'request') as Request;
   if (request.version !== ARENA_PROTOCOL_VERSION) throw new EncounterError(`Unsupported arena protocol version ${String(request.version)}.`);
   if (request.mode === 'init') {
-    if (!Number.isInteger(request.seed) || !Number.isInteger(request.roundCap) || request.roundCap < 1 || request.mapId !== 'open-arena') {
-      throw new EncounterError('init requires an integer seed, a positive integer roundCap, and mapId "open-arena".');
+    if (!Number.isInteger(request.seed) || request.roundCap !== ARENA_ROUND_CAP || request.mapId !== 'open-arena') {
+      throw new EncounterError(`init requires an integer seed, roundCap ${ARENA_ROUND_CAP}, and mapId "open-arena".`);
     }
     const red = parseParty(request.redParty, 'red');
     const blue = parseParty(request.blueParty, 'blue');
@@ -170,6 +187,9 @@ export function kaggleStep(value: unknown) {
   if (request.mode === 'step') {
     if (request.team !== 'red' && request.team !== 'blue') throw new EncounterError('step.team must be red or blue.');
     const encounter = Encounter.fromJSON(request.state);
+    if (encounter.getArenaRoundCap() !== ARENA_ROUND_CAP) {
+      throw new EncounterError(`Arena state must use roundCap ${ARENA_ROUND_CAP}.`);
+    }
     const active = getActiveCreature(encounter);
     if (!active || active.team !== request.team) throw new EncounterError('The submitted team does not own the active creature.');
     const requested = parseAction(request.action);
