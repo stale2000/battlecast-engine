@@ -2531,7 +2531,8 @@ export function tryEscapeContainer(state: BattleState, creature: Creature): bool
     return false;
   }
   if (!container.escapeDc) return false;
-  const roll = rollD20();
+  let roll = rollD20();
+  if (creature.monsterData.heroSpecies === 'Halfling' && roll.total === 1) roll = rollD20();
   const total = roll.total + abilityModifier(getEffectiveAbilityScore(creature, 'str'));
   const success = total >= container.escapeDc;
   state.events.push({ kind: 'save', targetId: creature.id, success, durationMs: BASE_DURATIONS.save });
