@@ -44,15 +44,17 @@ function isWeaponProficient(heroClass: typeof HERO_CLASS_NAMES[number], weapon: 
   return weapon.category === 'simple';
 }
 
-function toWeaponOverrides(weapons: readonly (typeof ARENA_WEAPONS[string])[] | undefined): WeaponOverride[] | undefined {
+function toWeaponOverrides(weapons: readonly (typeof ARENA_WEAPONS[string])[] | undefined, useTwoHanded: boolean): WeaponOverride[] | undefined {
   return weapons?.flatMap<WeaponOverride>(weapon => {
     const base = { name: weapon.name, die: weapon.die, damageType: weapon.damageType, attackAbility: weapon.attackAbility, finesse: weapon.finesse, loading: weapon.loading, heavy: weapon.heavy, closeRangeDisadvantage: weapon.closeRangeDisadvantage };
-    return weapon.thrownRange
+    const melee = weapon.thrownRange
       ? [
         { ...base, name: `${weapon.name} (Melee)`, type: 'melee' as const, reach: weapon.reach },
         { ...base, name: `${weapon.name} (Thrown)`, type: 'ranged' as const, range: weapon.thrownRange },
       ]
       : [{ ...base, type: weapon.type, reach: weapon.reach, range: weapon.range } as WeaponOverride];
+    if (useTwoHanded && weapon.versatileDie) melee.push({ ...base, name: `${weapon.name} (Two-Handed)`, die: weapon.versatileDie, type: 'melee', reach: weapon.reach });
+    return melee;
   });
 }
 
@@ -357,7 +359,7 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     return {
       heroClass, heroLevel: 5, team,
       heroOverrides: {
-        abilities, subclass: character.subclass as HeroSubclassName | undefined, spells, weapons: toWeaponOverrides(weapons), ...(armor ? { armorBaseOverride: ARENA_ARMOR[armor].armorBase, armorDexCapOverride: ARENA_ARMOR[armor].dexCap, ...(ARENA_ARMOR[armor].minimumStrength && abilities.str < ARENA_ARMOR[armor].minimumStrength ? { speedPenaltyOverride: 10 } : {}) } : {}), ...(character.shield !== undefined ? { shieldOverride: character.shield as boolean } : {}),
+        abilities, subclass: character.subclass as HeroSubclassName | undefined, spells, weapons: toWeaponOverrides(weapons, character.shield === false), ...(armor ? { armorBaseOverride: ARENA_ARMOR[armor].armorBase, armorDexCapOverride: ARENA_ARMOR[armor].dexCap, ...(ARENA_ARMOR[armor].minimumStrength && abilities.str < ARENA_ARMOR[armor].minimumStrength ? { speedPenaltyOverride: 10 } : {}) } : {}), ...(character.shield !== undefined ? { shieldOverride: character.shield as boolean } : {}),
         ...(species && background ? {
           species, speciesChoice: elfLineage ?? gnomeLineage ?? goliathAncestry ?? tieflingLegacy ?? character.dragonAncestry as string | undefined, speciesCastingAbility, background, originFeat: BACKGROUNDS[background].originFeat, originFeats: [BACKGROUNDS[background].originFeat, ...(humanOriginFeat ? [humanOriginFeat] : [])], originSkills: [...new Set([...BACKGROUNDS[background].skills, ...(elfKeenSense ? [elfKeenSense] : []), ...(humanSkill ? [humanSkill] : []), ...selectedOriginSkills])], originTool: BACKGROUNDS[background].tool, originTools: [...new Set([BACKGROUNDS[background].tool, ...selectedOriginTools])],
           originEquipment: [...BACKGROUNDS[background].equipment], alignmentOverride: alignment, additionalSenses: speciesDarkvision(species, elfLineage), additionalLanguages: languages, speciesCantrips: lineageSpells(species, elfLineage ?? gnomeLineage ?? tieflingLegacy, selectedHighElfCantrip).cantrips, speciesPreparedSpells: lineageSpells(species, elfLineage ?? gnomeLineage ?? tieflingLegacy).prepared, sizeOverride: size ?? SPECIES[species].size, speedOverride: elfLineage === 'Wood Elf' ? 35 : SPECIES[species].speed,

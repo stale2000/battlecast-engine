@@ -151,6 +151,15 @@ describe('Kaggle arena bridge', () => {
     expect(creature.monsterData.actions.find(action => action.name === 'Javelin (Thrown)')?.range).toEqual({ normal: 30, long: 120 });
   });
 
+  it('exposes versatile two-handed damage only after a shield opt-out', () => {
+    const base = { heroClass: 'Fighter', species: 'Human', background: 'Soldier', humanOriginFeat: 'Alert', humanSkill: 'Perception', weapons: ['Battleaxe'], abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 } };
+    const oneHanded = { characters: Array.from({ length: 4 }, () => base) };
+    const twoHanded = { characters: Array.from({ length: 4 }, () => ({ ...base, shield: false })) };
+    const actions = (party: typeof oneHanded) => kaggleStep({ ...init(), redParty: party, blueParty: party }).state.battleState!.creatures.find(creature => creature.team === 'red')!.monsterData.actions;
+    expect(actions(oneHanded).some(action => action.name === 'Battleaxe (Two-Handed)')).toBe(false);
+    expect(actions(twoHanded).find(action => action.name === 'Battleaxe (Two-Handed)')?.damage).toBe('1d10+3');
+  });
+
   it('constructs every catalog weapon for a trained level-5 fighter', () => {
     const base = { heroClass: 'Fighter', species: 'Human', background: 'Soldier', humanOriginFeat: 'Alert', humanSkill: 'Perception', abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 } };
     for (const weapon of Object.keys(ARENA_WEAPONS)) {
