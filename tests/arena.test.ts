@@ -12,6 +12,7 @@ import { rollAttack } from '../src/engine/dice.js';
 import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
+import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
@@ -148,6 +149,14 @@ describe('Kaggle arena bridge', () => {
     const creature = kaggleStep({ ...init(), redParty: party, blueParty: party }).state.battleState!.creatures.find(candidate => candidate.team === 'red')!;
     expect(creature.monsterData.actions.find(action => action.name === 'Javelin (Melee)')?.reach).toBe(5);
     expect(creature.monsterData.actions.find(action => action.name === 'Javelin (Thrown)')?.range).toEqual({ normal: 30, long: 120 });
+  });
+
+  it('constructs every catalog weapon for a trained level-5 fighter', () => {
+    const base = { heroClass: 'Fighter', species: 'Human', background: 'Soldier', humanOriginFeat: 'Alert', humanSkill: 'Perception', abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 } };
+    for (const weapon of Object.keys(ARENA_WEAPONS)) {
+      const party = { characters: Array.from({ length: 4 }, () => ({ ...base, weapons: [weapon] })) };
+      expect(() => kaggleStep({ ...init(), redParty: party, blueParty: party })).not.toThrow();
+    }
   });
 
   it('applies catalog armor and rejects unavailable heavy armor', () => {
