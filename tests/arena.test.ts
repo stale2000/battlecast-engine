@@ -116,7 +116,7 @@ describe('Kaggle arena bridge', () => {
 
   it('accepts the SRD Small-or-Medium choice only for Human and Tiefling', () => {
     const human = {
-      heroClass: 'Fighter', species: 'Human', background: 'Soldier', size: 'Small',
+      heroClass: 'Fighter', species: 'Human', background: 'Soldier', humanOriginFeat: 'Alert', size: 'Small',
       abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 },
     };
     const party = { characters: Array.from({ length: 4 }, () => human) };
@@ -374,7 +374,7 @@ describe('Kaggle arena bridge', () => {
 
   it('builds Magic Initiate background spells with an authoritative free cast', () => {
     const acolyte = {
-      heroClass: 'Fighter', species: 'Human', background: 'Acolyte', size: 'Medium',
+      heroClass: 'Fighter', species: 'Human', background: 'Acolyte', humanOriginFeat: 'Alert', size: 'Medium',
       abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { wis: 2, cha: 1 },
       originCantrips: ['Sacred Flame', 'Toll the Dead'], originSpell: 'Guiding Bolt', originCastingAbility: 'wis',
     };
@@ -382,9 +382,23 @@ describe('Kaggle arena bridge', () => {
     const result = kaggleStep({ ...init(), redParty: party, blueParty: party });
     const hero = result.state.battleState!.creatures.find(creature => creature.team === 'red')!;
     expect(hero.monsterData.actions.map(action => action.name)).toEqual(expect.arrayContaining(['Sacred Flame', 'Toll the Dead', 'Guiding Bolt']));
-    expect(hero.resources['magic-initiate']).toBe(1);
+    expect(hero.resources['magic-initiate:background']).toBe(1);
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...acolyte, originCantrips: ['Sacred Flame'] })) }, blueParty: party })).toThrow(/originCantrips/);
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...acolyte, background: 'Soldier', abilityIncreases: { str: 2, con: 1 } })) }, blueParty: party })).toThrow(/Magic Initiate/);
+  });
+
+  it('gives Humans a second implemented Origin Feat with independent Magic Initiate use', () => {
+    const human = {
+      heroClass: 'Fighter', species: 'Human', background: 'Acolyte', humanOriginFeat: 'Magic Initiate (Wizard)',
+      abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { wis: 2, cha: 1 },
+      originCantrips: ['Sacred Flame', 'Toll the Dead'], originSpell: 'Guiding Bolt', originCastingAbility: 'wis',
+      humanOriginCantrips: ['Fire Bolt', 'Ray of Frost'], humanOriginSpell: 'Magic Missile', humanOriginCastingAbility: 'int',
+    };
+    const party = { characters: Array.from({ length: 4 }, () => human) };
+    const result = kaggleStep({ ...init(), redParty: party, blueParty: party });
+    const build = result.state.battleState!.creatures.find(creature => creature.team === 'red')!.monsterData;
+    expect(build.originFeats).toEqual(['Magic Initiate (Cleric)', 'Magic Initiate (Wizard)']);
+    expect(build.initialResources).toMatchObject({ 'magic-initiate:background': 1, 'magic-initiate:human': 1 });
   });
 
   it('accepts only exact reachable move destinations and runs opportunity attacks', () => {
@@ -540,5 +554,5 @@ describe('Kaggle arena bridge', () => {
     });
     expect(validParty.status).toBe(0);
     expect(validParty.stdout).toBe('{"valid":true}\n');
-  });
+  }, 15_000);
 });

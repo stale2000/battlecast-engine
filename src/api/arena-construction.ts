@@ -76,6 +76,7 @@ function magicInitiateActions(
   castingAbility: unknown,
   abilities: Abilities,
   label: string,
+  resourceKey: string,
 ): { actions: MonsterAction[]; resources: Record<string, number> } | undefined {
   if (feat !== 'Magic Initiate (Cleric)' && feat !== 'Magic Initiate (Wizard)') return undefined;
   const list = feat === 'Magic Initiate (Cleric)' ? 'Cleric' : 'Wizard';
@@ -98,7 +99,7 @@ function magicInitiateActions(
         ? { name, type: 'ranged', description: `Ranged spell attack, 2d10 fire damage.`, spellLevel: 0, castingAbility: castingAbility as CastingAbility, attackBonus: mod + pb, damage: '2d10', damageType: 'fire', range: { normal: 120, long: 120 }, magical: true, targetScope: 'one_enemy' }
         : { name, type: 'ranged', description: `Ranged spell attack, 2d8 cold damage.`, spellLevel: 0, castingAbility: castingAbility as CastingAbility, attackBonus: mod + pb, damage: '2d8', damageType: 'cold', range: { normal: 60, long: 60 }, magical: true, targetScope: 'one_enemy' };
   const levelOne = spell === 'Bless' ? bless() : spell === 'Cure Wounds' ? cureWounds(castingAbility as CastingAbility, mod, pb) : spell === 'Healing Word' ? healingWord(castingAbility as CastingAbility, mod, pb) : spell === 'Shield of Faith' ? shieldOfFaith() : spell === 'Guiding Bolt' ? guidingBolt(castingAbility as CastingAbility, mod, pb) : spell === 'Magic Missile' ? magicMissile() : spell === 'Burning Hands' ? burningHands(castingAbility as CastingAbility, mod, pb) : spell === 'Thunderwave' ? thunderwave(castingAbility as CastingAbility, mod, pb) : sleep(castingAbility as CastingAbility, mod, pb);
-  return { actions: [...cantrips.map(makeCantrip), { ...levelOne, resourceCost: { key: 'magic-initiate', amount: 1 } }], resources: { 'magic-initiate': 1 } };
+  return { actions: [...cantrips.map(makeCantrip), { ...levelOne, resourceCost: { key: resourceKey, amount: 1 } }], resources: { [resourceKey]: 1 } };
 }
 
 /** Validates a public arena party and converts it into trusted encounter options. */
@@ -121,7 +122,7 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     if (typeof character.heroClass !== 'string' || !HERO_CLASS_NAMES.includes(character.heroClass as typeof HERO_CLASS_NAMES[number])) {
       throw new EncounterError(`${label}.heroClass must be a supported hero class.`);
     }
-    if (!Object.keys(character).every(key => ['heroClass', 'abilities', 'subclass', 'spells', 'species', 'background', 'abilityIncreases', 'dragonAncestry', 'elfLineage', 'gnomeLineage', 'goliathAncestry', 'tieflingLegacy', 'size', 'originCantrips', 'originSpell', 'originCastingAbility'].includes(key))) {
+    if (!Object.keys(character).every(key => ['heroClass', 'abilities', 'subclass', 'spells', 'species', 'background', 'abilityIncreases', 'dragonAncestry', 'elfLineage', 'gnomeLineage', 'goliathAncestry', 'tieflingLegacy', 'size', 'originCantrips', 'originSpell', 'originCastingAbility', 'humanOriginFeat', 'humanOriginCantrips', 'humanOriginSpell', 'humanOriginCastingAbility'].includes(key))) {
       throw new EncounterError(`${label} contains unsupported build choices.`);
     }
     const baseAbilities = parseAbilities(character.abilities, `${label}.abilities`);
@@ -154,6 +155,17 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     const tieflingLegacy = character.tieflingLegacy as TieflingLegacy | undefined;
     if (species === 'Tiefling' && !['Abyssal', 'Chthonic', 'Infernal'].includes(tieflingLegacy ?? '')) throw new EncounterError(`${label}.tieflingLegacy must be Abyssal, Chthonic, or Infernal.`);
     if (species !== 'Tiefling' && character.tieflingLegacy !== undefined) throw new EncounterError(`${label}.tieflingLegacy requires Tiefling.`);
+    const humanOriginFeat = character.humanOriginFeat as string | undefined;
+    if (species === 'Human' && !['Alert', 'Magic Initiate (Cleric)', 'Magic Initiate (Wizard)', 'Savage Attacker'].includes(humanOriginFeat ?? '')) {
+      throw new EncounterError(`${label}.humanOriginFeat must be an engine-supported Origin Feat.`);
+    }
+    if (species !== 'Human' && (humanOriginFeat !== undefined || character.humanOriginCantrips !== undefined || character.humanOriginSpell !== undefined || character.humanOriginCastingAbility !== undefined)) {
+      throw new EncounterError(`${label}.humanOriginFeat requires Human.`);
+    }
+    const hasHumanOriginSpellChoice = character.humanOriginCantrips !== undefined || character.humanOriginSpell !== undefined || character.humanOriginCastingAbility !== undefined;
+    if (hasHumanOriginSpellChoice && (!humanOriginFeat || !['Magic Initiate (Cleric)', 'Magic Initiate (Wizard)'].includes(humanOriginFeat))) {
+      throw new EncounterError(`${label} human origin spell choices require a Magic Initiate feat.`);
+    }
     let abilities = baseAbilities;
     if (hasOrigin) {
       const increases = assertArenaObject(character.abilityIncreases, `${label}.abilityIncreases`) as Partial<Record<AbilityName, 0 | 1 | 2>>;
@@ -172,18 +184,20 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     if (hasOriginSpellChoice && (!background || !['Magic Initiate (Cleric)', 'Magic Initiate (Wizard)'].includes(BACKGROUNDS[background].originFeat))) {
       throw new EncounterError(`${label} origin spell choices require a Magic Initiate background.`);
     }
-    const origin = species && background ? magicInitiateActions(BACKGROUNDS[background].originFeat, character.originCantrips, character.originSpell, character.originCastingAbility, abilities, label) : undefined;
+    const origin = species && background ? magicInitiateActions(BACKGROUNDS[background].originFeat, character.originCantrips, character.originSpell, character.originCastingAbility, abilities, label, 'magic-initiate:background') : undefined;
+    if (species === 'Human' && humanOriginFeat === BACKGROUNDS[background!]?.originFeat) throw new EncounterError(`${label}.humanOriginFeat must differ from the background Origin Feat.`);
+    const humanOrigin = species === 'Human' ? magicInitiateActions(humanOriginFeat, character.humanOriginCantrips, character.humanOriginSpell, character.humanOriginCastingAbility, abilities, label, 'magic-initiate:human') : undefined;
     return {
       heroClass, heroLevel: 5, team,
       heroOverrides: {
         abilities, subclass: character.subclass as 'Circle of the Land' | 'Circle of the Moon' | undefined, spells,
         ...(species && background ? {
-          species, speciesChoice: elfLineage ?? gnomeLineage ?? goliathAncestry ?? tieflingLegacy ?? character.dragonAncestry as string | undefined, background, originFeat: BACKGROUNDS[background].originFeat, originSkills: [...BACKGROUNDS[background].skills], originTool: BACKGROUNDS[background].tool,
+          species, speciesChoice: elfLineage ?? gnomeLineage ?? goliathAncestry ?? tieflingLegacy ?? character.dragonAncestry as string | undefined, background, originFeat: BACKGROUNDS[background].originFeat, originFeats: [BACKGROUNDS[background].originFeat, ...(humanOriginFeat ? [humanOriginFeat] : [])], originSkills: [...BACKGROUNDS[background].skills], originTool: BACKGROUNDS[background].tool,
           originEquipment: [...BACKGROUNDS[background].equipment], sizeOverride: size ?? SPECIES[species].size, speedOverride: elfLineage === 'Wood Elf' ? 35 : SPECIES[species].speed,
           hitPointBonus: SPECIES[species].maxHpBonusAtLevel5, additionalResistances: tieflingLegacy ? [{ Abyssal: 'poison', Chthonic: 'necrotic', Infernal: 'fire' }[tieflingLegacy]] : SPECIES[species].resistances ? [...SPECIES[species].resistances] : undefined,
-          additionalResources: { ...(species === 'Orc' ? { 'orc-adrenaline-rush': 3 } : {}), ...(species === 'Goliath' ? { 'goliath-large-form': 1, 'goliath-giant-ancestry': 3 } : {}), ...(origin?.resources ?? {}) },
-          additionalActions: [...(species === 'Dragonborn' ? [dragonbornBreath(character.dragonAncestry as DragonAncestry, abilities)] : []), ...(origin?.actions ?? [])],
-          ...(species === 'Dragonborn' ? { additionalResistances: [character.dragonAncestry as DragonAncestry], additionalResources: { ...(origin?.resources ?? {}), 'dragonborn-breath': 3, 'dragonborn-flight': 1 } } : {}),
+          additionalResources: { ...(species === 'Orc' ? { 'orc-adrenaline-rush': 3 } : {}), ...(species === 'Goliath' ? { 'goliath-large-form': 1, 'goliath-giant-ancestry': 3 } : {}), ...(origin?.resources ?? {}), ...(humanOrigin?.resources ?? {}) },
+          additionalActions: [...(species === 'Dragonborn' ? [dragonbornBreath(character.dragonAncestry as DragonAncestry, abilities)] : []), ...(origin?.actions ?? []), ...(humanOrigin?.actions ?? [])],
+          ...(species === 'Dragonborn' ? { additionalResistances: [character.dragonAncestry as DragonAncestry], additionalResources: { ...(origin?.resources ?? {}), ...(humanOrigin?.resources ?? {}), 'dragonborn-breath': 3, 'dragonborn-flight': 1 } } : {}),
         } : {}),
       },
     };

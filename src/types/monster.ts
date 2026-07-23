@@ -471,6 +471,8 @@ export interface MonsterData {
   heroSpeciesChoice?: string;
   heroBackground?: string;
   originFeat?: string;
+  /** All Origin Feats, including the Human Versatile choice. */
+  originFeats?: string[];
   originSkills?: string[];
   originTool?: string;
   originEquipment?: string[];
