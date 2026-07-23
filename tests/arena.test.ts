@@ -132,6 +132,15 @@ describe('Kaggle arena bridge', () => {
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...fighter, heroClass: 'Wizard' })) }, blueParty: party })).toThrow(/not proficient/);
   });
 
+  it('supports the full catalog armor progression and applies heavy-armor speed penalties', () => {
+    const dexRogue = { heroClass: 'Rogue', species: 'Human', background: 'Soldier', humanOriginFeat: 'Alert', humanSkill: 'Perception', armor: 'Studded Leather', abilities: { str: 8, dex: 15, con: 15, int: 13, wis: 12, cha: 8 }, abilityIncreases: { dex: 2, con: 1 } };
+    const rogueParty = { characters: Array.from({ length: 4 }, () => dexRogue) };
+    expect(kaggleStep({ ...init(), redParty: rogueParty, blueParty: rogueParty }).state.battleState!.creatures.find(creature => creature.team === 'red')!.monsterData.ac).toBe(15);
+    const slowFighter = { ...dexRogue, heroClass: 'Fighter', armor: 'Plate' };
+    const slowParty = { characters: Array.from({ length: 4 }, () => slowFighter) };
+    expect(kaggleStep({ ...init(), redParty: slowParty, blueParty: slowParty }).state.battleState!.creatures.find(creature => creature.team === 'red')!.monsterData.speed.walk).toBe(20);
+  });
+
   it('applies a selected shield and permits an explicit shield opt-out', () => {
     const base = { heroClass: 'Fighter', species: 'Human', background: 'Soldier', humanOriginFeat: 'Alert', humanSkill: 'Perception', armor: 'Plate', abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 } };
     const withShield = { characters: Array.from({ length: 4 }, () => ({ ...base, shield: true })) };

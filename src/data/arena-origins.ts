@@ -15,12 +15,27 @@ export interface ArenaWeapon {
   twoHanded?: boolean;
 }
 
-export const ARENA_ARMOR = {
+export interface ArenaArmor {
+  category: 'light' | 'medium' | 'heavy';
+  armorBase: number;
+  dexCap: number;
+  minimumStrength?: number;
+}
+
+export const ARENA_ARMOR: Record<string, ArenaArmor> = {
+  Padded: { category: 'light', armorBase: 11, dexCap: Infinity },
   Leather: { category: 'light', armorBase: 11, dexCap: Infinity },
+  'Studded Leather': { category: 'light', armorBase: 12, dexCap: Infinity },
+  Hide: { category: 'medium', armorBase: 12, dexCap: 2 },
+  'Chain Shirt': { category: 'medium', armorBase: 13, dexCap: 2 },
   'Scale Mail': { category: 'medium', armorBase: 14, dexCap: 2 },
-  'Chain Mail': { category: 'heavy', armorBase: 16, dexCap: 0 },
-  Plate: { category: 'heavy', armorBase: 18, dexCap: 0 },
-} as const;
+  Breastplate: { category: 'medium', armorBase: 14, dexCap: 2 },
+  'Half Plate': { category: 'medium', armorBase: 15, dexCap: 2 },
+  'Ring Mail': { category: 'heavy', armorBase: 14, dexCap: 0 },
+  'Chain Mail': { category: 'heavy', armorBase: 16, dexCap: 0, minimumStrength: 13 },
+  Splint: { category: 'heavy', armorBase: 17, dexCap: 0, minimumStrength: 15 },
+  Plate: { category: 'heavy', armorBase: 18, dexCap: 0, minimumStrength: 15 },
+};
 
 /** Server-owned SRD weapon facts. Public build requests select only these names. */
 export const ARENA_WEAPONS: Record<string, ArenaWeapon> = {

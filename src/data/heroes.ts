@@ -2376,6 +2376,7 @@ export interface HeroOverrides {
   armorBaseOverride?: number;
   armorDexCapOverride?: number;
   shieldOverride?: boolean;
+  speedPenaltyOverride?: number;
   speedOverride?: number;
   sizeOverride?: MonsterData['size'];
   hitPointBonus?: number;
@@ -2627,6 +2628,7 @@ export function buildCustomHero(
   const primaryWeapon = weaponSpecs[0];
 
   const speed: Speed = { walk: overrides.speedOverride ?? (spec.speed + (className === 'Monk' ? monkUnarmoredMovementBonus(level) : 0)) };
+  if (overrides.speedPenaltyOverride) speed.walk = Math.max(5, speed.walk - overrides.speedPenaltyOverride);
   if (!overrides.speedOverride && className === 'Barbarian' && level >= 5) speed.walk += 10;
   if (!overrides.speedOverride && className === 'Ranger' && level >= 6) {
     speed.walk += 10;
