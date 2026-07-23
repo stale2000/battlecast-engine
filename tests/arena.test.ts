@@ -167,8 +167,10 @@ describe('Kaggle arena bridge', () => {
     };
     const party = { characters: Array.from({ length: 4 }, () => abyssal) };
     const creature = kaggleStep({ ...init(), redParty: party, blueParty: party }).state.battleState!.creatures.find(candidate => candidate.team === 'red')!;
-    const ray = creature.monsterData.actions.find(action => action.name === 'Ray of Sickness')!;
+    const rays = creature.monsterData.actions.filter(action => action.name === 'Ray of Sickness');
+    const ray = rays.find(action => action.resourceCost?.key === 'abyssal-ray-of-sickness')!;
     expect(ray).toMatchObject({ spellLevel: 1, damage: '2d8', damageType: 'poison', conditionOnHit: { condition: 'poisoned', duration: 'end_of_next_turn' } });
+    expect(rays.some(action => action.resourceCost === undefined)).toBe(true);
     expect(creature.resources['abyssal-ray-of-sickness']).toBe(1);
 
     const encounter = new Encounter({ seed: 1 });
