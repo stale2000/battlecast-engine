@@ -168,6 +168,20 @@ describe('Kaggle arena bridge', () => {
     expect(active.resources['chthonic-false-life']).toBe(0);
   });
 
+  it('automatically resolves Infernal Hellish Rebuke against a nearby damaging creature', () => {
+    const encounter = new Encounter({ seed: 1 });
+    const [tiefling] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { species: 'Tiefling', speciesChoice: 'Infernal', speciesCastingAbility: 'cha', additionalResources: { 'infernal-hellish-rebuke': 1 } }, team: 'red', position: { x: 0, y: 0 } });
+    const [attacker] = encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
+    encounter.start();
+    const target = encounter.state!.creatures.find(creature => creature.id === tiefling.id)!;
+    const source = encounter.state!.creatures.find(creature => creature.id === attacker.id)!;
+    const hpBefore = source.currentHp;
+    encounter.runWithRng(() => applyDamage(encounter.state!, target, 1, 'slashing', source, true));
+    expect(source.currentHp).toBeLessThan(hpBefore);
+    expect(target.resources['infernal-hellish-rebuke']).toBe(0);
+    expect(target.reactionUsed).toBe(true);
+  });
+
   it('requires an Elf lineage and applies Wood Elf speed', () => {
     const elf = {
       heroClass: 'Fighter', species: 'Elf', elfLineage: 'Wood Elf', speciesCastingAbility: 'wis', background: 'Soldier',
