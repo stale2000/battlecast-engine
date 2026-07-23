@@ -23,6 +23,7 @@ import { executeLegendaryAction, handlePassiveAuras, processTurnStart, runOpport
 import { getEligibleWildShapeBeasts } from '../data/heroes.js';
 import { abilityModifier, rollDice } from '../engine/dice.js';
 import { getFootprintSize } from '../engine/combat-geometry.js';
+import { lineOfSightBlocked } from '../types/terrain.js';
 import type { Creature, MonsterAction } from '../types/monster.js';
 import { applyGoliathAttackFeature, applyOriginLegalAction, getGoliathAttackFeatures, getOriginLegalActions } from './arena-origin-actions.js';
 import { applyClassFeatureLegalAction, getClassFeatureLegalActions } from './arena-class-actions.js';
@@ -46,6 +47,20 @@ function attackInRange(attacker: Creature, target: Creature, action: MonsterActi
 
 function isSpellAction(action: MonsterAction): boolean {
   return action.spellLevel !== undefined || action.layOnHands !== undefined || action.heal !== undefined || action.temporaryHp !== undefined || action.buff !== undefined || action.savingThrow !== undefined || action.autoDarts !== undefined || action.powerWord !== undefined;
+}
+
+function canHideFrom(state: NonNullable<Encounter['state']>, active: Creature, observer: Creature): boolean {
+  if (!canSee(state, observer, active)) return true;
+  if (active.monsterData.heroSpecies !== 'Halfling') return false;
+  const activeFootprint = getFootprintSize(active.monsterData.size);
+  const creatureCover = new Set<string>();
+  for (const creature of state.creatures) {
+    if (!creature.isAlive || creature.id === active.id || creature.id === observer.id) continue;
+    const footprint = getFootprintSize(creature.monsterData.size);
+    if (footprint <= activeFootprint) continue;
+    for (let y = 0; y < footprint; y++) for (let x = 0; x < footprint; x++) creatureCover.add(`${creature.position.x + x},${creature.position.y + y}`);
+  }
+  return lineOfSightBlocked(observer.position, active.position, getFootprintSize(observer.monsterData.size), activeFootprint, creatureCover);
 }
 
 function attackRollBudget(creature: Creature): number {
@@ -229,7 +244,7 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
       actions.push({ id: 'disengage', type: 'disengage', isBonusAction: false });
       if (active.monsterData.heroClass === 'Rogue' && !active.bonusActionUsed) actions.push({ id: 'bonus_disengage', type: 'disengage', isBonusAction: true });
     }
-    if (enemies.some(target => !canSee(state, target, active))) {
+    if (enemies.some(target => canHideFrom(state, active, target))) {
       actions.push({ id: 'hide', type: 'hide', isBonusAction: false });
       if (active.monsterData.heroClass === 'Rogue' && !active.bonusActionUsed) actions.push({ id: 'bonus_hide', type: 'hide', isBonusAction: true });
     }
@@ -382,7 +397,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
     } else if (legal.type === 'hide') {
       const stealth = (active.monsterData.skills?.Stealth ?? abilityModifier(active.monsterData.abilities.dex))
         + Math.max(0, ...(active.activeBuffs ?? []).map(buff => buff.stealthBonus ?? 0));
-      const hiddenFrom = state.creatures.filter(target => target.team !== active.team && target.isAlive && !target.dying && !canSee(state, target, active));
+      const hiddenFrom = state.creatures.filter(target => target.team !== active.team && target.isAlive && !target.dying && canHideFrom(state, active, target));
       let successes = 0;
       for (const target of hiddenFrom) {
         const passivePerception = 10 + (target.monsterData.skills?.Perception ?? abilityModifier(target.monsterData.abilities.wis));

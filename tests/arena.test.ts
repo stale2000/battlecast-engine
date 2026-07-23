@@ -415,6 +415,15 @@ describe('Kaggle arena bridge', () => {
     expect(canSee(state, targetCreature, rogueCreature)).toBe(true);
   });
 
+  it('allows a Halfling to Hide behind a larger creature', () => {
+    const encounter = new Encounter({ seed: 1 });
+    const [halfling] = encounter.addCreature({ heroClass: 'Rogue', heroLevel: 5, heroOverrides: { species: 'Halfling', sizeOverride: 'Small' }, team: 'red', position: { x: 0, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'red', position: { x: 1, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 4, y: 0 } });
+    encounter.start(); encounter.state!.initiativeOrder = [halfling.id]; startArena(encounter);
+    expect(getLegalActions(encounter, halfling.id).some(action => action.id === 'hide')).toBe(true);
+  });
+
   it('applies Gnomish Cunning automatically to mental saves', () => {
     const encounter = new Encounter({ seed: 1 });
     const [gnome] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { species: 'Gnome' }, team: 'red' });
