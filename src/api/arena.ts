@@ -33,6 +33,7 @@ export type ArenaAction =
   | { id: 'class_feature:action_surge'; type: 'action_surge' }
   | { id: 'class_feature:steady_aim'; type: 'steady_aim' }
   | { id: 'species:adrenaline_rush'; type: 'species_dash' }
+  | { id: 'species:draconic_flight'; type: 'species_flight' }
   | { id: string; type: 'wild_shape'; beastName: string }
   | { id: string; type: 'monk_strike'; actionIndex: number; targetId: string; flurry: boolean }
   | { id: 'move_to'; type: 'move_to'; destination?: { x: number; y: number } }
@@ -204,6 +205,9 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
   if (active.monsterData.heroSpecies === 'Orc' && !active.bonusActionUsed && active.movementRemaining > 0 && hasResource(active, 'orc-adrenaline-rush')) {
     actions.push({ id: 'species:adrenaline_rush', type: 'species_dash' });
   }
+  if (active.monsterData.heroSpecies === 'Dragonborn' && (active.monsterData.heroLevel ?? 0) >= 5 && !active.bonusActionUsed && !active.temporaryFlightSpeed && hasResource(active, 'dragonborn-flight')) {
+    actions.push({ id: 'species:draconic_flight', type: 'species_flight' });
+  }
   actions.push(...wildShapeActions(active, state));
   const monk = monkUnarmedAction(active);
   const flurryStrikes = Object.keys(active.turnFlags).filter(key => key.startsWith('arena-flurry-')).length;
@@ -350,6 +354,12 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       active.temporaryHp = Math.max(active.temporaryHp ?? 0, active.monsterData.proficiencyBonus);
       active.bonusActionUsed = true;
       pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Adrenaline Rush', details: `${active.displayName} dashes and gains temporary HP.`, type: 'move' });
+    } else if (legal.type === 'species_flight') {
+      if (active.monsterData.heroSpecies !== 'Dragonborn' || (active.monsterData.heroLevel ?? 0) < 5 || active.bonusActionUsed || active.temporaryFlightSpeed || !consumeResource(active, 'dragonborn-flight')) throw new EncounterError('Illegal or stale arena Draconic Flight.');
+      active.temporaryFlightSpeed = active.monsterData.speed.walk;
+      active.airborne = true;
+      active.bonusActionUsed = true;
+      pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Draconic Flight', details: `${active.displayName} sprouts spectral wings and gains a Fly Speed.`, type: 'special' });
     } else if (legal.type === 'wild_shape') {
       const level = active.monsterData.heroLevel ?? 0;
       const beast = getEligibleWildShapeBeasts({ level, subclass: active.monsterData.heroSubclass }).find(candidate => candidate.name === legal.beastName);

@@ -500,6 +500,7 @@ export interface Creature {
   hasActed: boolean;
   hasMovedThisTurn: boolean;
   movementRemaining: number;
+  temporaryFlightSpeed?: number;
   legendaryActionsRemaining?: number;
   superiorHunterDefense?: { damageType: string; round: number; turnIndex: number };
   recharges: Record<string, boolean>; // track recharge abilities

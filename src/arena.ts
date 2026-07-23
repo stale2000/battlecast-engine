@@ -125,7 +125,7 @@ function parseParty(value: unknown, team: Team): AddCreatureOptions[] {
           hitPointBonus: SPECIES[species].maxHpBonusAtLevel5, additionalResistances: SPECIES[species].resistances ? [...SPECIES[species].resistances] : undefined,
           additionalResources: species === 'Orc' ? { 'orc-adrenaline-rush': 3 } : undefined,
           additionalActions: species === 'Dragonborn' ? [dragonbornBreath(character.dragonAncestry as DragonAncestry, abilities)] : undefined,
-          ...(species === 'Dragonborn' ? { additionalResistances: [character.dragonAncestry as DragonAncestry], additionalResources: { 'dragonborn-breath': 3 } } : {}),
+          ...(species === 'Dragonborn' ? { additionalResistances: [character.dragonAncestry as DragonAncestry], additionalResources: { 'dragonborn-breath': 3, 'dragonborn-flight': 1 } } : {}),
         } : {}),
       },
       team,

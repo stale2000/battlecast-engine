@@ -218,7 +218,8 @@ export function getActiveSize(creature: Creature): MonsterData['size'] {
 }
 
 export function getActiveSpeed(creature: Creature): MonsterData['speed'] {
-  return creature.wildShape?.speed ?? creature.monsterData.speed;
+  const speed = creature.wildShape?.speed ?? creature.monsterData.speed;
+  return creature.temporaryFlightSpeed ? { ...speed, fly: Math.max(speed.fly ?? 0, creature.temporaryFlightSpeed) } : speed;
 }
 
 export function getEffectiveMoveSpeed(creature: Creature, state?: Pick<BattleState, 'movementEnvironment'>): number {

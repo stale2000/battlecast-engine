@@ -117,6 +117,19 @@ describe('Kaggle arena bridge', () => {
     expect(dragon.resources['dragonborn-breath']).toBe(3);
   });
 
+  it('resolves Dragonborn Draconic Flight through the legal-action catalogue', () => {
+    const encounter = new Encounter({ seed: 1 });
+    const [dragon] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { species: 'Dragonborn', additionalResources: { 'dragonborn-flight': 1 } }, team: 'red', position: { x: 0, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 10, y: 0 } });
+    encounter.start();
+    encounter.state!.initiativeOrder = [dragon.id];
+    startArena(encounter);
+    const active = getActiveCreature(encounter)!;
+    applyLegalAction(encounter, getLegalActions(encounter, active.id).find(action => action.type === 'species_flight')!);
+    expect(active.temporaryFlightSpeed).toBe(active.monsterData.speed.walk);
+    expect(active.resources['dragonborn-flight']).toBe(0);
+  });
+
   it('resolves Orc Adrenaline Rush through the legal-action catalogue', () => {
     const encounter = new Encounter({ seed: 1 });
     const [orc] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { species: 'Orc', additionalResources: { 'orc-adrenaline-rush': 3 } }, team: 'red', position: { x: 0, y: 0 } });
