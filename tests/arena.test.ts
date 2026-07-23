@@ -241,6 +241,15 @@ describe('Kaggle arena bridge', () => {
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...dwarfSoldier, abilityIncreases: { int: 2, con: 1 } })) }, blueParty: originParty })).toThrow(/listed abilities/);
   });
 
+  it('treats species speed as the base before applying class movement features', () => {
+    const base = { heroClass: 'Monk', background: 'Soldier', abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 } };
+    const human = { ...base, species: 'Human', humanOriginFeat: 'Alert', humanSkill: 'Perception' };
+    const woodElf = { ...base, species: 'Elf', elfLineage: 'Wood Elf', speciesCastingAbility: 'wis', elfKeenSense: 'Perception' };
+    const speed = (character: typeof human | typeof woodElf) => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => character) }, blueParty: party }).state.battleState!.creatures.find(creature => creature.team === 'red')!.monsterData.speed.walk;
+    expect(speed(human)).toBe(40);
+    expect(speed(woodElf)).toBe(45);
+  });
+
   it('accepts the SRD Small-or-Medium choice only for Human and Tiefling', () => {
     const human = {
       heroClass: 'Fighter', species: 'Human', background: 'Soldier', humanOriginFeat: 'Alert', humanSkill: 'Perception', size: 'Small',

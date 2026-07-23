@@ -2637,20 +2637,20 @@ export function buildCustomHero(
   ];
   const primaryWeapon = weaponSpecs[0];
 
-  const speed: Speed = { walk: overrides.speedOverride ?? (spec.speed + (className === 'Monk' ? monkUnarmoredMovementBonus(level) : 0)) };
-  if (overrides.speedPenaltyOverride) speed.walk = Math.max(5, speed.walk - overrides.speedPenaltyOverride);
-  if (!overrides.speedOverride && className === 'Barbarian' && level >= 5) speed.walk += 10;
-  if (!overrides.speedOverride && className === 'Ranger' && level >= 6) {
+  const speed: Speed = { walk: (overrides.speedOverride ?? spec.speed) + (className === 'Monk' ? monkUnarmoredMovementBonus(level) : 0) };
+  if (className === 'Barbarian' && level >= 5) speed.walk += 10;
+  if (className === 'Ranger' && level >= 6) {
     speed.walk += 10;
     speed.climb = speed.walk;
     speed.swim = speed.walk;
   }
-  if (!overrides.speedOverride && className === 'Rogue' && level >= 3) {
+  if (className === 'Rogue' && level >= 3) {
     speed.climb = speed.walk;
   }
-  if (!overrides.speedOverride && className === 'Sorcerer' && level >= 14) {
+  if (className === 'Sorcerer' && level >= 14) {
     speed.fly = 60;
   }
+  if (overrides.speedPenaltyOverride) speed.walk = Math.max(5, speed.walk - overrides.speedPenaltyOverride);
 
   const actions: MonsterAction[] = [];
   const masteryActive = hasWeaponMastery(className, level);
