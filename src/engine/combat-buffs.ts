@@ -74,6 +74,15 @@ export function getRageDamageBonus(attacker: Creature, actionOrType: MonsterActi
   return 0;
 }
 
+/** Apply effects such as Ray of Enfeeblement after a creature rolls damage. */
+export function applyDamageRollPenalty(creature: Creature, damage: number): number {
+  const penalty = (creature.activeBuffs ?? []).reduce(
+    (total, buff) => total + (buff.damageRollPenalty ? rollDice(buff.damageRollPenalty).total : 0),
+    0,
+  );
+  return Math.max(0, damage - penalty);
+}
+
 /** Sum active spell-save DC bonuses, e.g. Sorcerer Innate Sorcery. */
 export function getSpellSaveDcBonus(caster: Creature, action?: MonsterAction): number {
   if (action && action.spellLevel === undefined) return 0;
@@ -121,7 +130,8 @@ export function rollSaveWithBuffs(
     .map(b => b.key);
 
   const halflingLuck = saver.monsterData.heroSpecies === 'Halfling';
-  const result = rollSave(mod, advantage || barbarianSaveAdvantage || gnomishCunning || speciesConditionAdvantage, saveDisadvantageKeys.length > 0, halflingLuck);
+  const strengthTestDisadvantage = ability === 'str' && (saver.activeBuffs ?? []).some(buff => buff.strengthTestDisadvantage);
+  const result = rollSave(mod, advantage || barbarianSaveAdvantage || gnomishCunning || speciesConditionAdvantage, saveDisadvantageKeys.length > 0 || strengthTestDisadvantage, halflingLuck);
   if (saveDisadvantageKeys.length > 0) {
     saver.activeBuffs = saver.activeBuffs.filter(b => !saveDisadvantageKeys.includes(b.key));
   }

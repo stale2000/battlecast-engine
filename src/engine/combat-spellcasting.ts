@@ -28,7 +28,7 @@ import { creatureDistance } from './combat-geometry.js';
 import {
   addBuff, dropConcentratedBuffsFrom,
   hasResource, consumeResource,
-  attachConcentrationAura, rollSaveWithBuffs, getSpellSaveDcBonus,
+  attachConcentrationAura, rollSaveWithBuffs, getSpellSaveDcBonus, applyDamageRollPenalty,
 } from './combat-buffs.js';
 import { resolveAoE } from './combat-aoe.js';
 import {
@@ -414,7 +414,7 @@ export function applyAutoDarts(state: BattleState, caster: Creature, action: Mon
 
   for (const target of resolvedTargets) {
     if (!target.isAlive) continue;
-    const dmg = rollDice(diceExpr).total;
+    const dmg = applyDamageRollPenalty(caster, rollDice(diceExpr).total);
     pushLog(state, {
       round: state.round, turn: state.turnIndex,
       actor: caster.displayName, action: action.name,
@@ -488,6 +488,9 @@ export function applyBuffFromSpell(
     spellAttackAdvantage: tmpl.spellAttackAdvantage,
     spellSaveDcBonus: tmpl.spellSaveDcBonus,
     expiresOnSourceTurnStart: tmpl.expiresOnSourceTurnStart,
+    strengthTestDisadvantage: tmpl.strengthTestDisadvantage,
+    damageRollPenalty: tmpl.damageRollPenalty,
+    saveEnds: tmpl.saveEnds,
   };
   addBuff(target, buff);
   if (tmpl.maxHpBonus && tmpl.maxHpBonus > existingMaxHpBonus) {
@@ -605,7 +608,7 @@ export function tryUseBonusActionDamageBuff(state: BattleState, caster: Creature
   if (!linked) return false;
 
   const damageType = linked.buff.bonusActionDamageType ?? 'untyped';
-  const amount = rollDice(linked.buff.bonusActionDamage!).total;
+  const amount = applyDamageRollPenalty(caster, rollDice(linked.buff.bonusActionDamage!).total);
   pushLog(state, {
     round: state.round, turn: state.turnIndex,
     actor: caster.displayName, action: linked.buff.name,

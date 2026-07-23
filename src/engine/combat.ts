@@ -9,7 +9,7 @@ import {
 } from './combat-geometry.js';
 import {
   rollAttackBuffBonus, getRageDamageBonus,
-  rollSaveWithBuffs, applyBuffDamageResistance,
+  rollSaveWithBuffs, applyBuffDamageResistance, applyDamageRollPenalty,
   hasResource, consumeResource,
   lowestAvailableSlot,
   addBuff,
@@ -941,6 +941,8 @@ function hasDisadvantage(attacker: Creature, target: Creature, action: MonsterAc
 
   // Weapon Mastery: Sap gives the target Disadvantage on its next attack roll.
   if (attacker.activeBuffs?.some(b => b.attackDisadvantage)) dis = true;
+  if ((action.attackAbility === 'str' || (!action.attackAbility && action.type === 'melee'))
+      && attacker.activeBuffs?.some(b => b.strengthTestDisadvantage)) dis = true;
 
   // Target is prone and ranged
   if (target.conditions.includes('prone') && action.type === 'ranged') dis = true;
@@ -2418,7 +2420,20 @@ export function processSourceTurnStartOngoingEffects(state: BattleState, source:
 }
 
 export function processTargetTurnEndOngoingEffects(state: BattleState, target: Creature): void {
-  if (!target.isAlive || !target.ongoingEffects?.length) return;
+  if (!target.isAlive) return;
+  for (const buff of [...(target.activeBuffs ?? [])]) {
+    if (buff.saveEnds?.at !== 'targetTurnEnd') continue;
+    const save = rollSaveWithBuffs(target, getEffectiveSaveModifier(target, buff.saveEnds.ability, state), false, buff.saveEnds.dc, buff.saveEnds.ability);
+    const passed = save.total >= buff.saveEnds.dc;
+    state.events.push({ kind: 'save', targetId: target.id, success: passed, durationMs: BASE_DURATIONS.save });
+    pushLog(state, {
+      round: state.round, turn: state.turnIndex, actor: target.displayName, action: buff.name,
+      details: passed ? `${target.displayName} ends ${buff.name}. (${save.total} vs DC ${buff.saveEnds.dc})` : `${target.displayName} remains affected by ${buff.name}. (${save.total} vs DC ${buff.saveEnds.dc})`,
+      type: passed ? 'save' : 'condition',
+    });
+    if (passed) target.activeBuffs = target.activeBuffs.filter(candidate => candidate !== buff);
+  }
+  if (!target.ongoingEffects?.length) return;
   for (const effect of [...target.ongoingEffects]) {
     if (effect.expiresRound !== undefined && state.round >= effect.expiresRound) {
       removeOngoingEffect(state, target, effect.key, effect.sourceId);
@@ -3870,9 +3885,9 @@ function resolveAttack(
 
     if (action.damage) {
       const overchannelDamage = tryConsumeWizardOverchannel(state, attacker, action, action.damage);
-      let totalDmg = overchannelDamage ?? rollDamage(action.damage, isCrit).total;
+      let totalDmg = applyDamageRollPenalty(attacker, overchannelDamage ?? rollDamage(action.damage, isCrit).total);
       if (overchannelDamage === null && hasOriginFeat(attacker, 'Savage Attacker') && !attacker.turnFlags.savageAttackerUsed && action.spellLevel === undefined && (action.type === 'melee' || action.type === 'ranged')) {
-        totalDmg = Math.max(totalDmg, rollDamage(action.damage, isCrit).total);
+        totalDmg = Math.max(totalDmg, applyDamageRollPenalty(attacker, rollDamage(action.damage, isCrit).total));
         attacker.turnFlags.savageAttackerUsed = true;
       }
       const mainType = action.damageType || 'bludgeoning';
@@ -3933,7 +3948,7 @@ function resolveAttack(
 
       if (autoCrit && !isCrit) {
         const critDmg = rollDamage(action.damage, true);
-        totalDmg = critDmg.total;
+        totalDmg = applyDamageRollPenalty(attacker, critDmg.total);
         pushLog(state, {
           round: state.round, turn: state.turnIndex,
           actor: attacker.displayName, action: 'Auto-Critical!',
@@ -4000,6 +4015,7 @@ function resolveAttack(
           ?? action.smiteOnHit.dicePerSlotLevel[0];
         const smiteExpr = `${diceCount}d${action.smiteOnHit.die}`;
         const smite = rollDamage(smiteExpr, isCrit);
+        smite.total = applyDamageRollPenalty(attacker, smite.total);
         pushLog(state, {
           round: state.round, turn: state.turnIndex,
           actor: attacker.displayName, action: 'Divine Smite',
@@ -4022,6 +4038,7 @@ function resolveAttack(
       const diceExpr = parts[0];
       const type = parts.slice(1).join(' ') || 'untyped';
       const rider = rollDamage(diceExpr, isCrit);
+      rider.total = applyDamageRollPenalty(attacker, rider.total);
       pushLog(state, {
         round: state.round, turn: state.turnIndex,
         actor: attacker.displayName, action: b.name,
@@ -4067,6 +4084,7 @@ function resolveAttack(
         }
       }
       const addDmg = rollDamage(addDmgExpr, isCrit || autoCrit);
+      addDmg.total = applyDamageRollPenalty(attacker, addDmg.total);
 
       pushLog(state, {
         round: state.round, turn: state.turnIndex,
@@ -4094,7 +4112,7 @@ function resolveAttack(
     // healing side).
     if (action.additionalDamage?.includes('necrotic') && action.description.includes('regains Hit Points equal')) {
       const parts = action.additionalDamage.split(' ');
-      const drainAmount = rollDamage(parts[0], isCrit || autoCrit).total;
+      const drainAmount = applyDamageRollPenalty(attacker, rollDamage(parts[0], isCrit || autoCrit).total);
       applyHealing(state, attacker, drainAmount, attacker, 'Life Drain');
     }
 
@@ -4162,7 +4180,7 @@ function resolveAttack(
         const parts = b.reactiveDamage.split(' ');
         const diceExpr = parts[0];
         const dmgType = parts.slice(1).join(' ') || 'fire';
-        const reactiveDmg = rollDamage(diceExpr, false).total;
+        const reactiveDmg = applyDamageRollPenalty(target, rollDamage(diceExpr, false).total);
         pushLog(state, {
           round: state.round, turn: state.turnIndex,
           actor: target.displayName, action: b.name,
@@ -4317,7 +4335,7 @@ export {
 // re-export them here so external `from './combat.js'` imports keep working.
 export {
   rollAttackBuffBonus, rollSaveBuffBonus, getRageDamageBonus, getSpellSaveDcBonus,
-  rollSaveWithBuffs, applyBuffDamageResistance,
+  rollSaveWithBuffs, applyBuffDamageResistance, applyDamageRollPenalty,
   hasResource, consumeResource, restoreResource,
   lowestAvailableSlot, highestAvailableSlot,
   hasBuff, getBuff, addBuff, removeBuff,

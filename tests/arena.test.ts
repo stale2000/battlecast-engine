@@ -4,7 +4,7 @@ import { Encounter } from '../src/api/encounter.js';
 import { getActiveCreature, getLegalActions, applyLegalAction, startArena } from '../src/api/arena.js';
 import { reachableMovementDestinations } from '../src/engine/ai-movement.js';
 import { processTurnStart } from '../src/engine/ai-turn.js';
-import { applyDamage, hasDisadvantage, resolveAttack } from '../src/engine/combat.js';
+import { applyDamage, applyDamageRollPenalty, hasDisadvantage, processTargetTurnEndOngoingEffects, resolveAttack } from '../src/engine/combat.js';
 import { rollSaveWithBuffs } from '../src/engine/combat-buffs.js';
 import { rollAttack } from '../src/engine/dice.js';
 import { withRng } from '../src/engine/rng.js';
@@ -217,6 +217,31 @@ describe('Kaggle arena bridge', () => {
     applyLegalAction(encounter, getLegalActions(encounter, active.id).find(action => action.type === 'spell' && action.actionName === 'False Life')!);
     expect(active.temporaryHp).toBeGreaterThan(0);
     expect(active.resources['chthonic-false-life']).toBe(0);
+  });
+
+  it('constructs Ray of Enfeeblement and resolves its save-ended combat debuff', () => {
+    const chthonic = {
+      heroClass: 'Fighter', species: 'Tiefling', tieflingLegacy: 'Chthonic', speciesCastingAbility: 'cha', background: 'Soldier',
+      abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 },
+    };
+    const result = kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => chthonic) }, blueParty: party });
+    const caster = result.state.battleState!.creatures.find(creature => creature.team === 'red')!;
+    expect(caster.monsterData.actions.some(action => action.name === 'Ray of Enfeeblement')).toBe(true);
+    expect(caster.resources['chthonic-ray-of-enfeeblement']).toBe(1);
+
+    const encounter = new Encounter({ seed: 1 });
+    const [debuffed] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'red' });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue' });
+    encounter.start();
+    const target = encounter.state!.creatures.find(creature => creature.id === debuffed.id)!;
+    target.activeBuffs.push({ name: 'Ray of Enfeeblement', key: 'test-ray', casterId: 'caster', appliedRound: 1, endRound: 11, strengthTestDisadvantage: true, damageRollPenalty: '1d8', saveEnds: { ability: 'con', dc: 100, at: 'targetTurnEnd' } });
+    expect(hasDisadvantage(target, encounter.state!.creatures.find(creature => creature.team === 'blue')!, { name: 'Strength Attack', type: 'melee', description: '', attackBonus: 1, attackAbility: 'str' })).toBe(true);
+    expect(encounter.runWithRng(() => applyDamageRollPenalty(target, 10))).toBeLessThan(10);
+    encounter.runWithRng(() => processTargetTurnEndOngoingEffects(encounter.state!, target));
+    expect(target.activeBuffs.some(buff => buff.key === 'test-ray')).toBe(true);
+    target.activeBuffs.push({ name: 'Ray of Enfeeblement', key: 'test-ray-ends', casterId: 'caster', appliedRound: 1, endRound: 11, saveEnds: { ability: 'con', dc: 0, at: 'targetTurnEnd' } });
+    encounter.runWithRng(() => processTargetTurnEndOngoingEffects(encounter.state!, target));
+    expect(target.activeBuffs.some(buff => buff.key === 'test-ray-ends')).toBe(false);
   });
 
   it('automatically resolves Infernal Hellish Rebuke against a nearby damaging creature', () => {

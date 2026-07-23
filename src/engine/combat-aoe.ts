@@ -29,7 +29,7 @@ import {
   creatureDistance, parseAoEShape, isInCone, isInLine, isPositionBlocked, distance,
 } from './combat-geometry.js';
 import {
-  rollSaveWithBuffs, hasResource, consumeResource, addBuff, getSpellSaveDcBonus,
+  rollSaveWithBuffs, hasResource, consumeResource, addBuff, getSpellSaveDcBonus, applyDamageRollPenalty,
 } from './combat-buffs.js';
 import {
   applyDamage, applyCondition, resolveConditionOnHit,
@@ -136,9 +136,8 @@ function tryConsumeWizardOverchannel(
   return maxDiceTotal(damageExpression);
 }
 
-function applyFailedSaveBuff(state: BattleState, attacker: Creature, target: Creature, action: MonsterAction): void {
-  if (!action.buffOnFailedSave || !target.isAlive) return;
-  const tmpl = action.buffOnFailedSave;
+function applySaveBuff(state: BattleState, attacker: Creature, target: Creature, action: MonsterAction, tmpl: NonNullable<MonsterAction['buffOnFailedSave']>): void {
+  if (!target.isAlive) return;
   addBuff(target, {
     name: tmpl.name,
     key: tmpl.key,
@@ -172,6 +171,9 @@ function applyFailedSaveBuff(state: BattleState, attacker: Creature, target: Cre
     spellAttackAdvantage: tmpl.spellAttackAdvantage,
     spellSaveDcBonus: tmpl.spellSaveDcBonus,
     expiresOnSourceTurnStart: tmpl.expiresOnSourceTurnStart,
+    strengthTestDisadvantage: tmpl.strengthTestDisadvantage,
+    damageRollPenalty: tmpl.damageRollPenalty,
+    saveEnds: tmpl.saveEnds,
   });
   pushLog(state, {
     round: state.round, turn: state.turnIndex,
@@ -348,6 +350,7 @@ export function resolveSingleTargetSave(
         details: `${target.displayName} saves! (${save.total} vs DC ${dc})`,
         type: 'save'
       });
+      if (action.buffOnSuccessfulSave) applySaveBuff(state, attacker, target, action, action.buffOnSuccessfulSave);
       return;
     } else {
       dmg = rollDice(damageOnFail).total;
@@ -396,8 +399,10 @@ export function resolveSingleTargetSave(
     resolveConditionOnHit(state, attacker, target, action);
   }
   if (!passed) {
-    applyFailedSaveBuff(state, attacker, target, action);
+    if (action.buffOnFailedSave) applySaveBuff(state, attacker, target, action, action.buffOnFailedSave);
     if (action.pushOnFailedSave) pushTargetAwayFromCaster(state, attacker, target, action.pushOnFailedSave);
+  } else if (action.buffOnSuccessfulSave) {
+    applySaveBuff(state, attacker, target, action, action.buffOnSuccessfulSave);
   }
 }
 
@@ -620,7 +625,7 @@ export function resolveAoE(
       const draconicBonus = draconicElementalAffinityBonus(attacker, action, aoeDmgType);
       const evocationBonus = wizardEvocationBonus(attacker, action);
       const rolledParts = damageParts.map(part => {
-        let partDamage = part.primary ? rollSpellDamage(part.damage) : rollDice(part.damage).total;
+        let partDamage = applyDamageRollPenalty(attacker, part.primary ? rollSpellDamage(part.damage) : rollDice(part.damage).total);
         if (part.primary) partDamage += draconicBonus + evocationBonus;
         if (halfDamage) partDamage = Math.floor(partDamage / 2);
         return { ...part, rolledDamage: partDamage };
@@ -642,6 +647,11 @@ export function resolveAoE(
           details: `${target.displayName} saves! (${save.total} vs DC ${dc}) Takes no damage.`,
           type: 'save'
         });
+        if (action.buffOnSuccessfulSave) {
+          const emittedStart = state.events.length;
+          applySaveBuff(state, attacker, target, action, action.buffOnSuccessfulSave);
+          followUpEvents.push(...state.events.splice(emittedStart));
+        }
         aoeDamageTargets.push(visualTarget);
         continue;
       } else {
@@ -735,8 +745,12 @@ export function resolveAoE(
 
     if (!passed) {
       const emittedStart = state.events.length;
-      applyFailedSaveBuff(state, attacker, target, action);
+      if (action.buffOnFailedSave) applySaveBuff(state, attacker, target, action, action.buffOnFailedSave);
       if (action.pushOnFailedSave) pushTargetAwayFromCaster(state, attacker, target, action.pushOnFailedSave);
+      followUpEvents.push(...state.events.splice(emittedStart));
+    } else if (action.buffOnSuccessfulSave) {
+      const emittedStart = state.events.length;
+      applySaveBuff(state, attacker, target, action, action.buffOnSuccessfulSave);
       followUpEvents.push(...state.events.splice(emittedStart));
     }
 

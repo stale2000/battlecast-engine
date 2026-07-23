@@ -215,6 +215,8 @@ export interface MonsterAction {
   buffOnHit?: BuffTemplate;
   /** Buff applied to targets that fail this action's saving throw, e.g. Vicious Mockery. */
   buffOnFailedSave?: BuffTemplate;
+  /** Buff applied to targets that succeed on this action's saving throw. */
+  buffOnSuccessfulSave?: BuffTemplate;
   /** Failed-save forced movement in feet away from the caster, e.g. Thunderwave. */
   pushOnFailedSave?: number;
   /** On-hit forced movement in feet toward the attacker, e.g. Balor Flame Whip. */
@@ -394,6 +396,12 @@ export interface BuffTemplate {
   spellSaveDcBonus?: number;
   /** Some short mastery debuffs expire at the start of the source creature's next turn. */
   expiresOnSourceTurnStart?: boolean;
+  /** Disadvantage on Strength attack rolls and saving throws. */
+  strengthTestDisadvantage?: boolean;
+  /** Dice subtracted from each damage roll this creature makes. */
+  damageRollPenalty?: string;
+  /** Repeat this save at the specified point and remove the buff on success. */
+  saveEnds?: { ability: keyof Abilities; dc: number; at: 'targetTurnEnd' };
 }
 
 export interface MonsterTrait {
@@ -753,6 +761,12 @@ export interface ActiveBuff {
   spellSaveDcBonus?: number;
   /** Some short mastery debuffs expire at the start of the source creature's next turn. */
   expiresOnSourceTurnStart?: boolean;
+  /** Disadvantage on Strength attack rolls and saving throws. */
+  strengthTestDisadvantage?: boolean;
+  /** Dice subtracted from each damage roll this creature makes. */
+  damageRollPenalty?: string;
+  /** Repeat this save at the specified point and remove the buff on success. */
+  saveEnds?: { ability: keyof Abilities; dc: number; at: 'targetTurnEnd' };
 }
 
 export interface CreatureStats {
