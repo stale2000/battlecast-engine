@@ -11,7 +11,7 @@ import {
   type ArenaSpecies,
 } from '../data/arena-origins.js';
 import type { Abilities, MonsterAction } from '../types/monster.js';
-import { bless, burningHands, cureWounds, guidingBolt, healingWord, magicMissile, shieldOfFaith, sleep, thunderwave } from '../data/spells.js';
+import { bless, burningHands, cureWounds, guidingBolt, healingWord, holdPerson, magicMissile, shieldOfFaith, sleep, thunderwave } from '../data/spells.js';
 
 type DragonAncestry = 'acid' | 'cold' | 'fire' | 'lightning' | 'poison';
 type CastingAbility = 'int' | 'wis' | 'cha';
@@ -217,8 +217,8 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
           species, speciesChoice: elfLineage ?? gnomeLineage ?? goliathAncestry ?? tieflingLegacy ?? character.dragonAncestry as string | undefined, speciesCastingAbility, background, originFeat: BACKGROUNDS[background].originFeat, originFeats: [BACKGROUNDS[background].originFeat, ...(humanOriginFeat ? [humanOriginFeat] : [])], originSkills: [...BACKGROUNDS[background].skills], originTool: BACKGROUNDS[background].tool,
           originEquipment: [...BACKGROUNDS[background].equipment], sizeOverride: size ?? SPECIES[species].size, speedOverride: elfLineage === 'Wood Elf' ? 35 : SPECIES[species].speed,
           hitPointBonus: SPECIES[species].maxHpBonusAtLevel5, additionalResistances: tieflingLegacy ? [{ Abyssal: 'poison', Chthonic: 'necrotic', Infernal: 'fire' }[tieflingLegacy]] : SPECIES[species].resistances ? [...SPECIES[species].resistances] : undefined,
-          additionalResources: { ...(species === 'Orc' ? { 'orc-adrenaline-rush': 3 } : {}), ...(species === 'Goliath' ? { 'goliath-large-form': 1, 'goliath-giant-ancestry': 3 } : {}), ...(species === 'Elf' && elfLineage === 'Drow' ? { 'drow-faerie-fire': 1 } : {}), ...(origin?.resources ?? {}), ...(humanOrigin?.resources ?? {}) },
-          additionalActions: [...(species === 'Dragonborn' ? [dragonbornBreath(character.dragonAncestry as DragonAncestry, abilities)] : []), ...(species === 'Elf' && elfLineage === 'Drow' ? [drowFaerieFire(speciesCastingAbility!, abilities)] : []), ...(species === 'Tiefling' ? [tieflingCantrip(tieflingLegacy!, speciesCastingAbility!, abilities)] : []), ...(origin?.actions ?? []), ...(humanOrigin?.actions ?? [])],
+          additionalResources: { ...(species === 'Orc' ? { 'orc-adrenaline-rush': 3 } : {}), ...(species === 'Goliath' ? { 'goliath-large-form': 1, 'goliath-giant-ancestry': 3 } : {}), ...(species === 'Elf' && elfLineage === 'Drow' ? { 'drow-faerie-fire': 1 } : {}), ...(species === 'Tiefling' && tieflingLegacy === 'Abyssal' ? { 'abyssal-hold-person': 1 } : {}), ...(origin?.resources ?? {}), ...(humanOrigin?.resources ?? {}) },
+          additionalActions: [...(species === 'Dragonborn' ? [dragonbornBreath(character.dragonAncestry as DragonAncestry, abilities)] : []), ...(species === 'Elf' && elfLineage === 'Drow' ? [drowFaerieFire(speciesCastingAbility!, abilities)] : []), ...(species === 'Tiefling' ? [tieflingCantrip(tieflingLegacy!, speciesCastingAbility!, abilities)] : []), ...(species === 'Tiefling' && tieflingLegacy === 'Abyssal' ? [{ ...holdPerson(speciesCastingAbility!, Math.floor((abilities[speciesCastingAbility!] - 10) / 2), 3), resourceCost: { key: 'abyssal-hold-person', amount: 1 } }] : []), ...(origin?.actions ?? []), ...(humanOrigin?.actions ?? [])],
           ...(species === 'Dragonborn' ? { additionalResistances: [character.dragonAncestry as DragonAncestry], additionalResources: { ...(origin?.resources ?? {}), ...(humanOrigin?.resources ?? {}), 'dragonborn-breath': 3, 'dragonborn-flight': 1 } } : {}),
         } : {}),
       },

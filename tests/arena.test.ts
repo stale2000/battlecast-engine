@@ -137,6 +137,17 @@ describe('Kaggle arena bridge', () => {
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...tiefling, tieflingLegacy: undefined })) }, blueParty: party })).toThrow(/tieflingLegacy/);
   });
 
+  it('adds Abyssal Hold Person as an authoritative lineage free cast', () => {
+    const abyssal = {
+      heroClass: 'Fighter', species: 'Tiefling', tieflingLegacy: 'Abyssal', speciesCastingAbility: 'cha', background: 'Soldier',
+      abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 },
+    };
+    const party = { characters: Array.from({ length: 4 }, () => abyssal) };
+    const creature = kaggleStep({ ...init(), redParty: party, blueParty: party }).state.battleState!.creatures.find(candidate => candidate.team === 'red')!;
+    expect(creature.monsterData.actions.some(action => action.name === 'Hold Person' && action.resourceCost?.key === 'abyssal-hold-person')).toBe(true);
+    expect(creature.resources['abyssal-hold-person']).toBe(1);
+  });
+
   it('requires an Elf lineage and applies Wood Elf speed', () => {
     const elf = {
       heroClass: 'Fighter', species: 'Elf', elfLineage: 'Wood Elf', speciesCastingAbility: 'wis', background: 'Soldier',
