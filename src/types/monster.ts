@@ -463,6 +463,13 @@ export interface MonsterData {
   heroClass?: string;
   heroLevel?: number;
   heroSubclass?: string;
+  /** SRD character-origin metadata used by validated arena construction. */
+  heroSpecies?: string;
+  heroBackground?: string;
+  originFeat?: string;
+  originSkills?: string[];
+  originTool?: string;
+  originEquipment?: string[];
   /** Research/config hook for Druids: prefer this eligible Beast when using Wild Shape. */
   preferredWildShapeBeast?: string;
   /**

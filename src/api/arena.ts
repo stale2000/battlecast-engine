@@ -32,6 +32,7 @@ export type ArenaAction =
   | { id: string; type: 'help'; targetId: string }
   | { id: 'class_feature:action_surge'; type: 'action_surge' }
   | { id: 'class_feature:steady_aim'; type: 'steady_aim' }
+  | { id: 'species:adrenaline_rush'; type: 'species_dash' }
   | { id: string; type: 'wild_shape'; beastName: string }
   | { id: string; type: 'monk_strike'; actionIndex: number; targetId: string; flurry: boolean }
   | { id: 'move_to'; type: 'move_to'; destination?: { x: number; y: number } }
@@ -200,6 +201,9 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
     actions.push({ id: 'class_feature:steady_aim', type: 'steady_aim' });
     if (active.movementRemaining > 0) actions.push({ id: 'bonus_dash', type: 'dash', isBonusAction: true });
   }
+  if (active.monsterData.heroSpecies === 'Orc' && !active.bonusActionUsed && active.movementRemaining > 0 && hasResource(active, 'orc-adrenaline-rush')) {
+    actions.push({ id: 'species:adrenaline_rush', type: 'species_dash' });
+  }
   actions.push(...wildShapeActions(active, state));
   const monk = monkUnarmedAction(active);
   const flurryStrikes = Object.keys(active.turnFlags).filter(key => key.startsWith('arena-flurry-')).length;
@@ -340,6 +344,12 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       active.bonusActionUsed = true;
       active.movementRemaining = 0;
       pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Steady Aim', details: `${active.displayName} gains advantage on their next attack.`, type: 'special' });
+    } else if (legal.type === 'species_dash') {
+      if (active.monsterData.heroSpecies !== 'Orc' || active.bonusActionUsed || !consumeResource(active, 'orc-adrenaline-rush')) throw new EncounterError('Illegal or stale arena Adrenaline Rush.');
+      active.movementRemaining += getEffectiveMoveSpeed(active, state);
+      active.temporaryHp = Math.max(active.temporaryHp ?? 0, active.monsterData.proficiencyBonus);
+      active.bonusActionUsed = true;
+      pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Adrenaline Rush', details: `${active.displayName} dashes and gains temporary HP.`, type: 'move' });
     } else if (legal.type === 'wild_shape') {
       const level = active.monsterData.heroLevel ?? 0;
       const beast = getEligibleWildShapeBeasts({ level, subclass: active.monsterData.heroSubclass }).find(candidate => candidate.name === legal.beastName);

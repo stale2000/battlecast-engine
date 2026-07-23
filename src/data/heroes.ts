@@ -2367,6 +2367,16 @@ export interface HeroOverrides {
   hpOverride?: number;
   acOverride?: number;
   speedOverride?: number;
+  sizeOverride?: MonsterData['size'];
+  hitPointBonus?: number;
+  additionalResistances?: string[];
+  species?: string;
+  background?: string;
+  originFeat?: string;
+  originSkills?: string[];
+  originTool?: string;
+  originEquipment?: string[];
+  additionalResources?: Record<string, number>;
   weapon?: WeaponOverride;
   weapons?: WeaponOverride[];
   spells?: string[];
@@ -2575,6 +2585,7 @@ export function buildCustomHero(
 
   let hp = overrides.hpOverride ?? computeHP(spec.hitDie, conMod, level);
   if (overrides.hpOverride === undefined && className === 'Sorcerer' && level >= 3) hp += level;
+  if (overrides.hpOverride === undefined) hp += overrides.hitPointBonus ?? 0;
   const armorOverride = (className === 'Fighter' || className === 'Paladin' || className === 'Cleric') && level >= 5 ? 18 : undefined;
   let ac = overrides.acOverride ?? computeAC(spec, dexMod, wisMod, conMod, armorOverride);
   if (!overrides.acOverride && className === 'Sorcerer' && level >= 3) ac = 10 + dexMod + abilityMod(abilities.cha);
@@ -2657,7 +2668,7 @@ export function buildCustomHero(
 
   const abilityActions = buildClassAbilities(className, level, abilities, pb);
   actions.push(...abilityActions);
-  const initialResources = buildClassResources(className, level);
+  const initialResources = { ...buildClassResources(className, level), ...(overrides.additionalResources ?? {}) };
 
   if (className === 'Paladin' && level >= 2) {
     const weaponNames = new Set(weaponSpecs.map(weapon => weapon.name));
@@ -2699,11 +2710,12 @@ export function buildCustomHero(
     ...(className === 'Druid' && level >= 10 ? ['cold'] : []),
     ...(className === 'Sorcerer' && level >= 6 ? ['fire'] : []),
     ...(className === 'Warlock' && level >= 10 ? ['fire'] : []),
+    ...(overrides.additionalResistances ?? []),
   ];
   const conditionImmunities = className === 'Druid' && level >= 10 ? ['poisoned'] : undefined;
   const data: MonsterData = {
     name,
-    size: 'Medium',
+    size: overrides.sizeOverride ?? 'Medium',
     type: 'Humanoid (Hero)',
     alignment: 'Any Alignment',
     ac, hp,
@@ -2722,6 +2734,12 @@ export function buildCustomHero(
     heroClass: className,
     heroLevel: level,
     heroSubclass,
+    heroSpecies: overrides.species,
+    heroBackground: overrides.background,
+    originFeat: overrides.originFeat,
+    originSkills: overrides.originSkills,
+    originTool: overrides.originTool,
+    originEquipment: overrides.originEquipment,
     preferredWildShapeBeast: overrides.preferredWildShapeBeast,
     initialResources: Object.keys(initialResources).length ? initialResources : undefined,
   };

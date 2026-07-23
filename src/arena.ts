@@ -1,13 +1,14 @@
 import { Encounter, EncounterError, type AddCreatureOptions, type SerializedEncounter, type Team } from './api/encounter.js';
 import { applyLegalAction, getActiveCreature, getLegalActions, sameArenaAction, startArena, type ArenaAction } from './api/arena.js';
 import { buildHero, getAvailableSpells, HERO_CLASS_NAMES } from './data/heroes.js';
+import { ARENA_BACKGROUNDS, ARENA_SPECIES, BACKGROUNDS, SPECIES, applyBackgroundIncreases, type AbilityName, type ArenaBackground, type ArenaSpecies } from './data/arena-origins.js';
 import type { Abilities, Creature } from './types/monster.js';
 
 export const ARENA_PROTOCOL_VERSION = 1;
 export const ARENA_ROUND_CAP = 20;
 
 type SlotCharacter = { slot: 1 | 2 | 3 | 4 };
-type ArenaHero = { heroClass: string; abilities: Abilities; subclass?: string; spells?: string[] };
+type ArenaHero = { heroClass: string; abilities: Abilities; subclass?: string; spells?: string[]; species?: ArenaSpecies; background?: ArenaBackground; abilityIncreases?: Partial<Record<AbilityName, 0 | 1 | 2>> };
 type Character = SlotCharacter | ArenaHero;
 type Party = { characters: Character[] };
 type Request =
@@ -74,10 +75,25 @@ function parseParty(value: unknown, team: Team): AddCreatureOptions[] {
     if (typeof character.heroClass !== 'string' || !HERO_CLASS_NAMES.includes(character.heroClass as typeof HERO_CLASS_NAMES[number])) {
       throw new EncounterError(`${team}Party.characters[${index}].heroClass must be a supported hero class.`);
     }
-    if (!Object.keys(character).every(key => key === 'heroClass' || key === 'abilities' || key === 'subclass' || key === 'spells')) {
+    if (!Object.keys(character).every(key => key === 'heroClass' || key === 'abilities' || key === 'subclass' || key === 'spells' || key === 'species' || key === 'background' || key === 'abilityIncreases')) {
       throw new EncounterError(`${team}Party.characters[${index}] contains unsupported build choices.`);
     }
-    const abilities = parseAbilities(character.abilities, `${team}Party.characters[${index}].abilities`);
+    const baseAbilities = parseAbilities(character.abilities, `${team}Party.characters[${index}].abilities`);
+    const hasOrigin = character.species !== undefined || character.background !== undefined || character.abilityIncreases !== undefined;
+    if (hasOrigin && (typeof character.species !== 'string' || !ARENA_SPECIES.includes(character.species as ArenaSpecies) || typeof character.background !== 'string' || !ARENA_BACKGROUNDS.includes(character.background as ArenaBackground))) {
+      throw new EncounterError(`${team}Party.characters[${index}] must use an SRD species and background together.`);
+    }
+    const species = character.species as ArenaSpecies | undefined;
+    const background = character.background as ArenaBackground | undefined;
+    let abilities = baseAbilities;
+    if (hasOrigin) {
+      const increases = assertObject(character.abilityIncreases, `${team}Party.characters[${index}].abilityIncreases`) as Partial<Record<AbilityName, 0 | 1 | 2>>;
+      try {
+        abilities = applyBackgroundIncreases(baseAbilities, background!, increases);
+      } catch (error) {
+        throw new EncounterError(error instanceof Error ? error.message : String(error));
+      }
+    }
     if (character.subclass !== undefined && (character.heroClass !== 'Druid' || (character.subclass !== 'Circle of the Land' && character.subclass !== 'Circle of the Moon'))) {
       throw new EncounterError(`${team}Party.characters[${index}].subclass is not supported.`);
     }
@@ -86,7 +102,15 @@ function parseParty(value: unknown, team: Team): AddCreatureOptions[] {
     return {
       heroClass: character.heroClass,
       heroLevel: 5,
-      heroOverrides: { abilities, subclass: character.subclass as 'Circle of the Land' | 'Circle of the Moon' | undefined, spells },
+      heroOverrides: {
+        abilities, subclass: character.subclass as 'Circle of the Land' | 'Circle of the Moon' | undefined, spells,
+        ...(species && background ? {
+          species, background, originFeat: BACKGROUNDS[background].originFeat, originSkills: [...BACKGROUNDS[background].skills], originTool: BACKGROUNDS[background].tool,
+          originEquipment: [...BACKGROUNDS[background].equipment], sizeOverride: SPECIES[species].size, speedOverride: SPECIES[species].speed,
+          hitPointBonus: SPECIES[species].maxHpBonusAtLevel5, additionalResistances: SPECIES[species].resistances ? [...SPECIES[species].resistances] : undefined,
+          additionalResources: species === 'Orc' ? { 'orc-adrenaline-rush': 3 } : undefined,
+        } : {}),
+      },
       team,
     };
   });
@@ -120,6 +144,7 @@ function observation(encounter: Encounter, team: Team) {
         position: { ...c.position }, size: c.monsterData.size, conditions: [...c.conditions], status: status(c), resources: { ...c.resources },
         build: {
           heroClass: c.monsterData.heroClass, heroLevel: c.monsterData.heroLevel, heroSubclass: c.monsterData.heroSubclass,
+          species: c.monsterData.heroSpecies, background: c.monsterData.heroBackground, originFeat: c.monsterData.originFeat,
           abilities: { ...c.monsterData.abilities }, ac: c.monsterData.ac, speed: { ...c.monsterData.speed },
           equipment: visibleEquipment(c), preparedSpells: preparedSpells(c),
         },

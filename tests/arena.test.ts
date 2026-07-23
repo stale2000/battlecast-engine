@@ -84,6 +84,40 @@ describe('Kaggle arena bridge', () => {
     expect(() => kaggleStep({ ...init(), redParty: { characters: [{ heroClass: 'Fighter', abilities: { str: 15, dex: 15, con: 15, int: 15, wis: 15, cha: 15 } }] } })).toThrow(/exactly four/);
   });
 
+  it('applies SRD 5.2.1 background increases and static species traits', () => {
+    const dwarfSoldier = {
+      heroClass: 'Fighter', species: 'Dwarf', background: 'Soldier',
+      abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 },
+      abilityIncreases: { str: 2, con: 1 },
+    };
+    const originParty = { characters: Array.from({ length: 4 }, () => dwarfSoldier) };
+    const result = kaggleStep({ ...init(), redParty: originParty, blueParty: originParty });
+    const red = result.state.battleState!.creatures.find(creature => creature.team === 'red')!;
+    expect(red.monsterData.abilities).toMatchObject({ str: 17, con: 14 });
+    expect(red.monsterData.heroSpecies).toBe('Dwarf');
+    expect(red.monsterData.heroBackground).toBe('Soldier');
+    expect(red.monsterData.originFeat).toBe('Savage Attacker');
+    expect(red.monsterData.resistances).toContain('poison');
+    expect(red.monsterData.hp).toBeGreaterThan(0);
+    expect(result.observations.red.publicCombatState.creatures.filter(creature => creature.team === 'red').every(creature => 'build' in creature && creature.build.species === 'Dwarf')).toBe(true);
+    expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...dwarfSoldier, abilityIncreases: { int: 2, con: 1 } })) }, blueParty: originParty })).toThrow(/listed abilities/);
+  });
+
+  it('resolves Orc Adrenaline Rush through the legal-action catalogue', () => {
+    const encounter = new Encounter({ seed: 1 });
+    const [orc] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { species: 'Orc', additionalResources: { 'orc-adrenaline-rush': 3 } }, team: 'red', position: { x: 0, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 10, y: 0 } });
+    encounter.start();
+    encounter.state!.initiativeOrder = [orc.id];
+    startArena(encounter);
+    const active = getActiveCreature(encounter)!;
+    const before = active.movementRemaining;
+    applyLegalAction(encounter, getLegalActions(encounter, active.id).find(action => action.type === 'species_dash')!);
+    expect(active.movementRemaining).toBeGreaterThan(before);
+    expect(active.temporaryHp).toBe(3);
+    expect(active.resources['orc-adrenaline-rush']).toBe(2);
+  });
+
   it('accepts only engine-listed spell selections for custom casters', () => {
     const wizard = {
       heroClass: 'Wizard', abilities: { str: 8, dex: 14, con: 13, int: 15, wis: 12, cha: 10 },
