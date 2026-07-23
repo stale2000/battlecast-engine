@@ -211,6 +211,10 @@ export interface MonsterAction {
   /** True for weapons with the 5e Loading property. A creature can fire a
    * loading weapon only once during a multiattack/Extra Attack action. */
   loading?: boolean;
+  /** Heavy weapons impose Disadvantage on attacks by Small creatures. */
+  heavy?: boolean;
+  /** Lance attacks have Disadvantage against targets within 5 feet. */
+  closeRangeDisadvantage?: boolean;
   /** Buff applied to the target after this attack hits and deals damage, e.g. Guiding Bolt. */
   buffOnHit?: BuffTemplate;
   /** Buff applied to targets that fail this action's saving throw, e.g. Vicious Mockery. */

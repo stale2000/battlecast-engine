@@ -39,14 +39,14 @@ const SHIELD_TRAINING = new Set<typeof HERO_CLASS_NAMES[number]>(['Barbarian', '
 function isWeaponProficient(heroClass: typeof HERO_CLASS_NAMES[number], weapon: typeof ARENA_WEAPONS[string]): boolean {
   if (heroClass === 'Barbarian' || heroClass === 'Fighter' || heroClass === 'Paladin' || heroClass === 'Ranger') return true;
   if (heroClass === 'Bard') return weapon.category === 'simple' || weapon.finesse === true;
-  if (heroClass === 'Monk') return weapon.category === 'simple';
-  if (heroClass === 'Rogue') return weapon.category === 'simple' || weapon.finesse === true;
+  if (heroClass === 'Monk') return weapon.category === 'simple' || weapon.light === true;
+  if (heroClass === 'Rogue') return weapon.category === 'simple' || weapon.finesse === true || weapon.light === true;
   return weapon.category === 'simple';
 }
 
 function toWeaponOverrides(weapons: readonly (typeof ARENA_WEAPONS[string])[] | undefined): WeaponOverride[] | undefined {
   return weapons?.flatMap<WeaponOverride>(weapon => {
-    const base = { name: weapon.name, die: weapon.die, damageType: weapon.damageType, attackAbility: weapon.attackAbility, finesse: weapon.finesse, loading: weapon.loading };
+    const base = { name: weapon.name, die: weapon.die, damageType: weapon.damageType, attackAbility: weapon.attackAbility, finesse: weapon.finesse, loading: weapon.loading, heavy: weapon.heavy, closeRangeDisadvantage: weapon.closeRangeDisadvantage };
     return weapon.thrownRange
       ? [
         { ...base, name: `${weapon.name} (Melee)`, type: 'melee' as const, reach: weapon.reach },

@@ -99,6 +99,17 @@ describe('Kaggle arena bridge', () => {
     expect(getLegalActions(encounter, hero.id).some(action => action.type === 'attack' && action.actionName === 'Light Crossbow')).toBe(false);
   });
 
+  it('applies Heavy and Lance disadvantage through the shared attack resolver', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { sizeOverride: 'Small', weapons: [{ name: 'Heavy Crossbow', die: '1d10', damageType: 'piercing', type: 'ranged', range: { normal: 100, long: 400 }, heavy: true }] }, team: 'red', position: { x: 0, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
+    encounter.start();
+    const [attacker, target] = encounter.state!.creatures;
+    expect(hasDisadvantage(attacker, target, attacker.monsterData.actions.find(action => action.name === 'Heavy Crossbow')!)).toBe(true);
+    attacker.monsterData.actions = [{ name: 'Lance', type: 'melee', attackBonus: 6, damage: '1d10+3', damageType: 'piercing', reach: 10, closeRangeDisadvantage: true, description: 'test' }];
+    expect(hasDisadvantage(attacker, target, attacker.monsterData.actions[0]!)).toBe(true);
+  });
+
   it('keeps opponent build details out of team observations and validates custom point-buy heroes', () => {
     const customParty = {
       characters: Array.from({ length: 4 }, () => ({

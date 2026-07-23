@@ -984,6 +984,9 @@ function hasDisadvantage(attacker: Creature, target: Creature, action: MonsterAc
   if ((action.attackAbility === 'str' || (!action.attackAbility && action.type === 'melee'))
       && attacker.activeBuffs?.some(b => b.strengthTestDisadvantage)) dis = true;
 
+  if (action.heavy && getActiveSize(attacker) === 'Small') dis = true;
+  if (action.closeRangeDisadvantage && creatureDistance(attacker, target) <= 5) dis = true;
+
   // Target is prone and ranged
   if (target.conditions.includes('prone') && action.type === 'ranged') dis = true;
 

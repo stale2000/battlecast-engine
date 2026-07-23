@@ -10,6 +10,9 @@ export interface ArenaWeapon {
   range?: { normal: number; long: number };
   thrownRange?: { normal: number; long: number };
   loading?: boolean;
+  light?: boolean;
+  heavy?: boolean;
+  closeRangeDisadvantage?: boolean;
   attackAbility?: keyof Abilities;
   finesse?: boolean;
   twoHanded?: boolean;
@@ -51,13 +54,30 @@ export const ARENA_WEAPONS: Record<string, ArenaWeapon> = {
   Quarterstaff: { name: 'Quarterstaff', category: 'simple', die: '1d6', damageType: 'bludgeoning', type: 'melee' },
   Spear: { name: 'Spear', category: 'simple', die: '1d6', damageType: 'piercing', type: 'melee', thrownRange: { normal: 20, long: 60 }, attackAbility: 'str' },
   LightCrossbow: { name: 'Light Crossbow', category: 'simple', die: '1d8', damageType: 'piercing', type: 'ranged', range: { normal: 80, long: 320 }, loading: true, twoHanded: true },
+  Dart: { name: 'Dart', category: 'simple', die: '1d4', damageType: 'piercing', type: 'ranged', range: { normal: 20, long: 60 }, finesse: true },
+  Sling: { name: 'Sling', category: 'simple', die: '1d4', damageType: 'bludgeoning', type: 'ranged', range: { normal: 30, long: 120 } },
   Shortbow: { name: 'Shortbow', category: 'simple', die: '1d6', damageType: 'piercing', type: 'ranged', range: { normal: 80, long: 320 }, twoHanded: true },
+  Flail: { name: 'Flail', category: 'martial', die: '1d8', damageType: 'bludgeoning', type: 'melee' },
+  Glaive: { name: 'Glaive', category: 'martial', die: '1d10', damageType: 'slashing', type: 'melee', reach: 10, twoHanded: true, heavy: true },
+  Greataxe: { name: 'Greataxe', category: 'martial', die: '1d12', damageType: 'slashing', type: 'melee', twoHanded: true, heavy: true },
+  Halberd: { name: 'Halberd', category: 'martial', die: '1d10', damageType: 'slashing', type: 'melee', reach: 10, twoHanded: true, heavy: true },
   Longsword: { name: 'Longsword', category: 'martial', die: '1d8', damageType: 'slashing', type: 'melee' },
   Longbow: { name: 'Longbow', category: 'martial', die: '1d8', damageType: 'piercing', type: 'ranged', range: { normal: 150, long: 600 }, twoHanded: true },
+  Lance: { name: 'Lance', category: 'martial', die: '1d10', damageType: 'piercing', type: 'melee', reach: 10, twoHanded: true, closeRangeDisadvantage: true },
+  Maul: { name: 'Maul', category: 'martial', die: '2d6', damageType: 'bludgeoning', type: 'melee', twoHanded: true, heavy: true },
+  Pike: { name: 'Pike', category: 'martial', die: '1d10', damageType: 'piercing', type: 'melee', reach: 10, twoHanded: true, heavy: true },
   Rapier: { name: 'Rapier', category: 'martial', die: '1d8', damageType: 'piercing', type: 'melee', finesse: true },
+  Scimitar: { name: 'Scimitar', category: 'martial', die: '1d6', damageType: 'slashing', type: 'melee', finesse: true, light: true },
+  Shortsword: { name: 'Shortsword', category: 'martial', die: '1d6', damageType: 'piercing', type: 'melee', finesse: true, light: true },
+  Trident: { name: 'Trident', category: 'martial', die: '1d8', damageType: 'piercing', type: 'melee', thrownRange: { normal: 20, long: 60 }, attackAbility: 'str' },
   Greatsword: { name: 'Greatsword', category: 'martial', die: '2d6', damageType: 'slashing', type: 'melee', twoHanded: true },
   Battleaxe: { name: 'Battleaxe', category: 'martial', die: '1d8', damageType: 'slashing', type: 'melee' },
   Warhammer: { name: 'Warhammer', category: 'martial', die: '1d8', damageType: 'bludgeoning', type: 'melee' },
+  Whip: { name: 'Whip', category: 'martial', die: '1d4', damageType: 'slashing', type: 'melee', reach: 10, finesse: true },
+  HandCrossbow: { name: 'Hand Crossbow', category: 'martial', die: '1d6', damageType: 'piercing', type: 'ranged', range: { normal: 30, long: 120 }, loading: true, light: true },
+  HeavyCrossbow: { name: 'Heavy Crossbow', category: 'martial', die: '1d10', damageType: 'piercing', type: 'ranged', range: { normal: 100, long: 400 }, loading: true, twoHanded: true, heavy: true },
+  Pistol: { name: 'Pistol', category: 'martial', die: '1d10', damageType: 'piercing', type: 'ranged', range: { normal: 30, long: 90 }, loading: true },
+  Musket: { name: 'Musket', category: 'martial', die: '1d12', damageType: 'piercing', type: 'ranged', range: { normal: 40, long: 120 }, loading: true, twoHanded: true },
 };
 
 export const ARENA_SRD_VERSION = '5.2.1';

@@ -161,6 +161,8 @@ interface WeaponSpec {
   mastery?: WeaponMasteryProperty;
   /** 5e Loading property. Inferred for crossbows unless explicitly provided. */
   loading?: boolean;
+  heavy?: boolean;
+  closeRangeDisadvantage?: boolean;
 }
 
 interface CantripSpec {
@@ -1154,6 +1156,8 @@ function makeWeaponAction(
   if (weaponSpec.loading ?? hasLoadingProperty(weaponSpec.name)) {
     action.loading = true;
   }
+  if (weaponSpec.heavy) action.heavy = true;
+  if (weaponSpec.closeRangeDisadvantage) action.closeRangeDisadvantage = true;
   if (weaponSpec.kind === 'melee') {
     action.reach = weaponSpec.reach ?? 5;
   } else {
@@ -2361,6 +2365,8 @@ export interface WeaponOverride {
   attackBonusOverride?: number;
   damageOverride?: string;
   loading?: boolean;
+  heavy?: boolean;
+  closeRangeDisadvantage?: boolean;
   attackAbility?: AbilityKey;
   finesse?: boolean;
 }
@@ -2414,6 +2420,8 @@ function weaponOverrideToSpec(weapon: WeaponOverride): WeaponSpec {
     attackBonusOverride: weapon.attackBonusOverride,
     damageOverride: weapon.damageOverride,
     loading: weapon.loading,
+    heavy: weapon.heavy,
+    closeRangeDisadvantage: weapon.closeRangeDisadvantage,
     abilityOverride: weapon.attackAbility,
     finesse: weapon.finesse,
   };
