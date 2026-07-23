@@ -32,6 +32,7 @@ import {
   adjustForResistance,
 } from './ai-targeting.js';
 import { trySpellcast } from './ai-spellcasting.js';
+import { revealVisibleHiddenCreatures } from './visibility.js';
 
 /**
  * Turn orchestration: end-to-end "creature takes a turn" logic.
@@ -347,6 +348,7 @@ function processTurnStartTraits(state: BattleState, creature: Creature): void {
 export function processTurnStart(state: BattleState, creature: Creature): boolean {
   state.events.push({ kind: 'turnStart', creatureId: creature.id, durationMs: BASE_DURATIONS.turnStart });
   state.darknessZones = state.darknessZones?.filter(zone => zone.endRound > state.round);
+  revealVisibleHiddenCreatures(state);
   // Dying hero at the start of their turn: roll a death save before any
   // other turn-start processing. Outcomes:
   //   - nat 20: dying cleared, currentHp=1, unconscious removed.

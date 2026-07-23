@@ -27,6 +27,7 @@ import {
   applyDamage, pushLog, getEffectiveAbilityScore, getEffectiveSaveModifier, hasActiveTrait,
   type BattleState,
 } from './combat.js';
+import { revealVisibleHiddenCreatures } from './visibility.js';
 
 // ─────────────────────────────────────────────────────────────────────
 // Buff bonus math
@@ -301,6 +302,7 @@ export function dropConcentratedBuffsFrom(
     creature.activeBuffs?.some(buff => buff.requiresConcentration && buff.casterId === casterId)
   ) || state.darknessZones?.some(zone => zone.requiresConcentration && zone.sourceId === casterId);
   if (caster?.concentratingOn && !stillConcentrating) caster.concentratingOn = undefined;
+  revealVisibleHiddenCreatures(state);
 }
 
 /**

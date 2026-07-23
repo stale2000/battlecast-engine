@@ -27,6 +27,32 @@ export function magicalDarknessBlocksSight(
   ));
 }
 
+/** Geometric visibility, intentionally ignoring an existing Hide result. */
+export function canSeeCreatureIgnoringHide(state: BattleState, observer: Creature, target: Creature): boolean {
+  if (magicalDarknessBlocksSight(state.darknessZones, state.round, observer, target)) return false;
+  const sightBlocked = state.terrainSightBlocked;
+  if (!sightBlocked?.size) return true;
+  return !lineOfSightBlocked(
+    observer.position,
+    target.position,
+    getFootprintSize(observer.wildShape?.size ?? observer.temporarySize ?? observer.monsterData.size),
+    getFootprintSize(target.wildShape?.size ?? target.temporarySize ?? target.monsterData.size),
+    sightBlocked,
+  );
+}
+
+/** Remove Hide results as soon as the named observer regains clear sight. */
+export function revealVisibleHiddenCreatures(state: BattleState): void {
+  for (const creature of state.creatures) {
+    if (!creature.activeBuffs?.length) continue;
+    creature.activeBuffs = creature.activeBuffs.filter(buff => {
+      if (!buff.key.startsWith('hidden-from:')) return true;
+      const observer = state.creatures.find(candidate => candidate.id === buff.key.slice('hidden-from:'.length));
+      return !observer || !observer.isAlive || !canSeeCreatureIgnoringHide(state, observer, creature);
+    });
+  }
+}
+
 /** True when an observer can see a map point through walls and magical darkness. */
 export function canSeePoint(
   state: BattleState,

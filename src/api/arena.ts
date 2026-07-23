@@ -17,7 +17,7 @@ import {
   resolveAttack,
 } from '../engine/combat.js';
 import { canSee, getActiveActions } from '../engine/ai-targeting.js';
-import { canSeePoint } from '../engine/visibility.js';
+import { canSeePoint, revealVisibleHiddenCreatures } from '../engine/visibility.js';
 import { moveToDestination, reachableMovementDestinations } from '../engine/ai-movement.js';
 import { executeLegendaryAction, handlePassiveAuras, processTurnStart, runOpportunityAttacks } from '../engine/ai-turn.js';
 import { getEligibleWildShapeBeasts } from '../data/heroes.js';
@@ -359,9 +359,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       if (!reachableMovementDestinations(active, state).some(cell => cell.x === destination.x && cell.y === destination.y)) throw new EncounterError('Illegal or stale move destination.');
       const oldPosition = { ...active.position };
       moveToDestination(active, destination, state);
-      // A voluntary arena movement ends the current Hide. We only issue a
-      // new Hide after validating concealment at the creature's new point.
-      active.activeBuffs = active.activeBuffs.filter(buff => !buff.key.startsWith('hidden-from:'));
+      revealVisibleHiddenCreatures(state);
       active.hasMovedThisTurn = active.position.x !== oldPosition.x || active.position.y !== oldPosition.y;
       if ((active.position.x !== oldPosition.x || active.position.y !== oldPosition.y) && !active.turnFlags.arenaDisengaged && runOpportunityAttacks(state, active, oldPosition)) {
         checkBattleComplete(state);

@@ -40,8 +40,7 @@ import {
   getActiveSize, getActiveSpeed,
 } from './combat.js';
 import { abilityModifier, averageDamage } from './dice.js';
-import { lineOfSightBlocked } from '../types/terrain.js';
-import { magicalDarknessBlocksSight } from './visibility.js';
+import { canSeeCreatureIgnoringHide } from './visibility.js';
 
 // ─────────────────────────────────────────────────────────────────────
 // Action list helpers - used by targeting, spellcasting, and turn
@@ -286,12 +285,7 @@ export function adjustForResistance(dmg: number, damageType: string, target: Cre
  */
 export function canSee(state: BattleState, attacker: Creature, target: Creature): boolean {
   if (target.activeBuffs?.some(buff => buff.key === `hidden-from:${attacker.id}`)) return false;
-  const sightSet = state.terrainSightBlocked;
-  const aFp = getFootprintSize(getActiveSize(attacker));
-  const tFp = getFootprintSize(getActiveSize(target));
-  if (magicalDarknessBlocksSight(state.darknessZones, state.round, attacker, target)) return false;
-  return !sightSet || sightSet.size === 0
-    || !lineOfSightBlocked(attacker.position, target.position, aFp, tFp, sightSet);
+  return canSeeCreatureIgnoringHide(state, attacker, target);
 }
 
 export function selectTarget(state: BattleState, creature: Creature, strategy: 'nearest' | 'weakest' | 'strongest' | 'smart'): Creature | null {
