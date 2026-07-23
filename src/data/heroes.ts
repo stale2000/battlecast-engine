@@ -2358,6 +2358,7 @@ export interface WeaponOverride {
   attackBonusOverride?: number;
   damageOverride?: string;
   loading?: boolean;
+  attackAbility?: AbilityKey;
 }
 
 export interface HeroOverrides {
@@ -2405,6 +2406,7 @@ function weaponOverrideToSpec(weapon: WeaponOverride): WeaponSpec {
     attackBonusOverride: weapon.attackBonusOverride,
     damageOverride: weapon.damageOverride,
     loading: weapon.loading,
+    abilityOverride: weapon.attackAbility,
   };
 }
 

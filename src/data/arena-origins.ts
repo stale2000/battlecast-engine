@@ -8,6 +8,7 @@ export interface ArenaWeapon {
   reach?: number;
   range?: { normal: number; long: number };
   loading?: boolean;
+  attackAbility?: keyof Abilities;
 }
 
 /** Server-owned SRD weapon facts. Public build requests select only these names. */
@@ -16,8 +17,10 @@ export const ARENA_WEAPONS: Record<string, ArenaWeapon> = {
   Dagger: { name: 'Dagger', die: '1d4', damageType: 'piercing', type: 'melee' },
   Greatclub: { name: 'Greatclub', die: '1d8', damageType: 'bludgeoning', type: 'melee' },
   Handaxe: { name: 'Handaxe', die: '1d6', damageType: 'slashing', type: 'melee' },
+  Javelin: { name: 'Javelin', die: '1d6', damageType: 'piercing', type: 'ranged', range: { normal: 30, long: 120 }, attackAbility: 'str' },
   Mace: { name: 'Mace', die: '1d6', damageType: 'bludgeoning', type: 'melee' },
   Quarterstaff: { name: 'Quarterstaff', die: '1d6', damageType: 'bludgeoning', type: 'melee' },
+  Spear: { name: 'Spear', die: '1d6', damageType: 'piercing', type: 'ranged', range: { normal: 20, long: 60 }, attackAbility: 'str' },
   LightCrossbow: { name: 'Light Crossbow', die: '1d8', damageType: 'piercing', type: 'ranged', range: { normal: 80, long: 320 }, loading: true },
   Shortbow: { name: 'Shortbow', die: '1d6', damageType: 'piercing', type: 'ranged', range: { normal: 80, long: 320 } },
   Longsword: { name: 'Longsword', die: '1d8', damageType: 'slashing', type: 'melee' },
