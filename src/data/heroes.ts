@@ -2361,6 +2361,7 @@ export interface WeaponOverride {
 
 export interface HeroOverrides {
   displayName?: string;
+  alignmentOverride?: string;
   subclass?: DruidSubclassName;
   preferredWildShapeBeast?: string;
   abilities?: Abilities;
@@ -2728,7 +2729,7 @@ export function buildCustomHero(
     name,
     size: overrides.sizeOverride ?? 'Medium',
     type: 'Humanoid (Hero)',
-    alignment: 'Any Alignment',
+    alignment: overrides.alignmentOverride ?? 'Any Alignment',
     ac, hp,
     hpFormula: overrides.hpOverride === undefined
       ? `${level}d${spec.hitDie}${rolledHpBonus !== 0 ? formatBonus(rolledHpBonus) : ''}`

@@ -104,6 +104,13 @@ describe('Kaggle arena bridge', () => {
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...hero, languages: ['Dwarvish', 'Dwarvish'] })) }, blueParty: party })).toThrow(/languages/);
   });
 
+  it('preserves a validated SRD alignment', () => {
+    const hero = { heroClass: 'Fighter', species: 'Dwarf', background: 'Soldier', alignment: 'Lawful Good', abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 } };
+    const party = { characters: Array.from({ length: 4 }, () => hero) };
+    expect(kaggleStep({ ...init(), redParty: party, blueParty: party }).state.battleState!.creatures.find(candidate => candidate.team === 'red')!.monsterData.alignment).toBe('Lawful Good');
+    expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...hero, alignment: 'Good' })) }, blueParty: party })).toThrow(/alignment/);
+  });
+
   it('applies SRD 5.2.1 background increases and static species traits', () => {
     const dwarfSoldier = {
       heroClass: 'Fighter', species: 'Dwarf', background: 'Soldier',
