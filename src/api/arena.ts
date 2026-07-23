@@ -22,7 +22,7 @@ import { canSeePoint, revealVisibleHiddenCreatures } from '../engine/visibility.
 import { moveToDestination, reachableMovementDestinations } from '../engine/ai-movement.js';
 import { executeLegendaryAction, handlePassiveAuras, processTurnStart, runOpportunityAttacks } from '../engine/ai-turn.js';
 import { getEligibleWildShapeBeasts } from '../data/heroes.js';
-import { abilityModifier, rollDice } from '../engine/dice.js';
+import { abilityModifier, rollD20, rollDice } from '../engine/dice.js';
 import { getFootprintSize } from '../engine/combat-geometry.js';
 import { lineOfSightBlocked } from '../types/terrain.js';
 import type { Creature, MonsterAction } from '../types/monster.js';
@@ -406,7 +406,9 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       let successes = 0;
       for (const target of hiddenFrom) {
         const passivePerception = 10 + (target.monsterData.skills?.Perception ?? abilityModifier(target.monsterData.abilities.wis));
-        if (rollDice('1d20').total + stealth < passivePerception) continue;
+        let roll = rollD20().total;
+        if (active.monsterData.heroSpecies === 'Halfling' && roll === 1) roll = rollD20().total;
+        if (roll + stealth < passivePerception) continue;
         active.activeBuffs = active.activeBuffs.filter(buff => buff.key !== `hidden-from:${target.id}`);
         active.activeBuffs.push({ name: 'Hidden', key: `hidden-from:${target.id}`, casterId: active.id, appliedRound: state.round, endRound: state.round + 600 });
         successes++;
