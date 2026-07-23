@@ -2972,6 +2972,24 @@ function applyDamage(state: BattleState, target: Creature, damage: number, damag
     if (damage <= 0) return 0;
   }
 
+  // Arena reactions are automatic. Stone's Endurance is the only Goliath
+  // ancestry reaction that changes incoming damage before HP is applied.
+  if (target.monsterData.heroSpecies === 'Goliath' && target.monsterData.heroSpeciesChoice === 'Stone'
+      && !target.reactionUsed && damage > 0 && consumeResource(target, 'goliath-giant-ancestry')) {
+    target.reactionUsed = true;
+    const reduction = rollDice('1d12').total + abilityModifier(getEffectiveAbilityScore(target, 'con'));
+    const before = damage;
+    damage = Math.max(0, damage - reduction);
+    target.stats.actionUsage["Stone's Endurance"] = (target.stats.actionUsage["Stone's Endurance"] || 0) + 1;
+    pushLog(state, {
+      round: state.round, turn: state.turnIndex,
+      actor: target.displayName, action: "Stone's Endurance",
+      details: `${target.displayName} reduces ${before} damage by ${reduction}.`,
+      type: 'info',
+    });
+    if (damage <= 0) return 0;
+  }
+
   damage = applySuperiorHuntersDefense(state, target, damage, damageType);
 
   // Uncanny Dodge (Rogue L5+): reaction to halve damage from one attack
@@ -3093,6 +3111,25 @@ function applyDamage(state: BattleState, target: Creature, damage: number, damag
 
   if (target.currentHp <= 0) {
     tryRelentlessRage(state, target);
+  }
+
+  if (damage > 0 && target.isAlive && target.currentHp > 0 && attacker && attacker.isAlive
+      && target.monsterData.heroSpecies === 'Goliath' && target.monsterData.heroSpeciesChoice === 'Storm'
+      && !target.reactionUsed && creatureDistance(target, attacker) <= 60
+      && consumeResource(target, 'goliath-giant-ancestry')) {
+    target.reactionUsed = true;
+    const thunder = rollDice('1d8').total;
+    const before = attacker.currentHp;
+    pushLog(state, {
+      round: state.round, turn: state.turnIndex,
+      actor: target.displayName, action: "Storm's Thunder",
+      details: `${target.displayName} deals ${thunder} thunder damage to ${attacker.displayName}.`,
+      damage: thunder, type: 'damage',
+    });
+    const event = pushHitEvent(state, attacker.id, thunder, 'thunder', false, before);
+    applyDamage(state, attacker, thunder, 'thunder', target, false, true);
+    event.targetHpAfter = attacker.currentHp;
+    target.stats.actionUsage["Storm's Thunder"] = (target.stats.actionUsage["Storm's Thunder"] || 0) + 1;
   }
 
   // Retaliation (Barbarian L10): reaction melee attack when damaged by adjacent creature

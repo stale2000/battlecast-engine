@@ -192,6 +192,31 @@ describe('Kaggle arena bridge', () => {
     expect(active.resources['goliath-large-form']).toBe(0);
   });
 
+  it("applies Stone's Endurance automatically before Goliath HP is reduced", () => {
+    const encounter = new Encounter({ seed: 1 });
+    const [goliath] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { species: 'Goliath', speciesChoice: 'Stone', additionalResources: { 'goliath-giant-ancestry': 3 } }, team: 'red' });
+    const [attacker] = encounter.addCreature({ monster: 'Ogre', team: 'blue' });
+    encounter.start();
+    const target = encounter.state!.creatures.find(creature => creature.id === goliath.id)!;
+    const before = target.currentHp;
+    encounter.runWithRng(() => applyDamage(encounter.state!, target, 20, 'slashing', encounter.state!.creatures.find(creature => creature.id === attacker.id)!, true));
+    expect(target.currentHp).toBeGreaterThan(before - 20);
+    expect(target.resources['goliath-giant-ancestry']).toBe(2);
+    expect(target.reactionUsed).toBe(true);
+  });
+
+  it("applies Storm's Thunder automatically against the damaging creature", () => {
+    const encounter = new Encounter({ seed: 1 });
+    const [goliath] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { species: 'Goliath', speciesChoice: 'Storm', additionalResources: { 'goliath-giant-ancestry': 3 } }, team: 'red', position: { x: 0, y: 0 } });
+    const [attacker] = encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
+    encounter.start();
+    const source = encounter.state!.creatures.find(creature => creature.id === attacker.id)!;
+    const before = source.currentHp;
+    encounter.runWithRng(() => applyDamage(encounter.state!, encounter.state!.creatures.find(creature => creature.id === goliath.id)!, 1, 'slashing', source, true));
+    expect(source.currentHp).toBeLessThan(before);
+    expect(encounter.state!.creatures.find(creature => creature.id === goliath.id)!.resources['goliath-giant-ancestry']).toBe(2);
+  });
+
   it('rerolls Halfling natural ones in the shared d20 primitive', () => {
     const values = [0, 0.5, 0.9];
     const rng = { next: () => values.shift()! };
