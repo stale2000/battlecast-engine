@@ -12,7 +12,7 @@ import {
   processConcentrationAuras, checkAuraEntry, expireSourceTurnBuffs,
   runDeathSave, stabiliseDyingAlly,
   getActiveSize, getActiveSpeed, getActiveTraits, hasActiveTrait,
-  getEffectiveMoveSpeed, getEffectiveSaveModifier, getHydraHeadCount,
+  getEffectiveMoveSpeed, getEffectiveSaveModifier, getHydraHeadCount, canTakeReactions,
   processSwallowedTargets, resolveSwallowAction,
   processTargetTurnStartOngoingEffects, processSourceTurnStartOngoingEffects,
   processTargetTurnEndOngoingEffects,
@@ -696,7 +696,7 @@ export function runOpportunityAttacks(
     // the user sees why a goblin walked past the Fighter unscathed.
     const reactionLimit = getHydraHeadCount(enemy) ?? 1;
     const reactionsUsed = enemy.reactionsUsed ?? (enemy.reactionUsed ? 1 : 0);
-    if (enemy.activeBuffs?.some(b => b.preventsOpportunityAttacks)) {
+    if (!canTakeReactions(enemy) || enemy.activeBuffs?.some(b => b.preventsOpportunityAttacks)) {
       state.events.push({
         kind: 'oaAvoided', moverId: creature.id, enemyId: enemy.id,
         reason: 'stunned', durationMs: BASE_DURATIONS.oaAvoided,
@@ -906,7 +906,7 @@ function runRetreat(
 
   // Find adjacent enemies that could make an OA if we leave their reach.
   const adjacentEnemies = enemies.filter(e => {
-    if (!e.isAlive || e.reactionUsed) return false;
+    if (!e.isAlive || !canTakeReactions(e)) return false;
     if (e.conditions.includes('incapacitated') || e.conditions.includes('stunned') ||
         e.conditions.includes('paralyzed') || e.conditions.includes('unconscious')) return false;
     const reach = getMeleeActions(e).reduce((max, a) => Math.max(max, a.reach || 5), 5);
@@ -1767,7 +1767,7 @@ export function executeTurn(state: BattleState, creature: Creature): void {
       // can emit oaAvoided badges over each one once the disengage move
       // lands.
       const wasAdjacent = enemies.filter(e =>
-        e.isAlive && !e.reactionUsed && creatureDistance(creature, e) <= 5
+        e.isAlive && canTakeReactions(e) && creatureDistance(creature, e) <= 5
       );
       disengagedThisTurn = true;
       const kiteTarget = {

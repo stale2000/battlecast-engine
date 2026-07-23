@@ -402,6 +402,8 @@ export interface BuffTemplate {
   stealthBonus?: number;
   /** One-shot rider such as Barbarian Staggering Blow: no Opportunity Attacks. */
   preventsOpportunityAttacks?: boolean;
+  /** The creature cannot take reactions while this effect lasts. */
+  preventsReactions?: boolean;
   /** One-shot rider such as Barbarian Sundering Blow: next other attacker gets a flat bonus. */
   attackBonusForAllAttackers?: number;
   /** Innate Sorcery-style rider: this creature has Advantage on spell attack rolls. */
@@ -775,6 +777,8 @@ export interface ActiveBuff {
   tremorsenseRange?: number;
   /** One-shot rider such as Barbarian Staggering Blow: no Opportunity Attacks. */
   preventsOpportunityAttacks?: boolean;
+  /** The creature cannot take reactions while this effect lasts. */
+  preventsReactions?: boolean;
   /** One-shot rider such as Barbarian Sundering Blow: next other attacker gets a flat bonus. */
   attackBonusForAllAttackers?: number;
   /** Innate Sorcery-style rider: this creature has Advantage on spell attack rolls. */
