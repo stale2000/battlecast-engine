@@ -455,7 +455,9 @@ describe('Kaggle arena bridge', () => {
         ...(feat === 'Tavern Brawler' ? { humanOriginAbility: 'str' } : {}),
       };
       const result = kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => character) }, blueParty: party });
-      expect(result.state.battleState!.creatures.find(creature => creature.team === 'red')!.monsterData.originFeats).toContain(feat);
+      const hero = result.state.battleState!.creatures.find(creature => creature.team === 'red')!;
+      expect(hero.monsterData.originFeats).toContain(feat);
+      expect(hero.monsterData.skills?.Stealth).toBe(hero.monsterData.proficiencyBonus + Math.floor((hero.monsterData.abilities.dex - 10) / 2));
     }
   });
 

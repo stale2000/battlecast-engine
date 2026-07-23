@@ -1222,19 +1222,18 @@ function makeCantripAction(
   };
 }
 
+const SKILL_ABILITIES: Record<string, AbilityKey> = {
+  Acrobatics: 'dex', 'Animal Handling': 'wis', Arcana: 'int', Athletics: 'str',
+  Deception: 'cha', History: 'int', Insight: 'wis', Intimidation: 'cha',
+  Investigation: 'int', Medicine: 'wis', Nature: 'int', Perception: 'wis',
+  Performance: 'cha', Persuasion: 'cha', Religion: 'int',
+  'Sleight of Hand': 'dex', Stealth: 'dex', Survival: 'wis',
+};
+
 function skillsForClass(spec: ClassSpec, abilities: Abilities, pb: number): Record<string, number> {
-  // Map skill name → ability used (simplified). If a skill isn't in this map it
-  // defaults to the class's primary ability  - good enough for showing proficiency.
-  const skillAbility: Record<string, AbilityKey> = {
-    Acrobatics: 'dex', 'Animal Handling': 'wis', Arcana: 'int', Athletics: 'str',
-    Deception: 'cha', History: 'int', Insight: 'wis', Intimidation: 'cha',
-    Investigation: 'int', Medicine: 'wis', Nature: 'int', Perception: 'wis',
-    Performance: 'cha', Persuasion: 'cha', Religion: 'int',
-    'Sleight of Hand': 'dex', Stealth: 'dex', Survival: 'wis',
-  };
   const out: Record<string, number> = {};
   for (const s of spec.skills) {
-    const abil = skillAbility[s] ?? spec.primary;
+    const abil = SKILL_ABILITIES[s] ?? spec.primary;
     out[s] = pb + abilityMod(abilities[abil]);
   }
   return out;
@@ -1393,7 +1392,8 @@ export function buildHero(className: HeroClassName, level: number, options: Buil
     ...(className === 'Warlock' && level >= 10 ? ['fire'] : []),
   ];
   const conditionImmunities = className === 'Druid' && level >= 10 ? ['poisoned'] : undefined;
-  const passivePerception = 10 + pb + abilityMod(abilities.wis) * (spec.skills.includes('Perception') ? 1 : 0);
+  const skills = skillsForClass(spec, abilities, pb);
+  const passivePerception = 10 + (skills.Perception ?? abilityMod(abilities.wis));
   const senses = className === 'Paladin' && level >= 19
     ? `Truesight 60 ft., Passive Perception ${passivePerception}`
     : className === 'Ranger' && level >= 18
@@ -1410,7 +1410,7 @@ export function buildHero(className: HeroClassName, level: number, options: Buil
     speed,
     abilities,
     saves,
-    skills: skillsForClass(spec, abilities, pb),
+    skills,
     resistances: resistances.length ? resistances : undefined,
     conditionImmunities,
     senses,
@@ -2711,7 +2711,12 @@ export function buildCustomHero(
   }
 
   const name = overrides.displayName || `${className} L${level}`;
-  const passivePerception = 10 + pb + abilityMod(abilities.wis) * (spec.skills.includes('Perception') ? 1 : 0);
+  const skills = skillsForClass(spec, abilities, pb);
+  for (const skill of overrides.originSkills ?? []) {
+    const ability = SKILL_ABILITIES[skill];
+    if (ability) skills[skill] = Math.max(skills[skill] ?? -Infinity, pb + abilityMod(abilities[ability]));
+  }
+  const passivePerception = 10 + (skills.Perception ?? abilityMod(abilities.wis));
   const baseSenses = className === 'Paladin' && level >= 19
     ? `Truesight 60 ft., Passive Perception ${passivePerception}`
     : className === 'Ranger' && level >= 18
@@ -2735,7 +2740,7 @@ export function buildCustomHero(
       ? `${level}d${spec.hitDie}${rolledHpBonus !== 0 ? formatBonus(rolledHpBonus) : ''}`
       : String(hp),
     speed, abilities, saves,
-    skills: skillsForClass(spec, abilities, pb),
+    skills,
     resistances: resistances.length ? resistances : undefined,
     conditionImmunities,
     senses,
