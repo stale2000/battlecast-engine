@@ -467,6 +467,8 @@ export interface MonsterData {
   heroSubclass?: string;
   /** SRD character-origin metadata used by validated arena construction. */
   heroSpecies?: string;
+  /** Chosen lineage, legacy, or ancestry for a species with an SRD choice. */
+  heroSpeciesChoice?: string;
   heroBackground?: string;
   originFeat?: string;
   originSkills?: string[];

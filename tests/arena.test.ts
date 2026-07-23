@@ -155,6 +155,15 @@ describe('Kaggle arena bridge', () => {
     encounter.runWithRng(() => expect(rollSaveWithBuffs(creature, 0, false, 10, 'wis').rolls).toHaveLength(2));
   });
 
+  it('requires and preserves Gnome and Goliath SRD ancestry choices', () => {
+    const build = (species: 'Gnome' | 'Goliath', choice: string) => ({ heroClass: 'Fighter', species, background: 'Soldier', abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 }, ...(species === 'Gnome' ? { gnomeLineage: choice } : { goliathAncestry: choice }) });
+    for (const [species, choice] of [['Gnome', 'Forest Gnome'], ['Goliath', 'Cloud']] as const) {
+      const party = { characters: Array.from({ length: 4 }, () => build(species, choice)) };
+      const result = kaggleStep({ ...init(), redParty: party, blueParty: party });
+      expect(result.observations.red.publicCombatState.creatures.find(creature => creature.team === 'red')!.build.speciesChoice).toBe(choice);
+    }
+  });
+
   it('rerolls Halfling natural ones in the shared d20 primitive', () => {
     const values = [0, 0.5, 0.9];
     const rng = { next: () => values.shift()! };

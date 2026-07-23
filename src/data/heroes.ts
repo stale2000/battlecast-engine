@@ -2371,6 +2371,7 @@ export interface HeroOverrides {
   hitPointBonus?: number;
   additionalResistances?: string[];
   species?: string;
+  speciesChoice?: string;
   background?: string;
   originFeat?: string;
   originSkills?: string[];
@@ -2737,6 +2738,7 @@ export function buildCustomHero(
     heroLevel: level,
     heroSubclass,
     heroSpecies: overrides.species,
+    heroSpeciesChoice: overrides.speciesChoice,
     heroBackground: overrides.background,
     originFeat: overrides.originFeat,
     originSkills: overrides.originSkills,
