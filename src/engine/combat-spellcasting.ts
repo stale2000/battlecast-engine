@@ -25,6 +25,7 @@ import { ActiveBuff, Condition, Creature, MonsterAction } from '../types/monster
 import { BASE_DURATIONS } from '../types/animation.js';
 import { rollDice, abilityModifier, maxDiceTotal } from './dice.js';
 import { creatureDistance } from './combat-geometry.js';
+import { canSeePoint } from './visibility.js';
 import {
   addBuff, dropConcentratedBuffsFrom,
   hasResource, consumeResource,
@@ -696,6 +697,12 @@ export function executeSpell(
    */
   aoeCenter?: { x: number; y: number },
 ): boolean {
+  if (action.darkness) {
+    const range = action.range?.normal ?? action.range?.long ?? 0;
+    if (!aoeCenter || !Number.isInteger(aoeCenter.x) || !Number.isInteger(aoeCenter.y)
+      || creatureDistance(caster, { ...caster, position: aoeCenter, monsterData: { ...caster.monsterData, size: 'Medium' } }) > range
+      || !canSeePoint(state, caster, aoeCenter)) return false;
+  }
   const level = action.spellLevel ?? 0;
   let slotLevelUsed = level;
   let spellSlotUsedForThisCast: number | null = null;
@@ -750,6 +757,30 @@ export function executeSpell(
     caster.turnFlags = { ...(caster.turnFlags ?? {}), bonusActionSpellCast: true };
   }
   const castAction = scaleAttackSpellForSlot(action, slotLevelUsed);
+
+  if (castAction.darkness && aoeCenter) {
+    if (castAction.darkness.requiresConcentration) {
+      dropConcentratedBuffsFrom(state, caster.id);
+      caster.concentratingOn = `darkness:${castAction.name}`;
+    }
+    state.darknessZones = (state.darknessZones ?? []).filter(zone =>
+      zone.sourceId !== caster.id || !zone.requiresConcentration
+    );
+    state.darknessZones.push({
+      sourceId: caster.id,
+      x: aoeCenter.x,
+      y: aoeCenter.y,
+      radius: castAction.darkness.radius,
+      endRound: state.round + castAction.darkness.durationRounds,
+      requiresConcentration: castAction.darkness.requiresConcentration === true,
+    });
+    pushLog(state, {
+      round: state.round, turn: state.turnIndex, actor: caster.displayName,
+      action: castAction.name,
+      details: `${caster.displayName} creates magical darkness.`, type: 'special',
+    });
+    return true;
+  }
 
   if (castAction.buffOnFailedSave?.requiresConcentration) {
     dropConcentratedBuffsFrom(state, caster.id);

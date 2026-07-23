@@ -41,6 +41,7 @@ import {
 } from './combat.js';
 import { abilityModifier, averageDamage } from './dice.js';
 import { lineOfSightBlocked } from '../types/terrain.js';
+import { magicalDarknessBlocksSight } from './visibility.js';
 
 // ─────────────────────────────────────────────────────────────────────
 // Action list helpers - used by targeting, spellcasting, and turn
@@ -285,10 +286,11 @@ export function adjustForResistance(dmg: number, damageType: string, target: Cre
  */
 export function canSee(state: BattleState, attacker: Creature, target: Creature): boolean {
   const sightSet = state.terrainSightBlocked;
-  if (!sightSet || sightSet.size === 0) return true;
   const aFp = getFootprintSize(getActiveSize(attacker));
   const tFp = getFootprintSize(getActiveSize(target));
-  return !lineOfSightBlocked(attacker.position, target.position, aFp, tFp, sightSet);
+  if (magicalDarknessBlocksSight(state.darknessZones, state.round, attacker, target)) return false;
+  return !sightSet || sightSet.size === 0
+    || !lineOfSightBlocked(attacker.position, target.position, aFp, tFp, sightSet);
 }
 
 export function selectTarget(state: BattleState, creature: Creature, strategy: 'nearest' | 'weakest' | 'strongest' | 'smart'): Creature | null {

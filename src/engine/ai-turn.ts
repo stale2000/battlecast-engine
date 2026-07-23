@@ -346,6 +346,7 @@ function processTurnStartTraits(state: BattleState, creature: Creature): void {
  *  Returns false if the creature can't act (incapacitated/dead). */
 export function processTurnStart(state: BattleState, creature: Creature): boolean {
   state.events.push({ kind: 'turnStart', creatureId: creature.id, durationMs: BASE_DURATIONS.turnStart });
+  state.darknessZones = state.darknessZones?.filter(zone => zone.endRound > state.round);
   // Dying hero at the start of their turn: roll a death save before any
   // other turn-start processing. Outcomes:
   //   - nat 20: dying cleared, currentHp=1, unconscious removed.

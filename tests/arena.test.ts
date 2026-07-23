@@ -5,6 +5,8 @@ import { getActiveCreature, getLegalActions, applyLegalAction, startArena } from
 import { reachableMovementDestinations } from '../src/engine/ai-movement.js';
 import { processTurnStart } from '../src/engine/ai-turn.js';
 import { applyDamage, applyDamageRollPenalty, hasDisadvantage, processTargetTurnEndOngoingEffects, resolveAttack } from '../src/engine/combat.js';
+import { dropConcentratedBuffsFrom } from '../src/engine/combat-buffs.js';
+import { canSee } from '../src/engine/ai-targeting.js';
 import { rollSaveWithBuffs } from '../src/engine/combat-buffs.js';
 import { rollAttack, rollDamage } from '../src/engine/dice.js';
 import { withRng } from '../src/engine/rng.js';
@@ -351,7 +353,32 @@ describe('Kaggle arena bridge', () => {
     const drowCreature = result.state.battleState!.creatures.find(creature => creature.team === 'red')!;
     expect(drowCreature.monsterData.heroSpeciesCastingAbility).toBe('cha');
     expect(drowCreature.monsterData.actions.some(action => action.name === 'Faerie Fire')).toBe(true);
+    expect(drowCreature.monsterData.actions.some(action => action.name === 'Darkness')).toBe(true);
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...drow, speciesCastingAbility: undefined })) }, blueParty: party })).toThrow(/speciesCastingAbility/);
+  });
+
+  it('serializes magical Darkness, blocks sight, and removes it with concentration', () => {
+    const encounter = new Encounter({ seed: 1, gridSize: 12 });
+    const [caster] = encounter.addCreature({
+      heroClass: 'Fighter', heroLevel: 5,
+      heroOverrides: {
+        species: 'Elf', speciesChoice: 'Drow', additionalResources: { 'drow-darkness': 1 },
+        additionalActions: [{ name: 'Darkness', type: 'special', spellLevel: 2, range: { normal: 60, long: 60 }, targetScope: 'self', resourceCost: { key: 'drow-darkness', amount: 1 }, darkness: { radius: 15, durationRounds: 600, requiresConcentration: true }, description: 'Magical darkness.' }],
+      },
+      team: 'red', position: { x: 0, y: 0 },
+    });
+    const [target] = encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 4, y: 0 } });
+    encounter.start(); encounter.state!.initiativeOrder = [caster.id]; startArena(encounter);
+    const active = getActiveCreature(encounter)!;
+    const action = getLegalActions(encounter, active.id).find(candidate => candidate.type === 'spell' && candidate.actionName === 'Darkness' && candidate.center?.x === 4 && candidate.center?.y === 0)!;
+    applyLegalAction(encounter, action);
+    const casterCreature = encounter.state!.creatures.find(creature => creature.id === caster.id)!;
+    const targetCreature = encounter.state!.creatures.find(creature => creature.id === target.id)!;
+    expect(encounter.state!.darknessZones).toEqual([{ sourceId: caster.id, x: 4, y: 0, radius: 15, endRound: 601, requiresConcentration: true }]);
+    expect(canSee(encounter.state!, casterCreature, targetCreature)).toBe(false);
+    expect(canSee(Encounter.fromJSON(encounter.toJSON()).state!, casterCreature, targetCreature)).toBe(false);
+    dropConcentratedBuffsFrom(encounter.state!, caster.id);
+    expect(canSee(encounter.state!, casterCreature, targetCreature)).toBe(true);
   });
 
   it('applies Gnomish Cunning automatically to mental saves', () => {

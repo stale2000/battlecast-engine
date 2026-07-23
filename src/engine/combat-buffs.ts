@@ -275,6 +275,9 @@ export function dropConcentratedBuffsFrom(
   casterId: string,
   options: { preserveRelentlessHunter?: boolean } = {},
 ): void {
+  state.darknessZones = state.darknessZones?.filter(zone =>
+    !(zone.requiresConcentration && zone.sourceId === casterId)
+  );
   const caster = state.creatures.find(c => c.id === casterId);
   const preserveHuntersMark = options.preserveRelentlessHunter
     && caster?.monsterData.heroClass === 'Ranger'
@@ -294,6 +297,10 @@ export function dropConcentratedBuffsFrom(
       c.concentrationAura = undefined;
     }
   }
+  const stillConcentrating = state.creatures.some(creature =>
+    creature.activeBuffs?.some(buff => buff.requiresConcentration && buff.casterId === casterId)
+  ) || state.darknessZones?.some(zone => zone.requiresConcentration && zone.sourceId === casterId);
+  if (caster?.concentratingOn && !stillConcentrating) caster.concentratingOn = undefined;
 }
 
 /**

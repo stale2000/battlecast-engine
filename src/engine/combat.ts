@@ -1,8 +1,9 @@
 import { engineRandom } from './rng.js';
-import { ActiveBuff, Creature, Condition, ConditionDuration, MonsterAction, MonsterData, RuntimeTraitEffect } from '../types/monster.js';
+import { ActiveBuff, Creature, Condition, ConditionDuration, DarknessZone, MonsterAction, MonsterData, RuntimeTraitEffect } from '../types/monster.js';
 import { AnimationEvent, BASE_DURATIONS, OA_ATTACK_DURATIONS } from '../types/animation.js';
 import { rollAttack, rollDamage, rollDice, rollInitiative, abilityModifier, rollSave, rollD20, maxDiceTotal } from './dice.js';
 import { lineOfSightBlocked } from '../types/terrain.js';
+import { magicalDarknessBlocksSight } from './visibility.js';
 import {
   distance, getFootprintSize, creatureDistance, isPositionBlocked, canHalflingPassThrough,
   isInMeleeRange, isInCone, isInLine,
@@ -98,6 +99,8 @@ export interface BattleState {
    * through. Undefined or empty = open sight everywhere.
    */
   terrainSightBlocked?: Set<string>;
+  /** Temporary magical-darkness areas, serialized with the encounter. */
+  darknessZones?: DarknessZone[];
   /**
    * Optional environment override for research/special encounters. Land is
    * the default. Underwater uses Swim Speed when available, or half Walk
@@ -456,6 +459,7 @@ export function initBattle(creatures: Creature[], gridSize?: number): BattleStat
     winner: null,
     gridSize,
     teamTactics: DEFAULT_TACTICS,
+    darknessZones: [],
   };
 }
 
@@ -3531,18 +3535,16 @@ function validateAttackRange(
     // check is cheap (Bresenham over a ~20-cell line + Set lookups)
     // and skipped entirely when no sight-blocking terrain exists.
     const sightBlocked = state.terrainSightBlocked;
-    if (sightBlocked && sightBlocked.size > 0) {
-      const aFp = getFootprintSize(getActiveSize(attacker));
-      const tFp = getFootprintSize(getActiveSize(target));
-      if (lineOfSightBlocked(attacker.position, target.position, aFp, tFp, sightBlocked)) {
-        pushLog(state, {
-          round: state.round, turn: state.turnIndex,
-          actor: attacker.displayName, action: action.name,
-          details: `${attacker.displayName} has no line of sight to ${target.displayName} - a wall blocks the shot.`,
-          type: 'info'
-        });
-        return null;
-      }
+    if (magicalDarknessBlocksSight(state.darknessZones, state.round, attacker, target)
+      || (sightBlocked && sightBlocked.size > 0 &&
+        lineOfSightBlocked(attacker.position, target.position, getFootprintSize(getActiveSize(attacker)), getFootprintSize(getActiveSize(target)), sightBlocked))) {
+      pushLog(state, {
+        round: state.round, turn: state.turnIndex,
+        actor: attacker.displayName, action: action.name,
+        details: `${attacker.displayName} has no line of sight to ${target.displayName}.`,
+        type: 'info'
+      });
+      return null;
     }
   }
   return dist;

@@ -17,6 +17,7 @@ import {
   resolveAttack,
 } from '../engine/combat.js';
 import { canSee, getActiveActions } from '../engine/ai-targeting.js';
+import { canSeePoint } from '../engine/visibility.js';
 import { moveToDestination, reachableMovementDestinations } from '../engine/ai-movement.js';
 import { executeLegendaryAction, handlePassiveAuras, processTurnStart, runOpportunityAttacks } from '../engine/ai-turn.js';
 import { getEligibleWildShapeBeasts } from '../data/heroes.js';
@@ -84,7 +85,7 @@ function spellTargets(active: Creature, state: NonNullable<Encounter['state']>, 
   if (action.targetScope === 'one_ally' || action.heal || action.layOnHands) {
     return living.filter(c => c.team === active.team && inRange(c) && (action.heal || action.layOnHands ? c.currentHp < c.maxHp || c.dying : true));
   }
-  return living.filter(c => c.team !== active.team && attackInRange(active, c, action) && (action.type !== 'ranged' || canSee(state, active, c)));
+  return living.filter(c => c.team !== active.team && attackInRange(active, c, action) && (!action.range || canSee(state, active, c)));
 }
 
 function areaSpellActions(state: NonNullable<Encounter['state']>, active: Creature, action: MonsterAction, actionIndex: number): ArenaAction[] {
@@ -93,6 +94,23 @@ function areaSpellActions(state: NonNullable<Encounter['state']>, active: Creatu
     ? ['15-foot cone', '30-foot line']
     : [originalArea];
   return areas.flatMap(area => areaSpellAction(state, active, action, actionIndex, area));
+}
+
+function darknessSpellActions(state: NonNullable<Encounter['state']>, active: Creature, action: MonsterAction, actionIndex: number): ArenaAction[] {
+  const range = action.range?.normal ?? action.range?.long ?? 0;
+  const gridSize = state.gridSize ?? 20;
+  const actions: ArenaAction[] = [];
+  for (let y = 0; y < gridSize; y++) {
+    for (let x = 0; x < gridSize; x++) {
+      const center = { x, y };
+      if (Math.max(Math.abs(active.position.x - x), Math.abs(active.position.y - y)) * 5 > range || !canSeePoint(state, active, center)) continue;
+      actions.push({
+        id: `spell:${actionIndex}:${slug(action.name)}:darkness:${x},${y}`,
+        type: 'spell', actionName: action.name, actionIndex, targetId: active.id, center,
+      });
+    }
+  }
+  return actions;
 }
 
 function areaSpellAction(state: NonNullable<Encounter['state']>, active: Creature, action: MonsterAction, actionIndex: number, area: string): ArenaAction[] {
@@ -124,7 +142,7 @@ function heroHitDie(creature: Creature): number | undefined {
 
 function autoDartSpellActions(active: Creature, state: NonNullable<Encounter['state']>, action: MonsterAction, actionIndex: number): ArenaAction[] {
   const targets = state.creatures
-    .filter(target => target.team !== active.team && target.isAlive && !target.dying && attackInRange(active, target, action) && (action.type !== 'ranged' || canSee(state, active, target)))
+    .filter(target => target.team !== active.team && target.isAlive && !target.dying && attackInRange(active, target, action) && (!action.range || canSee(state, active, target)))
     .sort((left, right) => left.id.localeCompare(right.id));
   const darts = Math.max(1, action.autoDarts ?? 1);
   const result: ArenaAction[] = [];
@@ -170,6 +188,10 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
         if ((!action.replacesAttack && attackInProgress) || (action.replacesAttack && attacksUsed(active) >= attackRollBudget(active)) || !canCastArenaSpell(active, action)) continue;
         if (action.autoDarts) {
           actions.push(...autoDartSpellActions(active, state, action, actionIndex));
+          continue;
+        }
+        if (action.darkness) {
+          actions.push(...darknessSpellActions(state, active, action, actionIndex));
           continue;
         }
         if (action.savingThrow?.area) {

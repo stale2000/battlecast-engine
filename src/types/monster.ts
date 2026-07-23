@@ -334,6 +334,12 @@ export interface MonsterAction {
    */
   resourceCost?: { key: string; amount: number };
   /**
+   * Persistent magical darkness created by this spell. The spell resolver
+   * owns the zone, its concentration lifecycle, and its serialization; a
+   * caller can only choose one of the server-generated legal centers.
+   */
+  darkness?: { radius: number; durationRounds: number; requiresConcentration?: boolean };
+  /**
    * Action exists only as the mechanical payload for a legendary action.
    * Normal turn planning ignores it; executeLegendaryAction can still
    * resolve it via LegendaryAction.actionRef.
@@ -775,6 +781,16 @@ export interface ActiveBuff {
   damageRollPenalty?: string;
   /** Repeat this save at the specified point and remove the buff on success. */
   saveEnds?: { ability: keyof Abilities; dc: number; at: 'targetTurnEnd' };
+}
+
+/** A serialized area of magical darkness on the combat grid. */
+export interface DarknessZone {
+  sourceId: string;
+  x: number;
+  y: number;
+  radius: number;
+  endRound: number;
+  requiresConcentration: boolean;
 }
 
 export interface CreatureStats {
