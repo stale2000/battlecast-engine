@@ -1,4 +1,4 @@
-import type { Abilities } from '../types/monster.js';
+import type { Abilities, WeaponMasteryProperty } from '../types/monster.js';
 
 export interface ArenaWeapon {
   name: string;
@@ -14,6 +14,7 @@ export interface ArenaWeapon {
   light?: boolean;
   heavy?: boolean;
   closeRangeDisadvantage?: boolean;
+  mastery?: WeaponMasteryProperty;
   attackAbility?: keyof Abilities;
   finesse?: boolean;
   twoHanded?: boolean;
@@ -43,43 +44,43 @@ export const ARENA_ARMOR: Record<string, ArenaArmor> = {
 
 /** Server-owned SRD weapon facts. Public build requests select only these names. */
 export const ARENA_WEAPONS: Record<string, ArenaWeapon> = {
-  Club: { name: 'Club', category: 'simple', die: '1d4', damageType: 'bludgeoning', type: 'melee' },
-  Sickle: { name: 'Sickle', category: 'simple', die: '1d4', damageType: 'slashing', type: 'melee' },
-  LightHammer: { name: 'Light Hammer', category: 'simple', die: '1d4', damageType: 'bludgeoning', type: 'melee', thrownRange: { normal: 20, long: 60 } },
-  Dagger: { name: 'Dagger', category: 'simple', die: '1d4', damageType: 'piercing', type: 'melee', finesse: true, thrownRange: { normal: 20, long: 60 } },
-  Greatclub: { name: 'Greatclub', category: 'simple', die: '1d8', damageType: 'bludgeoning', type: 'melee', twoHanded: true },
-  Handaxe: { name: 'Handaxe', category: 'simple', die: '1d6', damageType: 'slashing', type: 'melee', thrownRange: { normal: 20, long: 60 } },
-  Javelin: { name: 'Javelin', category: 'simple', die: '1d6', damageType: 'piercing', type: 'melee', thrownRange: { normal: 30, long: 120 }, attackAbility: 'str' },
-  Mace: { name: 'Mace', category: 'simple', die: '1d6', damageType: 'bludgeoning', type: 'melee' },
-  Morningstar: { name: 'Morningstar', category: 'martial', die: '1d8', damageType: 'piercing', type: 'melee' },
-  Quarterstaff: { name: 'Quarterstaff', category: 'simple', die: '1d6', versatileDie: '1d8', damageType: 'bludgeoning', type: 'melee' },
-  Spear: { name: 'Spear', category: 'simple', die: '1d6', versatileDie: '1d8', damageType: 'piercing', type: 'melee', thrownRange: { normal: 20, long: 60 }, attackAbility: 'str' },
-  LightCrossbow: { name: 'Light Crossbow', category: 'simple', die: '1d8', damageType: 'piercing', type: 'ranged', range: { normal: 80, long: 320 }, loading: true, twoHanded: true },
-  Dart: { name: 'Dart', category: 'simple', die: '1d4', damageType: 'piercing', type: 'ranged', range: { normal: 20, long: 60 }, finesse: true },
-  Sling: { name: 'Sling', category: 'simple', die: '1d4', damageType: 'bludgeoning', type: 'ranged', range: { normal: 30, long: 120 } },
-  Shortbow: { name: 'Shortbow', category: 'simple', die: '1d6', damageType: 'piercing', type: 'ranged', range: { normal: 80, long: 320 }, twoHanded: true },
-  Flail: { name: 'Flail', category: 'martial', die: '1d8', damageType: 'bludgeoning', type: 'melee' },
-  Glaive: { name: 'Glaive', category: 'martial', die: '1d10', damageType: 'slashing', type: 'melee', reach: 10, twoHanded: true, heavy: true },
-  Greataxe: { name: 'Greataxe', category: 'martial', die: '1d12', damageType: 'slashing', type: 'melee', twoHanded: true, heavy: true },
-  Halberd: { name: 'Halberd', category: 'martial', die: '1d10', damageType: 'slashing', type: 'melee', reach: 10, twoHanded: true, heavy: true },
-  Longsword: { name: 'Longsword', category: 'martial', die: '1d8', versatileDie: '1d10', damageType: 'slashing', type: 'melee' },
-  Longbow: { name: 'Longbow', category: 'martial', die: '1d8', damageType: 'piercing', type: 'ranged', range: { normal: 150, long: 600 }, twoHanded: true, heavy: true },
-  Lance: { name: 'Lance', category: 'martial', die: '1d10', damageType: 'piercing', type: 'melee', reach: 10, twoHanded: true, closeRangeDisadvantage: true },
-  Maul: { name: 'Maul', category: 'martial', die: '2d6', damageType: 'bludgeoning', type: 'melee', twoHanded: true, heavy: true },
-  Pike: { name: 'Pike', category: 'martial', die: '1d10', damageType: 'piercing', type: 'melee', reach: 10, twoHanded: true, heavy: true },
-  Rapier: { name: 'Rapier', category: 'martial', die: '1d8', damageType: 'piercing', type: 'melee', finesse: true },
-  Scimitar: { name: 'Scimitar', category: 'martial', die: '1d6', damageType: 'slashing', type: 'melee', finesse: true, light: true },
-  Shortsword: { name: 'Shortsword', category: 'martial', die: '1d6', damageType: 'piercing', type: 'melee', finesse: true, light: true },
-  Trident: { name: 'Trident', category: 'martial', die: '1d8', versatileDie: '1d10', damageType: 'piercing', type: 'melee', thrownRange: { normal: 20, long: 60 }, attackAbility: 'str' },
-  Greatsword: { name: 'Greatsword', category: 'martial', die: '2d6', damageType: 'slashing', type: 'melee', twoHanded: true },
-  Battleaxe: { name: 'Battleaxe', category: 'martial', die: '1d8', versatileDie: '1d10', damageType: 'slashing', type: 'melee' },
-  Warhammer: { name: 'Warhammer', category: 'martial', die: '1d8', versatileDie: '1d10', damageType: 'bludgeoning', type: 'melee' },
-  Whip: { name: 'Whip', category: 'martial', die: '1d4', damageType: 'slashing', type: 'melee', reach: 10, finesse: true },
-  Blowgun: { name: 'Blowgun', category: 'martial', die: '1', damageType: 'piercing', type: 'ranged', range: { normal: 25, long: 100 }, loading: true },
-  HandCrossbow: { name: 'Hand Crossbow', category: 'martial', die: '1d6', damageType: 'piercing', type: 'ranged', range: { normal: 30, long: 120 }, loading: true, light: true },
-  HeavyCrossbow: { name: 'Heavy Crossbow', category: 'martial', die: '1d10', damageType: 'piercing', type: 'ranged', range: { normal: 100, long: 400 }, loading: true, twoHanded: true, heavy: true },
-  Pistol: { name: 'Pistol', category: 'martial', die: '1d10', damageType: 'piercing', type: 'ranged', range: { normal: 30, long: 90 }, loading: true },
-  Musket: { name: 'Musket', category: 'martial', die: '1d12', damageType: 'piercing', type: 'ranged', range: { normal: 40, long: 120 }, loading: true, twoHanded: true },
+  Club: { name: 'Club', category: 'simple', die: '1d4', damageType: 'bludgeoning', type: 'melee', mastery: 'slow' },
+  Sickle: { name: 'Sickle', category: 'simple', die: '1d4', damageType: 'slashing', type: 'melee', mastery: 'nick' },
+  LightHammer: { name: 'Light Hammer', category: 'simple', die: '1d4', damageType: 'bludgeoning', type: 'melee', thrownRange: { normal: 20, long: 60 }, mastery: 'nick' },
+  Dagger: { name: 'Dagger', category: 'simple', die: '1d4', damageType: 'piercing', type: 'melee', finesse: true, thrownRange: { normal: 20, long: 60 }, mastery: 'nick' },
+  Greatclub: { name: 'Greatclub', category: 'simple', die: '1d8', damageType: 'bludgeoning', type: 'melee', twoHanded: true, mastery: 'push' },
+  Handaxe: { name: 'Handaxe', category: 'simple', die: '1d6', damageType: 'slashing', type: 'melee', thrownRange: { normal: 20, long: 60 }, mastery: 'vex' },
+  Javelin: { name: 'Javelin', category: 'simple', die: '1d6', damageType: 'piercing', type: 'melee', thrownRange: { normal: 30, long: 120 }, attackAbility: 'str', mastery: 'slow' },
+  Mace: { name: 'Mace', category: 'simple', die: '1d6', damageType: 'bludgeoning', type: 'melee', mastery: 'sap' },
+  Morningstar: { name: 'Morningstar', category: 'martial', die: '1d8', damageType: 'piercing', type: 'melee', mastery: 'sap' },
+  Quarterstaff: { name: 'Quarterstaff', category: 'simple', die: '1d6', versatileDie: '1d8', damageType: 'bludgeoning', type: 'melee', mastery: 'topple' },
+  Spear: { name: 'Spear', category: 'simple', die: '1d6', versatileDie: '1d8', damageType: 'piercing', type: 'melee', thrownRange: { normal: 20, long: 60 }, attackAbility: 'str', mastery: 'sap' },
+  LightCrossbow: { name: 'Light Crossbow', category: 'simple', die: '1d8', damageType: 'piercing', type: 'ranged', range: { normal: 80, long: 320 }, loading: true, twoHanded: true, mastery: 'slow' },
+  Dart: { name: 'Dart', category: 'simple', die: '1d4', damageType: 'piercing', type: 'ranged', range: { normal: 20, long: 60 }, finesse: true, mastery: 'vex' },
+  Sling: { name: 'Sling', category: 'simple', die: '1d4', damageType: 'bludgeoning', type: 'ranged', range: { normal: 30, long: 120 }, mastery: 'slow' },
+  Shortbow: { name: 'Shortbow', category: 'simple', die: '1d6', damageType: 'piercing', type: 'ranged', range: { normal: 80, long: 320 }, twoHanded: true, mastery: 'vex' },
+  Flail: { name: 'Flail', category: 'martial', die: '1d8', damageType: 'bludgeoning', type: 'melee', mastery: 'sap' },
+  Glaive: { name: 'Glaive', category: 'martial', die: '1d10', damageType: 'slashing', type: 'melee', reach: 10, twoHanded: true, heavy: true, mastery: 'graze' },
+  Greataxe: { name: 'Greataxe', category: 'martial', die: '1d12', damageType: 'slashing', type: 'melee', twoHanded: true, heavy: true, mastery: 'cleave' },
+  Halberd: { name: 'Halberd', category: 'martial', die: '1d10', damageType: 'slashing', type: 'melee', reach: 10, twoHanded: true, heavy: true, mastery: 'cleave' },
+  Longsword: { name: 'Longsword', category: 'martial', die: '1d8', versatileDie: '1d10', damageType: 'slashing', type: 'melee', mastery: 'sap' },
+  Longbow: { name: 'Longbow', category: 'martial', die: '1d8', damageType: 'piercing', type: 'ranged', range: { normal: 150, long: 600 }, twoHanded: true, heavy: true, mastery: 'slow' },
+  Lance: { name: 'Lance', category: 'martial', die: '1d10', damageType: 'piercing', type: 'melee', reach: 10, twoHanded: true, closeRangeDisadvantage: true, mastery: 'topple' },
+  Maul: { name: 'Maul', category: 'martial', die: '2d6', damageType: 'bludgeoning', type: 'melee', twoHanded: true, heavy: true, mastery: 'topple' },
+  Pike: { name: 'Pike', category: 'martial', die: '1d10', damageType: 'piercing', type: 'melee', reach: 10, twoHanded: true, heavy: true, mastery: 'push' },
+  Rapier: { name: 'Rapier', category: 'martial', die: '1d8', damageType: 'piercing', type: 'melee', finesse: true, mastery: 'vex' },
+  Scimitar: { name: 'Scimitar', category: 'martial', die: '1d6', damageType: 'slashing', type: 'melee', finesse: true, light: true, mastery: 'nick' },
+  Shortsword: { name: 'Shortsword', category: 'martial', die: '1d6', damageType: 'piercing', type: 'melee', finesse: true, light: true, mastery: 'vex' },
+  Trident: { name: 'Trident', category: 'martial', die: '1d8', versatileDie: '1d10', damageType: 'piercing', type: 'melee', thrownRange: { normal: 20, long: 60 }, attackAbility: 'str', mastery: 'topple' },
+  Greatsword: { name: 'Greatsword', category: 'martial', die: '2d6', damageType: 'slashing', type: 'melee', twoHanded: true, heavy: true, mastery: 'graze' },
+  Battleaxe: { name: 'Battleaxe', category: 'martial', die: '1d8', versatileDie: '1d10', damageType: 'slashing', type: 'melee', mastery: 'topple' },
+  Warhammer: { name: 'Warhammer', category: 'martial', die: '1d8', versatileDie: '1d10', damageType: 'bludgeoning', type: 'melee', mastery: 'push' },
+  Whip: { name: 'Whip', category: 'martial', die: '1d4', damageType: 'slashing', type: 'melee', reach: 10, finesse: true, mastery: 'slow' },
+  Blowgun: { name: 'Blowgun', category: 'martial', die: '1', damageType: 'piercing', type: 'ranged', range: { normal: 25, long: 100 }, loading: true, mastery: 'vex' },
+  HandCrossbow: { name: 'Hand Crossbow', category: 'martial', die: '1d6', damageType: 'piercing', type: 'ranged', range: { normal: 30, long: 120 }, loading: true, light: true, mastery: 'vex' },
+  HeavyCrossbow: { name: 'Heavy Crossbow', category: 'martial', die: '1d10', damageType: 'piercing', type: 'ranged', range: { normal: 100, long: 400 }, loading: true, twoHanded: true, heavy: true, mastery: 'push' },
+  Pistol: { name: 'Pistol', category: 'martial', die: '1d10', damageType: 'piercing', type: 'ranged', range: { normal: 30, long: 90 }, loading: true, mastery: 'vex' },
+  Musket: { name: 'Musket', category: 'martial', die: '1d12', damageType: 'piercing', type: 'ranged', range: { normal: 40, long: 120 }, loading: true, twoHanded: true, mastery: 'slow' },
 };
 
 export const ARENA_SRD_VERSION = '5.2.1';

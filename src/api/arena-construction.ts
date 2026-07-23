@@ -46,7 +46,7 @@ function isWeaponProficient(heroClass: typeof HERO_CLASS_NAMES[number], weapon: 
 
 function toWeaponOverrides(weapons: readonly (typeof ARENA_WEAPONS[string])[] | undefined, useTwoHanded: boolean): WeaponOverride[] | undefined {
   return weapons?.flatMap<WeaponOverride>(weapon => {
-    const base = { name: weapon.name, die: weapon.die, damageType: weapon.damageType, attackAbility: weapon.attackAbility, finesse: weapon.finesse, loading: weapon.loading, heavy: weapon.heavy, closeRangeDisadvantage: weapon.closeRangeDisadvantage };
+    const base = { name: weapon.name, die: weapon.die, damageType: weapon.damageType, attackAbility: weapon.attackAbility, finesse: weapon.finesse, loading: weapon.loading, heavy: weapon.heavy, closeRangeDisadvantage: weapon.closeRangeDisadvantage, mastery: weapon.mastery };
     const melee = weapon.thrownRange
       ? [
         { ...base, name: `${weapon.name} (Melee)`, type: 'melee' as const, reach: weapon.reach },

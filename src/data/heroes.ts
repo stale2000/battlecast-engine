@@ -2367,6 +2367,7 @@ export interface WeaponOverride {
   loading?: boolean;
   heavy?: boolean;
   closeRangeDisadvantage?: boolean;
+  mastery?: WeaponMasteryProperty;
   attackAbility?: AbilityKey;
   finesse?: boolean;
 }
@@ -2422,6 +2423,7 @@ function weaponOverrideToSpec(weapon: WeaponOverride): WeaponSpec {
     loading: weapon.loading,
     heavy: weapon.heavy,
     closeRangeDisadvantage: weapon.closeRangeDisadvantage,
+    mastery: weapon.mastery,
     abilityOverride: weapon.attackAbility,
     finesse: weapon.finesse,
   };

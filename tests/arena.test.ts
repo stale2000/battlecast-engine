@@ -168,6 +168,13 @@ describe('Kaggle arena bridge', () => {
     }
   });
 
+  it('applies catalog weapon mastery only for classes with Weapon Mastery', () => {
+    const fighter = { heroClass: 'Fighter', species: 'Human', background: 'Soldier', humanOriginFeat: 'Alert', humanSkill: 'Perception', weapons: ['Greatsword'], abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 } };
+    const party = { characters: Array.from({ length: 4 }, () => fighter) };
+    const fighterAction = kaggleStep({ ...init(), redParty: party, blueParty: party }).state.battleState!.creatures.find(creature => creature.team === 'red')!.monsterData.actions.find(action => action.name === 'Greatsword')!;
+    expect(fighterAction.weaponMastery).toBe('graze');
+  });
+
   it('applies catalog armor and rejects unavailable heavy armor', () => {
     const fighter = { heroClass: 'Fighter', species: 'Human', background: 'Soldier', humanOriginFeat: 'Alert', humanSkill: 'Perception', armor: 'Plate', abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 } };
     const party = { characters: Array.from({ length: 4 }, () => fighter) };
