@@ -382,6 +382,8 @@ export interface BuffTemplate {
   saveDisadvantage?: boolean;
   /** Weapon Mastery: Slow reduces this creature's speed while active. */
   speedPenalty?: number;
+  /** Longstrider-style increase to all movement speeds. */
+  speedBonus?: number;
   /** One-shot rider such as Barbarian Staggering Blow: no Opportunity Attacks. */
   preventsOpportunityAttacks?: boolean;
   /** One-shot rider such as Barbarian Sundering Blow: next other attacker gets a flat bonus. */
@@ -735,6 +737,8 @@ export interface ActiveBuff {
   saveDisadvantage?: boolean;
   /** Weapon Mastery: Slow reduces this creature's speed while active. */
   speedPenalty?: number;
+  /** Longstrider-style increase to all movement speeds. */
+  speedBonus?: number;
   /** One-shot rider such as Barbarian Staggering Blow: no Opportunity Attacks. */
   preventsOpportunityAttacks?: boolean;
   /** One-shot rider such as Barbarian Sundering Blow: next other attacker gets a flat bonus. */

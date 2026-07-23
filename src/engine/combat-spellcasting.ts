@@ -455,6 +455,7 @@ export function applyBuffFromSpell(
     caster.concentratingOn = tmpl.key;
   }
   const existingMaxHpBonus = target.activeBuffs.find(b => b.key === tmpl.key)?.maxHpBonus ?? 0;
+  const existingSpeedBonus = target.activeBuffs.find(b => b.key === tmpl.key)?.speedBonus ?? 0;
   const buff: ActiveBuff = {
     name: tmpl.name, key: tmpl.key, casterId: caster.id,
     appliedRound: state.round, endRound,
@@ -481,6 +482,7 @@ export function applyBuffFromSpell(
     attackDisadvantage: tmpl.attackDisadvantage,
     saveDisadvantage: tmpl.saveDisadvantage,
     speedPenalty: tmpl.speedPenalty,
+    speedBonus: tmpl.speedBonus,
     preventsOpportunityAttacks: tmpl.preventsOpportunityAttacks,
     attackBonusForAllAttackers: tmpl.attackBonusForAllAttackers,
     spellAttackAdvantage: tmpl.spellAttackAdvantage,
@@ -492,6 +494,9 @@ export function applyBuffFromSpell(
     const increase = tmpl.maxHpBonus - existingMaxHpBonus;
     target.maxHp += increase;
     applyHealing(state, target, increase, caster, tmpl.name);
+  }
+  if (tmpl.speedBonus && tmpl.speedBonus > existingSpeedBonus) {
+    target.movementRemaining += tmpl.speedBonus - existingSpeedBonus;
   }
   pushLog(state, {
     round: state.round, turn: state.turnIndex,

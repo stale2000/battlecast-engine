@@ -224,6 +224,18 @@ describe('Kaggle arena bridge', () => {
     expect(result.state.battleState!.creatures.find(creature => creature.team === 'red')!.monsterData.speed.walk).toBe(35);
   });
 
+  it('resolves Wood Elf Longstrider through the shared speed buff path', () => {
+    const encounter = new Encounter({ seed: 1 });
+    const [elf] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { species: 'Elf', speciesChoice: 'Wood Elf', speciesCastingAbility: 'wis', speedOverride: 35, additionalResources: { 'wood-elf-longstrider': 1 }, additionalActions: [{ name: 'Longstrider', type: 'special', spellLevel: 1, castingAbility: 'wis', resourceCost: { key: 'wood-elf-longstrider', amount: 1 }, targetScope: 'self', durationRounds: 600, buff: { name: 'Longstrider', key: 'wood-elf-longstrider', speedBonus: 10 } }] }, team: 'red', position: { x: 0, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 10, y: 0 } });
+    encounter.start(); encounter.state!.initiativeOrder = [elf.id]; startArena(encounter);
+    const active = getActiveCreature(encounter)!;
+    applyLegalAction(encounter, getLegalActions(encounter, active.id).find(action => action.type === 'spell' && action.actionName === 'Longstrider')!);
+    expect(active.resources['wood-elf-longstrider']).toBe(0);
+    expect(active.activeBuffs.some(buff => buff.key === 'wood-elf-longstrider' && buff.speedBonus === 10)).toBe(true);
+    expect(active.movementRemaining).toBe(45);
+  });
+
   it('resolves High Elf Misty Step through the validated teleport action', () => {
     const encounter = new Encounter({ seed: 1 });
     const [elf] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { species: 'Elf', speciesChoice: 'High Elf', additionalResources: { 'high-elf-misty-step': 1 } }, team: 'red', position: { x: 0, y: 0 } });

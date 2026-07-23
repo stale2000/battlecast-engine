@@ -224,10 +224,11 @@ export function getActiveSpeed(creature: Creature): MonsterData['speed'] {
 
 export function getEffectiveMoveSpeed(creature: Creature, state?: Pick<BattleState, 'movementEnvironment'>): number {
   const speed = getActiveSpeed(creature);
+  const bonus = Math.max(0, ...((creature.activeBuffs ?? []).map(buff => buff.speedBonus ?? 0)));
   if (state?.movementEnvironment === 'underwater') {
-    return Math.max(speed.swim ?? 0, Math.floor((speed.walk ?? 0) / 2));
+    return Math.max(speed.swim ?? 0, Math.floor((speed.walk ?? 0) / 2)) + bonus;
   }
-  return Math.max(speed.walk ?? 0, speed.fly ?? 0);
+  return Math.max(speed.walk ?? 0, speed.fly ?? 0) + bonus;
 }
 
 export function getActiveTraits(creature: Creature) {
