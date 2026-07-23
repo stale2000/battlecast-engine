@@ -2590,6 +2590,7 @@ export function buildCustomHero(
   let hp = overrides.hpOverride ?? computeHP(spec.hitDie, conMod, level);
   if (overrides.hpOverride === undefined && className === 'Sorcerer' && level >= 3) hp += level;
   if (overrides.hpOverride === undefined) hp += overrides.hitPointBonus ?? 0;
+  const rolledHpBonus = conMod * level + (className === 'Sorcerer' && level >= 3 ? level : 0) + (overrides.hitPointBonus ?? 0);
   const armorOverride = (className === 'Fighter' || className === 'Paladin' || className === 'Cleric') && level >= 5 ? 18 : undefined;
   let ac = overrides.acOverride ?? computeAC(spec, dexMod, wisMod, conMod, armorOverride);
   if (!overrides.acOverride && className === 'Sorcerer' && level >= 3) ac = 10 + dexMod + abilityMod(abilities.cha);
@@ -2724,7 +2725,9 @@ export function buildCustomHero(
     type: 'Humanoid (Hero)',
     alignment: 'Any Alignment',
     ac, hp,
-    hpFormula: `${level}d${spec.hitDie}${conMod !== 0 ? formatBonus(conMod * level) : ''}`,
+    hpFormula: overrides.hpOverride === undefined
+      ? `${level}d${spec.hitDie}${rolledHpBonus !== 0 ? formatBonus(rolledHpBonus) : ''}`
+      : String(hp),
     speed, abilities, saves,
     skills: skillsForClass(spec, abilities, pb),
     resistances: resistances.length ? resistances : undefined,

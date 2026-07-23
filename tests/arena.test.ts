@@ -125,6 +125,17 @@ describe('Kaggle arena bridge', () => {
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...human, species: 'Dwarf' })) }, blueParty: party })).toThrow(/size is selectable/);
   });
 
+  it('applies the Human Tough Origin Feat hit point bonus', () => {
+    const human = {
+      heroClass: 'Fighter', species: 'Human', background: 'Soldier', humanOriginFeat: 'Tough',
+      abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 },
+    };
+    const party = { characters: Array.from({ length: 4 }, () => human) };
+    const tough = kaggleStep({ ...init(), redParty: party, blueParty: party }).state.battleState!.creatures.find(creature => creature.team === 'red')!;
+    const baseline = kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...human, humanOriginFeat: 'Alert' })) }, blueParty: party }).state.battleState!.creatures.find(creature => creature.team === 'red')!;
+    expect(tough.maxHp).toBe(baseline.maxHp + 10);
+  });
+
   it('requires a Tiefling legacy and applies its automatic resistance', () => {
     const tiefling = {
       heroClass: 'Fighter', species: 'Tiefling', tieflingLegacy: 'Infernal', speciesCastingAbility: 'cha', background: 'Soldier', size: 'Small',
