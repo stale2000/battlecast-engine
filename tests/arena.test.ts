@@ -302,6 +302,18 @@ describe('Kaggle arena bridge', () => {
     expect(active.bonusActionUsed).toBe(true);
   });
 
+  it('preserves an engine-supported High Elf cantrip replacement as a legal action', () => {
+    const highElf = {
+      heroClass: 'Fighter', species: 'Elf', elfLineage: 'High Elf', highElfCantrip: 'Fire Bolt', speciesCastingAbility: 'wis', elfKeenSense: 'Perception', background: 'Soldier',
+      abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 },
+    };
+    const result = kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => highElf) }, blueParty: party });
+    const elf = result.state.battleState!.creatures.find(creature => creature.team === 'red')!;
+    expect(elf.monsterData.speciesCantrips).toEqual(['Fire Bolt']);
+    expect(elf.monsterData.actions.some(action => action.name === 'Fire Bolt')).toBe(true);
+    expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...highElf, highElfCantrip: 'Wish' })) }, blueParty: party })).toThrow(/highElfCantrip/);
+  });
+
   it('casts Wood Elf Pass without Trace through the shared concentration path', () => {
     const encounter = new Encounter({ seed: 1 });
     const passWithoutTrace = { name: 'Pass without Trace', type: 'special' as const, spellLevel: 2, castingAbility: 'wis' as const, resourceCost: { key: 'wood-elf-pass-without-trace', amount: 1 }, range: { normal: 30, long: 30 }, targetScope: 'all_allies_in_area' as const, durationRounds: 600, buff: { name: 'Pass without Trace', key: 'wood-elf-pass-without-trace', requiresConcentration: true, stealthBonus: 10 }, description: 'Stealth bonus.' };
