@@ -944,7 +944,8 @@ describe('Kaggle arena bridge', () => {
     };
     const party = { characters: Array.from({ length: 4 }, () => wizard) };
     const hero = kaggleStep({ ...init(), redParty: party, blueParty: party }).state.battleState!.creatures.find(creature => creature.team === 'red')!;
-    expect(hero.monsterData.actions.map(action => action.name)).toContain('Guiding Bolt (Spell Slot)');
+    expect(hero.monsterData.actions.filter(action => action.name === 'Guiding Bolt')).toHaveLength(2);
+    expect(hero.monsterData.actions.some(action => action.name === 'Guiding Bolt' && action.resourceCost === undefined)).toBe(true);
   });
 
   it('gives Humans a second implemented Origin Feat with independent Magic Initiate use', () => {
