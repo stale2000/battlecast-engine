@@ -156,6 +156,7 @@ interface WeaponSpec {
   damageOverride?: string;
   /** If set, overrides the class primary ability for this weapon. */
   abilityOverride?: AbilityKey;
+  finesse?: boolean;
   /** 2024 weapon mastery property for this weapon. Applied only when the class has mastery. */
   mastery?: WeaponMasteryProperty;
   /** 5e Loading property. Inferred for crossbows unless explicitly provided. */
@@ -1125,7 +1126,9 @@ function hasLoadingProperty(name: string): boolean {
 function makeWeaponAction(
   spec: ClassSpec, weaponSpec: WeaponSpec, level: number, abilities: Abilities, pb: number, masteryActive = false,
 ): MonsterAction {
-  const useDex = spec.finesse && weaponSpec.kind === 'melee'
+  const useDex = weaponSpec.finesse
+    ? abilities.dex >= abilities.str
+    : spec.finesse && weaponSpec.kind === 'melee'
     ? true
     : weaponSpec.kind === 'ranged'
       ? true
@@ -2359,6 +2362,7 @@ export interface WeaponOverride {
   damageOverride?: string;
   loading?: boolean;
   attackAbility?: AbilityKey;
+  finesse?: boolean;
 }
 
 export interface HeroOverrides {
@@ -2410,6 +2414,7 @@ function weaponOverrideToSpec(weapon: WeaponOverride): WeaponSpec {
     damageOverride: weapon.damageOverride,
     loading: weapon.loading,
     abilityOverride: weapon.attackAbility,
+    finesse: weapon.finesse,
   };
 }
 

@@ -9,6 +9,7 @@ export interface ArenaWeapon {
   range?: { normal: number; long: number };
   loading?: boolean;
   attackAbility?: keyof Abilities;
+  finesse?: boolean;
 }
 
 export const ARENA_ARMOR = {
@@ -35,7 +36,7 @@ export const ARENA_WEAPONS: Record<string, ArenaWeapon> = {
   Shortbow: { name: 'Shortbow', die: '1d6', damageType: 'piercing', type: 'ranged', range: { normal: 80, long: 320 } },
   Longsword: { name: 'Longsword', die: '1d8', damageType: 'slashing', type: 'melee' },
   Longbow: { name: 'Longbow', die: '1d8', damageType: 'piercing', type: 'ranged', range: { normal: 150, long: 600 } },
-  Rapier: { name: 'Rapier', die: '1d8', damageType: 'piercing', type: 'melee' },
+  Rapier: { name: 'Rapier', die: '1d8', damageType: 'piercing', type: 'melee', finesse: true },
   Greatsword: { name: 'Greatsword', die: '2d6', damageType: 'slashing', type: 'melee' },
   Battleaxe: { name: 'Battleaxe', die: '1d8', damageType: 'slashing', type: 'melee' },
   Warhammer: { name: 'Warhammer', die: '1d8', damageType: 'bludgeoning', type: 'melee' },
