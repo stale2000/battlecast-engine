@@ -21,7 +21,7 @@ export type OriginArenaAction =
   | { id: 'species:adrenaline_rush'; type: 'species_dash' }
   | { id: 'species:draconic_flight'; type: 'species_flight' }
   | { id: 'species:large_form'; type: 'species_large_form' }
-  | { id: 'species:cloud_jaunt'; type: 'species_teleport'; destination?: { x: number; y: number } };
+  | { id: 'species:cloud_jaunt' | 'species:high_elf_misty_step'; type: 'species_teleport'; destination?: { x: number; y: number } };
 
 /** Returns only origin features whose complete effect is supported by the engine. */
 export function getOriginLegalActions(active: Creature): OriginArenaAction[] {
@@ -59,6 +59,15 @@ export function getOriginLegalActions(active: Creature): OriginArenaAction[] {
     && hasResource(active, 'goliath-giant-ancestry')
   ) {
     actions.push({ id: 'species:cloud_jaunt', type: 'species_teleport' });
+  }
+  if (
+    active.monsterData.heroSpecies === 'Elf'
+    && active.monsterData.heroSpeciesChoice === 'High Elf'
+    && (active.monsterData.heroLevel ?? 0) >= 5
+    && !active.bonusActionUsed
+    && hasResource(active, 'high-elf-misty-step')
+  ) {
+    actions.push({ id: 'species:high_elf_misty_step', type: 'species_teleport' });
   }
   return actions;
 }
@@ -100,9 +109,16 @@ export function applyOriginLegalAction(state: BattleState, active: Creature, act
     const gridSize = state.gridSize ?? 20;
     const size = getActiveSize(active);
     const footprint = size === 'Large' ? 2 : size === 'Huge' ? 3 : size === 'Gargantuan' ? 4 : 1;
+    const cloudJaunt = action.id === 'species:cloud_jaunt'
+      && active.monsterData.heroSpecies === 'Goliath'
+      && active.monsterData.heroSpeciesChoice === 'Cloud';
+    const mistyStep = action.id === 'species:high_elf_misty_step'
+      && active.monsterData.heroSpecies === 'Elf'
+      && active.monsterData.heroSpeciesChoice === 'High Elf'
+      && (active.monsterData.heroLevel ?? 0) >= 5;
+    const resourceKey = cloudJaunt ? 'goliath-giant-ancestry' : 'high-elf-misty-step';
     if (
-      active.monsterData.heroSpecies !== 'Goliath'
-      || active.monsterData.heroSpeciesChoice !== 'Cloud'
+      (!cloudJaunt && !mistyStep)
       || active.bonusActionUsed
       || !destination
       || !Number.isInteger(destination.x)
@@ -111,15 +127,16 @@ export function applyOriginLegalAction(state: BattleState, active: Creature, act
       || destination.x < 0 || destination.y < 0 || destination.x + footprint > gridSize || destination.y + footprint > gridSize
       || isPositionBlocked(destination, size, state.creatures, active.id, state.terrainBlocked)
       || !canSee(state, active, { ...active, position: destination })
-      || !consumeResource(active, 'goliath-giant-ancestry')
+      || !consumeResource(active, resourceKey)
     ) {
-      throw new Error("Illegal or stale arena Cloud's Jaunt.");
+      throw new Error(`Illegal or stale arena ${cloudJaunt ? "Cloud's Jaunt" : 'Misty Step'}.`);
     }
     const from = { ...active.position };
     active.position = { ...destination };
     active.bonusActionUsed = true;
     state.events.push({ kind: 'move', creatureId: active.id, from, to: { ...destination }, durationMs: 0 });
-    pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: "Cloud's Jaunt", details: `${active.displayName} teleports to (${destination.x}, ${destination.y}).`, type: 'move' });
+    const name = cloudJaunt ? "Cloud's Jaunt" : 'Misty Step';
+    pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: name, details: `${active.displayName} teleports to (${destination.x}, ${destination.y}).`, type: 'move' });
     return;
   }
 

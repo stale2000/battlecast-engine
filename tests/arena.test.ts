@@ -212,6 +212,19 @@ describe('Kaggle arena bridge', () => {
     expect(result.state.battleState!.creatures.find(creature => creature.team === 'red')!.monsterData.speed.walk).toBe(35);
   });
 
+  it('resolves High Elf Misty Step through the validated teleport action', () => {
+    const encounter = new Encounter({ seed: 1 });
+    const [elf] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { species: 'Elf', speciesChoice: 'High Elf', additionalResources: { 'high-elf-misty-step': 1 } }, team: 'red', position: { x: 0, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 10, y: 0 } });
+    encounter.start(); encounter.state!.initiativeOrder = [elf.id]; startArena(encounter);
+    const active = getActiveCreature(encounter)!;
+    const action = getLegalActions(encounter, active.id).find(candidate => candidate.id === 'species:high_elf_misty_step')!;
+    applyLegalAction(encounter, { ...action, destination: { x: 6, y: 0 } });
+    expect(active.position).toEqual({ x: 6, y: 0 });
+    expect(active.resources['high-elf-misty-step']).toBe(0);
+    expect(active.bonusActionUsed).toBe(true);
+  });
+
   it('requires an Elf casting ability and resolves Drow Faerie Fire through the shared spell path', () => {
     const drow = {
       heroClass: 'Fighter', species: 'Elf', elfLineage: 'Drow', speciesCastingAbility: 'cha', background: 'Soldier',
