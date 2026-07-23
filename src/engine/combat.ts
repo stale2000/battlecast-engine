@@ -3742,7 +3742,7 @@ function resolveAttack(
   const ac = getEffectiveAC(target);
 
   // Heroic Warrior (Fighter L10) and Human Resourceful inspiration reroll a missed attack.
-  const humanInspiration = (attacker.resources['heroic-inspiration'] ?? 0) > 0;
+  const humanInspiration = (attacker.resources?.['heroic-inspiration'] ?? 0) > 0;
   if (naturalRoll !== 20 && roll.total < ac && (attacker.turnFlags?.heroicInspiration || humanInspiration)) {
     const reroll = rollAttackForCreature(attacker, action.attackBonus!, effectiveAdv, attackHasDisadvantage);
     const rerollBuff = rollAttackBuffBonus(attacker);
