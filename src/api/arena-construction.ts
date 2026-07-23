@@ -30,6 +30,8 @@ const SKILLS = ['Acrobatics', 'Animal Handling', 'Arcana', 'Athletics', 'Decepti
 const TOOLS = ['Alchemist’s Supplies', 'Brewer’s Supplies', 'Calligrapher’s Supplies', 'Carpenter’s Tools', 'Cartographer’s Tools', 'Cobbler’s Tools', 'Cook’s Utensils', 'Disguise Kit', 'Forgery Kit', 'Gaming Set', 'Glassblower’s Tools', 'Herbalism Kit', 'Jeweler’s Tools', 'Leatherworker’s Tools', 'Mason’s Tools', 'Musical Instrument', 'Navigator’s Tools', 'Painter’s Supplies', 'Poisoner’s Kit', 'Potter’s Tools', 'Smith’s Tools', 'Thieves’ Tools', 'Tinker’s Tools', 'Weaver’s Tools', 'Woodcarver’s Tools'] as const;
 const LANGUAGES = ['Common Sign Language', 'Draconic', 'Dwarvish', 'Elvish', 'Giant', 'Gnomish', 'Goblin', 'Halfling', 'Orc', 'Abyssal', 'Celestial', 'Deep Speech', 'Druidic', 'Infernal', 'Primordial', 'Sylvan', 'Thieves’ Cant', 'Undercommon'] as const;
 const ALIGNMENTS = ['Lawful Good', 'Neutral Good', 'Chaotic Good', 'Lawful Neutral', 'Neutral', 'Chaotic Neutral', 'Lawful Evil', 'Neutral Evil', 'Chaotic Evil'] as const;
+const MARTIAL_WEAPONS = new Set(['Longsword', 'Longbow', 'Rapier', 'Greatsword']);
+const MARTIAL_CLASSES = new Set(['Barbarian', 'Fighter', 'Paladin', 'Ranger', 'Rogue']);
 
 function speciesDarkvision(species: ArenaSpecies, elfLineage?: ElfLineage): string | undefined {
   const range = species === 'Dwarf' || species === 'Orc' || (species === 'Elf' && elfLineage === 'Drow') ? 120
@@ -311,6 +313,7 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     const heroClass = character.heroClass as typeof HERO_CLASS_NAMES[number];
     if (character.weapons !== undefined && (!Array.isArray(character.weapons) || character.weapons.length < 1 || character.weapons.length > 2 || character.weapons.some(name => typeof name !== 'string' || !ARENA_WEAPONS[name]))) throw new EncounterError(`${label}.weapons must select one or two catalog weapons.`);
     const weapons = (character.weapons as string[] | undefined)?.map(name => ARENA_WEAPONS[name]!);
+    if (weapons?.some(weapon => MARTIAL_WEAPONS.has(weapon.name) && !MARTIAL_CLASSES.has(heroClass))) throw new EncounterError(`${label}.weapons includes a weapon your class is not proficient with.`);
     if (character.subclass !== undefined && (typeof character.subclass !== 'string' || !SRD_SUBCLASSES[heroClass].includes(character.subclass))) {
       throw new EncounterError(`${label}.subclass is not an SRD subclass for ${heroClass}.`);
     }
