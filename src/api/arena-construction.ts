@@ -16,6 +16,7 @@ import { bless, burningHands, cureWounds, guidingBolt, healingWord, magicMissile
 type DragonAncestry = 'acid' | 'cold' | 'fire' | 'lightning' | 'poison';
 type CastingAbility = 'int' | 'wis' | 'cha';
 type TieflingLegacy = 'Abyssal' | 'Chthonic' | 'Infernal';
+type ElfLineage = 'Drow' | 'High Elf' | 'Wood Elf';
 const ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 const POINT_COST: Record<number, number> = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
 const DRAGON_DAMAGE_TYPES = ['acid', 'cold', 'fire', 'lightning', 'poison'] as const;
@@ -118,7 +119,7 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     if (typeof character.heroClass !== 'string' || !HERO_CLASS_NAMES.includes(character.heroClass as typeof HERO_CLASS_NAMES[number])) {
       throw new EncounterError(`${label}.heroClass must be a supported hero class.`);
     }
-    if (!Object.keys(character).every(key => ['heroClass', 'abilities', 'subclass', 'spells', 'species', 'background', 'abilityIncreases', 'dragonAncestry', 'tieflingLegacy', 'size', 'originCantrips', 'originSpell', 'originCastingAbility'].includes(key))) {
+    if (!Object.keys(character).every(key => ['heroClass', 'abilities', 'subclass', 'spells', 'species', 'background', 'abilityIncreases', 'dragonAncestry', 'elfLineage', 'tieflingLegacy', 'size', 'originCantrips', 'originSpell', 'originCastingAbility'].includes(key))) {
       throw new EncounterError(`${label} contains unsupported build choices.`);
     }
     const baseAbilities = parseAbilities(character.abilities, `${label}.abilities`);
@@ -139,6 +140,9 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
       throw new EncounterError(`${label}.dragonAncestry must be an SRD damage type.`);
     }
     if (species !== 'Dragonborn' && character.dragonAncestry !== undefined) throw new EncounterError(`${label}.dragonAncestry requires Dragonborn.`);
+    const elfLineage = character.elfLineage as ElfLineage | undefined;
+    if (species === 'Elf' && !['Drow', 'High Elf', 'Wood Elf'].includes(elfLineage ?? '')) throw new EncounterError(`${label}.elfLineage must be Drow, High Elf, or Wood Elf.`);
+    if (species !== 'Elf' && character.elfLineage !== undefined) throw new EncounterError(`${label}.elfLineage requires Elf.`);
     const tieflingLegacy = character.tieflingLegacy as TieflingLegacy | undefined;
     if (species === 'Tiefling' && !['Abyssal', 'Chthonic', 'Infernal'].includes(tieflingLegacy ?? '')) throw new EncounterError(`${label}.tieflingLegacy must be Abyssal, Chthonic, or Infernal.`);
     if (species !== 'Tiefling' && character.tieflingLegacy !== undefined) throw new EncounterError(`${label}.tieflingLegacy requires Tiefling.`);
@@ -167,7 +171,7 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
         abilities, subclass: character.subclass as 'Circle of the Land' | 'Circle of the Moon' | undefined, spells,
         ...(species && background ? {
           species, background, originFeat: BACKGROUNDS[background].originFeat, originSkills: [...BACKGROUNDS[background].skills], originTool: BACKGROUNDS[background].tool,
-          originEquipment: [...BACKGROUNDS[background].equipment], sizeOverride: size ?? SPECIES[species].size, speedOverride: SPECIES[species].speed,
+          originEquipment: [...BACKGROUNDS[background].equipment], sizeOverride: size ?? SPECIES[species].size, speedOverride: elfLineage === 'Wood Elf' ? 35 : SPECIES[species].speed,
           hitPointBonus: SPECIES[species].maxHpBonusAtLevel5, additionalResistances: tieflingLegacy ? [{ Abyssal: 'poison', Chthonic: 'necrotic', Infernal: 'fire' }[tieflingLegacy]] : SPECIES[species].resistances ? [...SPECIES[species].resistances] : undefined,
           additionalResources: { ...(species === 'Orc' ? { 'orc-adrenaline-rush': 3 } : {}), ...(origin?.resources ?? {}) },
           additionalActions: [...(species === 'Dragonborn' ? [dragonbornBreath(character.dragonAncestry as DragonAncestry, abilities)] : []), ...(origin?.actions ?? [])],

@@ -133,6 +133,16 @@ describe('Kaggle arena bridge', () => {
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...tiefling, tieflingLegacy: undefined })) }, blueParty: party })).toThrow(/tieflingLegacy/);
   });
 
+  it('requires an Elf lineage and applies Wood Elf speed', () => {
+    const elf = {
+      heroClass: 'Fighter', species: 'Elf', elfLineage: 'Wood Elf', background: 'Soldier',
+      abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 },
+    };
+    const party = { characters: Array.from({ length: 4 }, () => elf) };
+    const result = kaggleStep({ ...init(), redParty: party, blueParty: party });
+    expect(result.state.battleState!.creatures.find(creature => creature.team === 'red')!.monsterData.speed.walk).toBe(35);
+  });
+
   it('constructs a Dragonborn Breath Weapon with its chosen ancestry', () => {
     const dragonborn = {
       heroClass: 'Fighter', species: 'Dragonborn', background: 'Soldier', dragonAncestry: 'fire',
