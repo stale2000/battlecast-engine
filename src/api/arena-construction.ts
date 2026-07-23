@@ -111,7 +111,7 @@ function lineageDarkness(resourceKey: string): MonsterAction {
   return {
     name: 'Darkness', type: 'special', description: 'Magical Darkness fills a 15-foot-radius Sphere at a visible point within 60 feet for 10 minutes. Concentration.',
     spellLevel: 2, range: { normal: 60, long: 60 }, targetScope: 'self', resourceCost: { key: resourceKey, amount: 1 },
-    darkness: { radius: 15, durationRounds: 600, requiresConcentration: true },
+    darkness: { radius: 15, durationRounds: 100, requiresConcentration: true },
   };
 }
 

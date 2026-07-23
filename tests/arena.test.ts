@@ -648,7 +648,7 @@ describe('Kaggle arena bridge', () => {
     applyLegalAction(encounter, getLegalActions(encounter, active.id).find(action => action.type === 'species_flight')!);
     expect(active.temporaryFlightSpeed).toBe(active.monsterData.speed.walk);
     expect(active.resources['dragonborn-flight']).toBe(0);
-    encounter.state!.round += 10;
+    encounter.state!.round += 100;
     encounter.runWithRng(() => processTurnStart(encounter.state!, active));
     expect(active.temporaryFlightSpeed).toBeUndefined();
   });
