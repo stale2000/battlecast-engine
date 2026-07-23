@@ -29,7 +29,7 @@
   "scripts": {
     "prepare": "npm run build",
     "build": "tsc -b",
-    "test": "vitest run",
+    "test": "vitest run --no-file-parallelism --maxWorkers=1",
     "test:watch": "vitest",
     "typecheck": "tsc -b --pretty false",
     "mcp": "node dist/mcp/cli.js mcp"
