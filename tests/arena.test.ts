@@ -5,6 +5,8 @@ import { getActiveCreature, getLegalActions, applyLegalAction, startArena } from
 import { reachableMovementDestinations } from '../src/engine/ai-movement.js';
 import { applyDamage, hasDisadvantage, resolveAttack } from '../src/engine/combat.js';
 import { rollSaveWithBuffs } from '../src/engine/combat-buffs.js';
+import { rollAttack } from '../src/engine/dice.js';
+import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { HERO_CLASS_NAMES } from '../src/data/heroes.js';
 
@@ -151,6 +153,12 @@ describe('Kaggle arena bridge', () => {
     encounter.start();
     const creature = encounter.state!.creatures.find(candidate => candidate.id === gnome.id)!;
     encounter.runWithRng(() => expect(rollSaveWithBuffs(creature, 0, false, 10, 'wis').rolls).toHaveLength(2));
+  });
+
+  it('rerolls Halfling natural ones in the shared d20 primitive', () => {
+    const values = [0, 0.5, 0.9];
+    const rng = { next: () => values.shift()! };
+    expect(withRng(rng, () => rollAttack(0, false, false, true).naturalRoll)).toBe(19);
   });
 
   it('constructs a Dragonborn Breath Weapon with its chosen ancestry', () => {

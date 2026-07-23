@@ -115,7 +115,8 @@ export function rollSaveWithBuffs(
     .filter(b => b.saveDisadvantage)
     .map(b => b.key);
 
-  const result = rollSave(mod, advantage || barbarianSaveAdvantage || gnomishCunning, saveDisadvantageKeys.length > 0);
+  const halflingLuck = saver.monsterData.heroSpecies === 'Halfling';
+  const result = rollSave(mod, advantage || barbarianSaveAdvantage || gnomishCunning, saveDisadvantageKeys.length > 0, halflingLuck);
   if (saveDisadvantageKeys.length > 0) {
     saver.activeBuffs = saver.activeBuffs.filter(b => !saveDisadvantageKeys.includes(b.key));
   }
@@ -132,7 +133,7 @@ export function rollSaveWithBuffs(
       && saver.monsterData.heroClass === 'Monk' && (saver.monsterData.heroLevel ?? 0) >= 14
       && hasResource(saver, 'ki')) {
     consumeResource(saver, 'ki');
-    const reroll = rollSave(mod, advantage || barbarianSaveAdvantage || gnomishCunning);
+    const reroll = rollSave(mod, advantage || barbarianSaveAdvantage || gnomishCunning, false, halflingLuck);
     const rerollBonus = rollSaveBuffBonus(saver);
     reroll.total += rerollBonus;
     reroll.modifier += rerollBonus;
@@ -143,7 +144,7 @@ export function rollSaveWithBuffs(
       && saver.monsterData.heroClass === 'Fighter' && (saver.monsterData.heroLevel ?? 0) >= 9
       && hasResource(saver, 'indomitable')) {
     consumeResource(saver, 'indomitable');
-    const reroll = rollSave(mod, advantage);
+    const reroll = rollSave(mod, advantage, false, halflingLuck);
     const rerollBonus = rollSaveBuffBonus(saver);
     reroll.total += rerollBonus + (saver.monsterData.heroLevel ?? 0);
     reroll.modifier += rerollBonus;

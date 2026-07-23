@@ -67,10 +67,13 @@ export function rollD20(): RollResult {
 export function rollAttack(
   modifier: number,
   advantage: boolean = false,
-  disadvantage: boolean = false
+  disadvantage: boolean = false,
+  rerollNaturalOnes: boolean = false,
 ): { roll: RollResult; naturalRoll: number } {
   let roll1 = Math.floor(engineRandom() * 20) + 1;
   let roll2 = Math.floor(engineRandom() * 20) + 1;
+  if (rerollNaturalOnes && roll1 === 1) roll1 = Math.floor(engineRandom() * 20) + 1;
+  if (rerollNaturalOnes && roll2 === 1) roll2 = Math.floor(engineRandom() * 20) + 1;
 
   let naturalRoll: number;
   if (advantage && !disadvantage) {
@@ -99,8 +102,9 @@ export function rollSave(
   modifier: number,
   advantage: boolean = false,
   disadvantage: boolean = false,
+  rerollNaturalOnes: boolean = false,
 ): RollResult {
-  const { roll } = rollAttack(modifier, advantage, disadvantage);
+  const { roll } = rollAttack(modifier, advantage, disadvantage, rerollNaturalOnes);
   return roll;
 }
 
