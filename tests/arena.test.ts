@@ -908,6 +908,20 @@ describe('Kaggle arena bridge', () => {
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...wizard, spells: ['Wish'] })) }, blueParty: casterParty })).toThrow(/spells/);
   });
 
+  it('constructs every engine-supported level-5 spell selection', () => {
+    for (const heroClass of HERO_CLASS_NAMES) {
+      const expected = buildHero(heroClass, 5).actions.filter(action => (action.spellLevel ?? 0) > 0).length;
+      if (!expected) continue;
+      const available = getAvailableSpells(heroClass, 5).filter(spell => spell.spellLevel > 0).map(spell => spell.name);
+      for (const selected of available) {
+        const spells = [selected, ...available.filter(spell => spell !== selected)].slice(0, expected);
+        const character = { heroClass, abilities: { str: 8, dex: 14, con: 13, int: 15, wis: 12, cha: 10 }, spells };
+        const party = { characters: Array.from({ length: 4 }, () => character) };
+        expect(() => kaggleStep({ ...init(), redParty: party, blueParty: party })).not.toThrow();
+      }
+    }
+  });
+
   it('builds Magic Initiate background spells with an authoritative free cast', () => {
     const acolyte = {
       heroClass: 'Fighter', species: 'Human', background: 'Acolyte', humanOriginFeat: 'Alert', humanSkill: 'Perception', size: 'Medium',
