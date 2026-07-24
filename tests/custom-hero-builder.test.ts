@@ -166,12 +166,15 @@ describe('getAvailableSpells', () => {
   it('lists supported combat cantrips only for their SRD classes', () => {
     for (const cls of ['Sorcerer', 'Wizard'] as const) {
       const names = getAvailableSpells(cls, 5).map(spell => spell.name);
-      expect(names).toEqual(expect.arrayContaining(['Ray of Frost', 'Chill Touch', 'Shocking Grasp']));
+      expect(names).toEqual(expect.arrayContaining(['Blade Ward', 'Ray of Frost', 'Chill Touch', 'Shocking Grasp']));
     }
     const warlock = getAvailableSpells('Warlock', 5).map(spell => spell.name);
     expect(warlock).toContain('Chill Touch');
+    expect(warlock).toContain('Blade Ward');
     expect(warlock).not.toContain('Ray of Frost');
     expect(getAvailableSpells('Cleric', 5).map(spell => spell.name)).toContain('Toll the Dead');
+    expect(getAvailableSpells('Cleric', 5).map(spell => spell.name)).toContain('Resistance');
+    expect(getAvailableSpells('Druid', 5).map(spell => spell.name)).toContain('Resistance');
     expect(getAvailableSpells('Wizard', 5).map(spell => spell.name)).toContain('Ice Knife');
   });
 

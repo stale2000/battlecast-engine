@@ -105,6 +105,14 @@ export function tollTheDead(ability: SpellcastingAbility, mod: number, pb: numbe
   };
 }
 
+export function trueStrike(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'True Strike', type: 'special', spellLevel: 0, spellSchool: 'divination', castingAbility: ability,
+    description: 'Guide a weapon attack with magical precision. The next time you hit with a weapon before the end of this turn, it deals 1d6 extra radiant damage.',
+    targetScope: 'self', buff: { name: 'True Strike', key: 'true-strike', weaponDamageRider: '1d6 radiant', endsOnWeaponHit: true },
+  };
+}
+
 export function magicMissile(): MonsterAction {
   return {
     name: 'Magic Missile',
@@ -1942,7 +1950,7 @@ export function wallOfFire(ability: SpellcastingAbility, mod: number, pb: number
 type SpellFactory = (ability: SpellcastingAbility, mod: number, pb: number) => MonsterAction;
 const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Magic Missile', () => magicMissile()],
-  ['Blade Ward', bladeWard], ['Resistance', resistance], ['Poison Spray', poisonSpray], ['Thorn Whip', thornWhip], ['Acid Splash', acidSplash], ['Starry Wisp', starryWisp], ['Thunderclap', thunderclap], ['Toll the Dead', tollTheDead],
+  ['Blade Ward', bladeWard], ['Resistance', resistance], ['Poison Spray', poisonSpray], ['Thorn Whip', thornWhip], ['Acid Splash', acidSplash], ['Starry Wisp', starryWisp], ['Thunderclap', thunderclap], ['Toll the Dead', tollTheDead], ['True Strike', trueStrike],
   ['Shield', shield],
   ['Hellish Rebuke', hellishRebuke],
   ['Burning Hands', burningHands], ['Thunderwave', thunderwave], ['Sleep', sleep],
