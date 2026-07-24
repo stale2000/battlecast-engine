@@ -210,7 +210,7 @@ export function shieldOfFaith(): MonsterAction {
     spellLevel: 1,
     isBonusAction: true,
     concentration: true,
-    durationRounds: 10,  // compressed to 10 rounds for combat pacing
+    durationRounds: 100,
     buff: {
       name: 'Shield of Faith', key: 'shield-of-faith',
       requiresConcentration: true, acBonus: 2,
@@ -250,7 +250,7 @@ export function hex(ability: SpellcastingAbility, _mod: number, _pb: number): Mo
     spellLevel: 1,
     isBonusAction: true,
     concentration: true,
-    durationRounds: 30,
+    durationRounds: 600,
     castingAbility: ability,
     // The buff sits on the TARGET with caster = warlock. Only matches if the
     // attacker's id equals casterId, so only the warlock's attacks proc it.
@@ -275,7 +275,7 @@ export function huntersMark(_ability: SpellcastingAbility, _mod: number, _pb: nu
     spellLevel: 1,
     isBonusAction: true,
     concentration: true,
-    durationRounds: 30,
+    durationRounds: 600,
     buff: {
       name: "Hunter's Mark", key: 'hunters-mark',
       requiresConcentration: true,
@@ -644,7 +644,7 @@ export function blur(ability: SpellcastingAbility, _mod: number, _pb: number): M
 }
 
 export function barkskin(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
-  return { name: 'Barkskin', type: 'special', spellLevel: 2, spellSchool: 'transmutation', castingAbility: ability, durationRounds: 100, description: 'One willing creature has AC 17 for 1 hour while it is not wearing Heavy armor.', range: { normal: 30, long: 30 }, targetScope: 'one_ally', requiresNoHeavyArmor: true, buff: { name: 'Barkskin', key: 'barkskin', acMinimum: 17 } };
+  return { name: 'Barkskin', type: 'special', spellLevel: 2, spellSchool: 'transmutation', castingAbility: ability, durationRounds: 600, description: 'One willing creature has AC 17 for 1 hour while it is not wearing Heavy armor.', range: { normal: 30, long: 30 }, targetScope: 'one_ally', requiresNoHeavyArmor: true, buff: { name: 'Barkskin', key: 'barkskin', acMinimum: 17 } };
 }
 
 export function protectionFromPoison(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
@@ -1525,7 +1525,7 @@ export function wallOfFire(ability: SpellcastingAbility, mod: number, pb: number
     spellLevel: 4,
     spellSchool: 'evocation',
     concentration: true,
-    durationRounds: 10,
+    durationRounds: 600,
     persistentAura: {},
     castingAbility: ability,
     damageType: 'fire',
