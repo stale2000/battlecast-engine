@@ -15,6 +15,7 @@ import {
   lowestAvailableSlot,
   addBuff,
   dropConcentratedBuffsFrom,
+  removeActiveBuff,
 } from './combat-buffs.js';
 import { applyHealing, applyTemporaryHp } from './combat-spellcasting.js';
 
@@ -3763,6 +3764,9 @@ function resolveAttack(
   if (!action.attackBonus && action.attackBonus !== 0) return;
   if (!target.isAlive) return;
   if (action.type === 'multiattack') return;
+  for (const buff of [...attacker.activeBuffs].filter(candidate => candidate.endsOnAttackOrCast)) {
+    removeActiveBuff(state, attacker, buff);
+  }
   if (hasTotalCoverFromContainer(target, attacker)) {
     logTotalCoverFromContainer(state, attacker, target, action.name);
     return;

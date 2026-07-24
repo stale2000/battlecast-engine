@@ -1466,6 +1466,16 @@ export function mirrorImage(ability: SpellcastingAbility, _mod: number, _pb: num
   };
 }
 
+export function invisibility(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Invisibility', type: 'special', spellLevel: 2, spellSchool: 'illusion', castingAbility: ability,
+    concentration: true, durationRounds: 600,
+    description: 'One willing creature within 30 feet becomes Invisible until concentration ends, it attacks, or it casts a spell.',
+    range: { normal: 30, long: 30 }, targetScope: 'one_ally',
+    buff: { name: 'Invisibility', key: 'invisibility', requiresConcentration: true, appliedCondition: 'invisible', endsOnAttackOrCast: true },
+  };
+}
+
 export function dispelMagic(_ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
   void _ability;
   void _mod;
@@ -1550,6 +1560,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Shatter', shatter], ['Moonbeam', moonbeam], ['Spiritual Weapon', spiritualWeapon],
   ['Aid', aid], ['Magic Weapon', magicWeapon], ['Shining Smite', shiningSmite],
   ['Blindness/Deafness', blindnessDeafness], ['Mirror Image', mirrorImage],
+  ['Invisibility', invisibility],
   ['Gust of Wind', gustOfWind], ['Lesser Restoration', lesserRestoration], ['Protection from Poison', protectionFromPoison],
   ['Misty Step', mistyStep],
   ['Blur', blur], ['Barkskin', barkskin],

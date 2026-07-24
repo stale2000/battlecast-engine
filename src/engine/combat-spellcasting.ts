@@ -523,11 +523,15 @@ export function applyBuffFromSpell(
     endsOnDamage: tmpl.endsOnDamage,
     temporaryHpAtTurnStart: tmpl.temporaryHpAtTurnStart,
     conditionImmunities: tmpl.conditionImmunities,
+    endsOnAttackOrCast: tmpl.endsOnAttackOrCast,
     hasteAction: tmpl.hasteAction,
     saveAdvantageAbilities: tmpl.saveAdvantageAbilities,
     saveEnds: tmpl.saveEnds,
   };
   addBuff(target, buff);
+  for (const condition of tmpl.appliedConditions ?? (tmpl.appliedCondition ? [tmpl.appliedCondition] : [])) {
+    if (!target.conditions.includes(condition)) target.conditions.push(condition);
+  }
   if (tmpl.maxHpBonus && tmpl.maxHpBonus > existingMaxHpBonus) {
     const increase = tmpl.maxHpBonus - existingMaxHpBonus;
     target.maxHp += increase;
@@ -605,6 +609,16 @@ function clearDeadBonusActionDamageLinks(state: BattleState, caster: Creature): 
   }
   if (clearedConcentrationKey && caster.concentratingOn === clearedConcentrationKey) {
     caster.concentratingOn = undefined;
+  }
+}
+
+function endAttackOrCastBuffs(state: BattleState, caster: Creature): void {
+  for (const buff of [...caster.activeBuffs].filter(candidate => candidate.endsOnAttackOrCast)) {
+    removeActiveBuff(state, caster, buff);
+    pushLog(state, {
+      round: state.round, turn: state.turnIndex, actor: caster.displayName,
+      action: buff.name, details: `${caster.displayName} becomes visible.`, type: 'special',
+    });
   }
 }
 
@@ -843,6 +857,8 @@ export function executeSpell(
     });
     return true;
   }
+
+  if (action.name !== 'Invisibility') endAttackOrCastBuffs(state, caster);
 
   if (castAction.teleport && aoeCenter) {
     const size = caster.wildShape?.size ?? caster.temporarySize ?? caster.monsterData.size;

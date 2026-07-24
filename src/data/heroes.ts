@@ -40,7 +40,7 @@ import {
   harm, heal, fireStorm, sunburst, massHeal, stormOfVengeance,
   blindingSmite, conjureBarrage, protectionFromEnergy,
   chromaticOrb, inflictWounds, command, witchBolt,
-  blindnessDeafness, mirrorImage, dispelMagic, haste, wallOfFire,
+  blindnessDeafness, invisibility, mirrorImage, dispelMagic, haste, wallOfFire,
   aid, magicWeapon, shiningSmite,
   acidArrow, armsOfHadar, barkskin, bestowCurse, blur, colorSpray, divineFavor, faerieFire, falseLife, fear, fly, fogCloud, grease, gustOfWind, lesserRestoration, mistyStep,
   longstrider, rayOfSickness, revivify, tashasHideousLaughter,
@@ -1679,7 +1679,7 @@ function buildOptionalSpells(
       pool.push(chromaticOrb(spellAbility, mod, pb), witchBolt(spellAbility, mod, pb));
       pool.push(shield(spellAbility, mod, pb), fogCloud(spellAbility, mod, pb));
       pool.push(falseLife(spellAbility, mod, pb), grease(spellAbility, mod, pb), rayOfSickness(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
-      pool.push(blindnessDeafness(spellAbility, mod, pb), blur(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb));
+      pool.push(blindnessDeafness(spellAbility, mod, pb), blur(spellAbility, mod, pb), invisibility(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb));
       pool.push(acidArrow(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb));
       pool.push(mistyStep(spellAbility, mod, pb));
       pool.push(dispelMagic(spellAbility, mod, pb), haste(spellAbility, mod, pb));
@@ -1691,7 +1691,7 @@ function buildOptionalSpells(
       pool.push(chromaticOrb(spellAbility, mod, pb), witchBolt(spellAbility, mod, pb));
       pool.push(shield(spellAbility, mod, pb), fogCloud(spellAbility, mod, pb));
       pool.push(falseLife(spellAbility, mod, pb), grease(spellAbility, mod, pb), rayOfSickness(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
-      pool.push(blindnessDeafness(spellAbility, mod, pb), blur(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb));
+      pool.push(blindnessDeafness(spellAbility, mod, pb), blur(spellAbility, mod, pb), invisibility(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb));
       pool.push(acidArrow(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb));
       pool.push(mistyStep(spellAbility, mod, pb));
       pool.push(dispelMagic(spellAbility, mod, pb), haste(spellAbility, mod, pb));
