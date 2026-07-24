@@ -1874,6 +1874,14 @@ describe('Kaggle arena bridge', () => {
     expect(getAvailableSpells('Ranger', 5).map(action => action.name)).toContain('Pass without Trace');
   });
 
+  it('offers only implemented SRD Cleric combat choices at level five', () => {
+    const spells = getAvailableSpells('Cleric', 5).map(action => action.name);
+    expect(spells).toEqual(expect.arrayContaining(['Bane', 'Protection from Evil and Good', 'Protection from Poison', 'Sanctuary']));
+    expect(spells).not.toContain('Counterspell');
+    const cleric = buildCustomHero('Cleric', 5, { spells: ['Bane', 'Protection from Evil and Good', 'Protection from Poison', 'Sanctuary'] });
+    expect(cleric.actions.map(action => action.name)).toEqual(expect.arrayContaining(['Bane', 'Protection from Evil and Good', 'Protection from Poison', 'Sanctuary']));
+  });
+
   it('offers and resolves supported resource actions without trusting client parameters', () => {
     const encounter = new Encounter({ seed: 1 });
     const [fighter] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'red', position: { x: 0, y: 0 } });
@@ -2101,12 +2109,14 @@ describe('Kaggle arena bridge', () => {
     startArena(encounter);
     const activeCaster = encounter.state!.creatures.find(creature => creature.id === caster.id)!;
     const choices = getLegalActions(encounter, caster.id).filter((action): action is Extract<typeof action, { type: 'spell_summon' }> => action.type === 'spell_summon');
-    expect(choices.map(action => action.variantKey)).toEqual(['air', 'land', 'water']);
-    expect(choices).toHaveLength(3);
+    expect(new Set(choices.map(action => action.variantKey))).toEqual(new Set(['air', 'land', 'water']));
+    expect(new Set(choices.map(action => action.id)).size).toBe(choices.length);
+    const landAtTwoTwo = choices.find(action => action.variantKey === 'land' && action.destination?.x === 2 && action.destination?.y === 2)!;
+    expect(landAtTwoTwo).toBeTruthy();
     const beforeInvalidPlacement = JSON.stringify(encounter.state);
-    expect(() => applyLegalAction(encounter, { ...choices[0]!, destination: { x: 8, y: 8 } })).toThrow(/Illegal or stale arena summon/);
+    expect(() => applyLegalAction(encounter, { ...landAtTwoTwo, destination: { x: 8, y: 8 } })).toThrow(/Illegal or stale arena action/);
     expect(JSON.stringify(encounter.state)).toBe(beforeInvalidPlacement);
-    applyLegalAction(encounter, { ...choices[0]!, destination: { x: 2, y: 2 } });
+    applyLegalAction(encounter, landAtTwoTwo);
     const summon = encounter.state!.creatures.find(creature => creature.summonedById === activeCaster.id)!;
     expect(summon).toMatchObject({ team: 'red', position: { x: 2, y: 2 }, initiative: activeCaster.initiative });
     expect(encounter.state!.initiativeOrder).toEqual([activeCaster.id, summon.id]);
@@ -2115,7 +2125,7 @@ describe('Kaggle arena bridge', () => {
     expect(encounter.state!.creatures.some(creature => creature.id === summon.id)).toBe(false);
     activeCaster.hasActed = false;
     activeCaster.resources['slot-2'] = 1;
-    applyLegalAction(encounter, { ...getLegalActions(encounter, activeCaster.id).find(action => action.type === 'spell_summon')!, destination: { x: 2, y: 2 } } as Extract<ReturnType<typeof getLegalActions>[number], { type: 'spell_summon' }>);
+    applyLegalAction(encounter, getLegalActions(encounter, activeCaster.id).find(action => action.type === 'spell_summon' && action.destination?.x === 2 && action.destination?.y === 2)!);
     const defeatedSummon = encounter.state!.creatures.find(creature => creature.summonedById === activeCaster.id)!;
     applyDamage(encounter.state!, defeatedSummon, 999, 'force', null);
     expect(encounter.state!.creatures.some(creature => creature.id === defeatedSummon.id)).toBe(false);
@@ -2125,7 +2135,7 @@ describe('Kaggle arena bridge', () => {
     recast.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 8, y: 8 } });
     recast.start(); recast.state!.initiativeOrder = [secondCaster.id]; startArena(recast);
     const activeSecondCaster = recast.state!.creatures.find(creature => creature.id === secondCaster.id)!;
-    applyLegalAction(recast, { ...getLegalActions(recast, secondCaster.id).find(action => action.type === 'spell_summon')!, destination: { x: 2, y: 2 } } as Extract<ReturnType<typeof getLegalActions>[number], { type: 'spell_summon' }>);
+    applyLegalAction(recast, getLegalActions(recast, secondCaster.id).find(action => action.type === 'spell_summon' && action.destination?.x === 2 && action.destination?.y === 2)!);
     recast.state!.round = recast.state!.creatures.find(creature => creature.summonedById === activeSecondCaster.id)!.summonExpiresRound!;
     processTurnStart(recast.state!, activeSecondCaster);
     expect(recast.state!.creatures.some(creature => creature.summonedById === activeSecondCaster.id)).toBe(false);

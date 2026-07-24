@@ -1710,12 +1710,11 @@ function buildOptionalSpells(
       pool.push(dispelMagic(spellAbility, mod, pb));
       break;
     case 'Cleric':
-      pool.push(inflictWounds(spellAbility, mod, pb), command(spellAbility, mod, pb), protectionFromEvilAndGood(spellAbility, mod, pb), sanctuary(spellAbility, mod, pb));
+      pool.push(bane(spellAbility, mod, pb), inflictWounds(spellAbility, mod, pb), command(spellAbility, mod, pb), protectionFromEvilAndGood(spellAbility, mod, pb), sanctuary(spellAbility, mod, pb));
       pool.push(blindnessDeafness(spellAbility, mod, pb));
-      pool.push(lesserRestoration(spellAbility, mod, pb));
+      pool.push(lesserRestoration(spellAbility, mod, pb), protectionFromPoison(spellAbility, mod, pb));
       pool.push(dispelMagic(spellAbility, mod, pb));
       pool.push(beaconOfHope(spellAbility, mod, pb));
-      pool.push(counterspell(spellAbility, mod, pb));
       pool.push(revivify(spellAbility, mod, pb));
       break;
     case 'Druid':
@@ -2619,12 +2618,11 @@ export function getAvailableSpells(
       optional.push(dispelMagic(spellAbility, mod, pb));
       break;
     case 'Cleric':
-      optional.push(inflictWounds(spellAbility, mod, pb), command(spellAbility, mod, pb));
+      optional.push(bane(spellAbility, mod, pb), inflictWounds(spellAbility, mod, pb), command(spellAbility, mod, pb), protectionFromEvilAndGood(spellAbility, mod, pb), sanctuary(spellAbility, mod, pb));
       optional.push(blindnessDeafness(spellAbility, mod, pb));
-      optional.push(lesserRestoration(spellAbility, mod, pb));
+      optional.push(lesserRestoration(spellAbility, mod, pb), protectionFromPoison(spellAbility, mod, pb));
       optional.push(dispelMagic(spellAbility, mod, pb));
       optional.push(beaconOfHope(spellAbility, mod, pb));
-      optional.push(counterspell(spellAbility, mod, pb));
       optional.push(revivify(spellAbility, mod, pb));
       break;
     case 'Druid':
