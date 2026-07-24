@@ -361,7 +361,8 @@ function processTurnStartTraits(state: BattleState, creature: Creature): void {
  *  Returns false if the creature can't act (incapacitated/dead). */
 export function processTurnStart(state: BattleState, creature: Creature): boolean {
   if (creature.spiritualWeapon && creature.spiritualWeapon.endRound <= state.round) creature.spiritualWeapon = undefined;
-  if (creature.repeatableAreaSpell && creature.repeatableAreaSpell.endRound <= state.round) dropConcentratedBuffsFrom(state, creature.id);
+  if ((creature.repeatableAreaSpell && creature.repeatableAreaSpell.endRound <= state.round)
+    || (creature.repeatableActionSpell && creature.repeatableActionSpell.endRound <= state.round)) dropConcentratedBuffsFrom(state, creature.id);
   if (creature.concentrationAura && creature.concentrationAura.endRound <= state.round) {
     dropConcentratedBuffsFrom(state, creature.id);
   }
