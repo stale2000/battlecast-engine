@@ -556,6 +556,7 @@ export function applyBuffFromSpell(
     sanctuarySaveDc: tmpl.sanctuarySaveDc,
     attackersOfTypesHaveDisadvantage: tmpl.attackersOfTypesHaveDisadvantage,
     canSeeInvisible: tmpl.canSeeInvisible,
+    suppressesInvisibility: tmpl.suppressesInvisibility,
     hasteAction: tmpl.hasteAction,
     limitAttacksToOne: tmpl.limitAttacksToOne,
     restrictActionBonusCombination: tmpl.restrictActionBonusCombination,

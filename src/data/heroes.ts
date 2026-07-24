@@ -43,7 +43,7 @@ import {
   blindnessDeafness, invisibility, mirrorImage, seeInvisibility, dispelMagic, haste, wallOfFire,
   aid, magicWeapon, shiningSmite,
   acidArrow, acidSplash, armsOfHadar, barkskin, bestowCurse, blur, colorSpray, darkness, divineFavor, enlargeReduce, expeditiousRetreat, faerieFire, falseLife, fear, fly, fogCloud, grease, gustOfWind, lesserRestoration, mistyStep,
-  armorOfAgathys, beaconOfHope, longstrider, mageArmor, passWithoutTrace, poisonSpray, rayOfEnfeeblement, rayOfSickness, revivify, slow, stinkingCloud, tashasHideousLaughter, thornWhip, vampiricTouch,
+  armorOfAgathys, beaconOfHope, longstrider, mageArmor, passWithoutTrace, poisonSpray, rayOfEnfeeblement, rayOfSickness, revivify, slow, starryWisp, stinkingCloud, tashasHideousLaughter, thornWhip, vampiricTouch,
   protectionFromPoison, shield, hellishRebuke,
   circleOfDeath, chainLightning, disintegrate, fingerOfDeath,
   befuddlement, powerWordHeal, powerWordKill, meteorSwarm,
@@ -1719,7 +1719,7 @@ function buildOptionalSpells(
       pool.push(revivify(spellAbility, mod, pb));
       break;
     case 'Druid':
-      pool.push(poisonSpray(spellAbility, mod, pb), thornWhip(spellAbility, mod, pb));
+      pool.push(poisonSpray(spellAbility, mod, pb), starryWisp(spellAbility, mod, pb), thornWhip(spellAbility, mod, pb));
       pool.push(summonBeast(spellAbility, mod, pb));
       pool.push(barkskin(spellAbility, mod, pb), faerieFire(spellAbility, mod, pb), fogCloud(spellAbility, mod, pb), longstrider(spellAbility, mod, pb));
       pool.push(lesserRestoration(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb), passWithoutTrace(spellAbility, mod, pb), spikeGrowth(spellAbility, mod, pb));
@@ -1729,6 +1729,7 @@ function buildOptionalSpells(
       pool.push(wallOfFire(spellAbility, mod, pb));
       break;
     case 'Bard':
+      pool.push(starryWisp(spellAbility, mod, pb));
       pool.push(heroism(spellAbility, mod, pb));
       pool.push(faerieFire(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
       pool.push(command(spellAbility, mod, pb));
@@ -2627,7 +2628,7 @@ export function getAvailableSpells(
       optional.push(revivify(spellAbility, mod, pb));
       break;
     case 'Druid':
-      optional.push(poisonSpray(spellAbility, mod, pb), thornWhip(spellAbility, mod, pb));
+      optional.push(poisonSpray(spellAbility, mod, pb), starryWisp(spellAbility, mod, pb), thornWhip(spellAbility, mod, pb));
       optional.push(summonBeast(spellAbility, mod, pb));
       optional.push(barkskin(spellAbility, mod, pb), faerieFire(spellAbility, mod, pb), fogCloud(spellAbility, mod, pb), longstrider(spellAbility, mod, pb));
       optional.push(lesserRestoration(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb), passWithoutTrace(spellAbility, mod, pb), spikeGrowth(spellAbility, mod, pb));
@@ -2637,6 +2638,7 @@ export function getAvailableSpells(
       optional.push(wallOfFire(spellAbility, mod, pb));
       break;
     case 'Bard':
+      optional.push(starryWisp(spellAbility, mod, pb));
       optional.push(heroism(spellAbility, mod, pb));
       optional.push(faerieFire(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
       optional.push(command(spellAbility, mod, pb));

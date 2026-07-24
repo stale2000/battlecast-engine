@@ -552,6 +552,8 @@ export interface BuffTemplate {
   attackersOfTypesHaveDisadvantage?: string[];
   /** This creature can see Invisible creatures. */
   canSeeInvisible?: boolean;
+  /** This creature cannot benefit from the Invisible condition while the buff lasts. */
+  suppressesInvisibility?: boolean;
   /** Grants the restricted one-attack/Dash/Disengage/Hide action from Haste. */
   hasteAction?: boolean;
   /** This effect limits the creature to one attack when it takes Attack. */
@@ -1025,6 +1027,7 @@ export interface ActiveBuff {
   sanctuarySaveDc?: number;
   attackersOfTypesHaveDisadvantage?: string[];
   canSeeInvisible?: boolean;
+  suppressesInvisibility?: boolean;
   hasteAction?: boolean;
   /** This effect limits the creature to one attack when it takes Attack. */
   limitAttacksToOne?: boolean;

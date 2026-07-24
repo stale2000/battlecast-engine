@@ -75,6 +75,17 @@ export function acidSplash(ability: SpellcastingAbility, mod: number, pb: number
   };
 }
 
+export function starryWisp(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  const dice = pb >= 6 ? '4d8' : pb >= 4 ? '3d8' : pb >= 3 ? '2d8' : '1d8';
+  return {
+    name: 'Starry Wisp', type: 'ranged', spellLevel: 0, spellSchool: 'evocation', castingAbility: ability,
+    description: `Ranged spell attack within 60 feet. Hit: ${dice} radiant damage, and the target cannot benefit from invisibility until the end of your next turn.`,
+    attackBonus: spellAttackBonus(mod, pb), damage: dice, damageType: 'radiant', magical: true,
+    range: { normal: 60, long: 60 }, targetScope: 'one_enemy', durationRounds: 1,
+    buffOnHit: { name: 'Starry Wisp', key: 'starry-wisp', suppressesInvisibility: true },
+  };
+}
+
 export function magicMissile(): MonsterAction {
   return {
     name: 'Magic Missile',
@@ -1786,7 +1797,7 @@ export function wallOfFire(ability: SpellcastingAbility, mod: number, pb: number
 type SpellFactory = (ability: SpellcastingAbility, mod: number, pb: number) => MonsterAction;
 const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Magic Missile', () => magicMissile()],
-  ['Blade Ward', bladeWard], ['Resistance', resistance], ['Poison Spray', poisonSpray], ['Thorn Whip', thornWhip], ['Acid Splash', acidSplash],
+  ['Blade Ward', bladeWard], ['Resistance', resistance], ['Poison Spray', poisonSpray], ['Thorn Whip', thornWhip], ['Acid Splash', acidSplash], ['Starry Wisp', starryWisp],
   ['Shield', shield],
   ['Hellish Rebuke', hellishRebuke],
   ['Burning Hands', burningHands], ['Thunderwave', thunderwave], ['Sleep', sleep],

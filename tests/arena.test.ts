@@ -2059,6 +2059,22 @@ describe('Kaggle arena bridge', () => {
     splashEncounter.start(); splashEncounter.state!.initiativeOrder = [wizard.id]; startArena(splashEncounter);
     const splash = getLegalActions(splashEncounter, wizard.id).find(candidate => candidate.actionName === 'Acid Splash')!;
     expect(() => applyLegalAction(splashEncounter, splash)).not.toThrow();
+
+    for (const heroClass of ['Bard', 'Druid'] as const) {
+      expect(getAvailableSpells(heroClass, 5).some(spell => spell.name === 'Starry Wisp')).toBe(true);
+    }
+    expect(buildSpellAction('Starry Wisp', 'cha', 3, 3)).toMatchObject({ spellLevel: 0, damage: '2d8', buffOnHit: { suppressesInvisibility: true } });
+    const wispEncounter = new Encounter({ seed: 1 });
+    const [bard] = wispEncounter.addCreature({ heroClass: 'Bard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { spells: ['Starry Wisp'] } });
+    const [wispTarget] = wispEncounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 2, y: 0 } });
+    wispEncounter.start(); wispEncounter.state!.initiativeOrder = [bard.id]; startArena(wispEncounter);
+    const activeBard = wispEncounter.state!.creatures.find(creature => creature.id === bard.id)!;
+    const activeWispTarget = wispEncounter.state!.creatures.find(creature => creature.id === wispTarget.id)!;
+    activeWispTarget.monsterData.ac = 1;
+    activeBard.activeBuffs.push({ name: 'See Invisibility', key: 'test-see-invisibility', casterId: activeBard.id, appliedRound: 1, endRound: 2, canSeeInvisible: true });
+    activeWispTarget.conditions.push('invisible');
+    applyLegalAction(wispEncounter, getLegalActions(wispEncounter, bard.id).find(candidate => candidate.actionName === 'Starry Wisp')!);
+    expect(canSee(wispEncounter.state!, activeBard, activeWispTarget)).toBe(true);
   });
 
   it('summons a controlled Bestial Spirit with validated placement and removes it on concentration loss or expiry', () => {

@@ -1472,6 +1472,7 @@ function applyAttackHitBuff(state: BattleState, attacker: Creature, target: Crea
     spellAttackAdvantage: tmpl.spellAttackAdvantage,
     spellSaveDcBonus: tmpl.spellSaveDcBonus,
     expiresOnSourceTurnStart: tmpl.expiresOnSourceTurnStart,
+    suppressesInvisibility: tmpl.suppressesInvisibility,
   });
 }
 
