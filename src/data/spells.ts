@@ -143,6 +143,7 @@ export function bless(): MonsterAction {
     },
     range: { normal: 30, long: 30 },
     targetScope: 'all_allies_in_area',
+    multiTargetBuff: { maxTargets: 3 },
   };
 }
 
@@ -555,6 +556,7 @@ export function aid(ability: SpellcastingAbility, _mod: number, _pb: number): Mo
     durationRounds: 1000,
     range: { normal: 30, long: 30 },
     targetScope: 'all_allies_in_area',
+    multiTargetBuff: { maxTargets: 3 },
   };
 }
 

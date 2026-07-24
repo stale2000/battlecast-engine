@@ -1035,7 +1035,7 @@ export function executeSpell(
         caster.concentratingOn = castAction.buff.key;
       }
       const range = castAction.range?.normal ?? 30;
-      const targets = getAliveCreatures(state)
+      const targets = (aoeTargets?.length ? aoeTargets : getAliveCreatures(state)
         .filter(c => c.team === caster.team && canReceiveAreaBuff(c, castAction) && creatureDistance(caster, c) <= range)
         .sort((a, b) => {
           if (castAction.buff?.maxHpBonus) {
@@ -1045,7 +1045,9 @@ export function executeSpell(
           }
           return (a.id === caster.id ? -1 : b.id === caster.id ? 1 : b.currentHp - a.currentHp);
         })
-        .slice(0, 3);
+        .slice(0, castAction.multiTargetBuff?.maxTargets ?? 3))
+        .filter(c => c.team === caster.team && canReceiveAreaBuff(c, castAction) && creatureDistance(caster, c) <= range)
+        .slice(0, castAction.multiTargetBuff?.maxTargets ?? 3);
       for (const t of targets) {
         applyBuffFromSpell(state, caster, t, castAction, { skipConcentrationDrop: true });
       }

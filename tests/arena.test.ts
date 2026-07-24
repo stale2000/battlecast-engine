@@ -405,6 +405,22 @@ describe('Kaggle arena bridge', () => {
     for (const enemy of enemies) expect(enemy.activeBuffs.some(buff => buff.key === 'bane')).toBe(action.targetIds!.includes(enemy.id));
   });
 
+  it('uses the exact server-generated Bless target set', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Cleric', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [bless()], additionalResources: { 'slot-1': 1 } } });
+    encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'red', position: { x: 1, y: 0 } });
+    encounter.addCreature({ heroClass: 'Rogue', heroLevel: 5, team: 'red', position: { x: 2, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 5, y: 0 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.monsterData.heroClass === 'Cleric')!;
+    const allies = encounter.state!.creatures.filter(creature => creature.team === 'red');
+    encounter.state!.initiativeOrder = [caster.id];
+    startArena(encounter);
+    const action = getLegalActions(encounter, caster.id).find(choice => choice.type === 'spell' && choice.actionName === 'Bless' && choice.targetIds?.length === 2)!;
+    applyLegalAction(encounter, action);
+    for (const ally of allies) expect(ally.activeBuffs.some(buff => buff.key === 'bless')).toBe(action.targetIds!.includes(ally.id));
+  });
+
   it('repeats Call Lightning from authoritative concentration state without another slot', () => {
     const encounter = new Encounter({ seed: 1 });
     encounter.addCreature({ heroClass: 'Druid', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [callLightning('wis', 3, 3)], additionalResources: { 'slot-3': 1 } } });

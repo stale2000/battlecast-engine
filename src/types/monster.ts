@@ -321,6 +321,8 @@ export interface MonsterAction {
   multiTargetAttack?: { count: number };
   /** A saving throw spell that selects up to this many individual targets. */
   multiTargetSave?: { maxTargets: number };
+  /** A buff spell that selects up to this many allied targets. */
+  multiTargetBuff?: { maxTargets: number };
   /**
    * Which ability is used for spell attack bonus / save DC. Overrides
    * the creature's primary. Set per-action because one creature can
