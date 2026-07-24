@@ -1899,6 +1899,11 @@ describe('Kaggle arena bridge', () => {
     expect(buildSpellAction('Sleep', 'cha', 3, 3)).toMatchObject({ concentration: true, range: { normal: 60 }, savingThrow: { ability: 'wis', dc: 14, conditionOnFail: 'incapacitated', conditionDuration: 'end_of_next_turn', secondFailureCondition: 'unconscious', secondFailureDuration: '1_minute', area: '5-foot sphere' } });
   });
 
+  it('offers resolver-backed SRD mobility and weapon buffs to their caster classes', () => {
+    for (const heroClass of ['Bard', 'Druid', 'Ranger', 'Wizard'] as const) expect(getAvailableSpells(heroClass, 5).some(action => action.name === 'Longstrider')).toBe(true);
+    for (const heroClass of ['Paladin', 'Ranger', 'Sorcerer', 'Wizard'] as const) expect(getAvailableSpells(heroClass, 5).some(action => action.name === 'Magic Weapon')).toBe(true);
+  });
+
   it('offers and resolves supported resource actions without trusting client parameters', () => {
     const encounter = new Encounter({ seed: 1 });
     const [fighter] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'red', position: { x: 0, y: 0 } });
