@@ -1346,12 +1346,12 @@ export function executeSpell(
     return true;
   }
 
-  if (castAction.persistentZone && aoeCenter) {
+  if (castAction.persistentZone && (aoeCenter || castAction.targetScope === 'self')) {
     if (castAction.concentration) {
       dropConcentratedBuffsFrom(state, caster.id);
       caster.concentratingOn = castAction.name;
     }
-    createPersistentZone(state, caster, castAction, aoeCenter ?? primaryTarget?.position);
+    createPersistentZone(state, caster, castAction, aoeCenter ?? primaryTarget?.position ?? caster.position);
     pushLog(state, { round: state.round, turn: state.turnIndex, actor: caster.displayName, action: castAction.name, details: `${caster.displayName} creates ${castAction.name}.`, type: 'special' });
     return true;
   }

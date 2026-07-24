@@ -451,6 +451,7 @@ export interface MonsterAction {
     skipActionsOnFailedSave?: boolean;
     obscuresSight?: boolean;
     silences?: boolean;
+    rangedWeaponAttacksDisadvantage?: boolean;
   };
   /** Enables a later no-slot repeat of this concentration spell (Call Lightning). */
   repeatableAreaSpell?: true;
@@ -1155,6 +1156,7 @@ export interface PersistentZone {
   skipActionsOnFailedSave?: boolean;
   obscuresSight?: boolean;
   silences?: boolean;
+  rangedWeaponAttacksDisadvantage?: boolean;
   requiresConcentration: boolean;
 }
 

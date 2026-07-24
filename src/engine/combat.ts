@@ -1029,7 +1029,7 @@ function seedQuiveringPalm(state: BattleState, attacker: Creature, target: Creat
   state.events.push({ kind: 'effect', creatureId: target.id, label: 'Quivering Palm', tone: 'danger', durationMs: BASE_DURATIONS.effect });
 }
 
-function hasDisadvantage(attacker: Creature, target: Creature, action: MonsterAction): boolean {
+function hasDisadvantage(attacker: Creature, target: Creature, action: MonsterAction, state?: BattleState): boolean {
   let dis = false;
 
   // Dodge imposes Disadvantage on attacks while the dodger can see the attacker.
@@ -1040,6 +1040,7 @@ function hasDisadvantage(attacker: Creature, target: Creature, action: MonsterAc
   // Weapon Mastery: Sap gives the target Disadvantage on its next attack roll.
   if (attacker.activeBuffs?.some(b => b.attackDisadvantage && (!b.attackDisadvantageAgainstCaster || b.casterId === target.id)) || target.activeBuffs?.some(b => b.attackersHaveDisadvantage || (b.attackersHaveDisadvantageExceptCaster && b.casterId !== attacker.id))) dis = true;
   if (target.activeBuffs?.some(buff => buff.attackersOfTypesHaveDisadvantage?.some(type => type.toLowerCase() === attacker.monsterData.type.toLowerCase()))) dis = true;
+  if (state && action.type === 'ranged' && action.spellLevel === undefined && (state.persistentZones ?? []).some(zone => zone.rangedWeaponAttacksDisadvantage && zone.endRound > state.round && (isInPersistentZone(zone, attacker.position) || isInPersistentZone(zone, target.position)))) dis = true;
   if ((action.attackAbility === 'str' || (!action.attackAbility && action.type === 'melee'))
       && attacker.activeBuffs?.some(b => b.strengthTestDisadvantage)) dis = true;
 
@@ -1342,7 +1343,7 @@ function resolveCleaveMastery(state: BattleState, attacker: Creature, originalTa
   attacker.turnFlags['mastery-cleave-used'] = true;
 
   const adv = hasAdvantage(state, attacker, cleaveTarget, action);
-  const dis = hasDisadvantage(attacker, cleaveTarget, action);
+  const dis = hasDisadvantage(attacker, cleaveTarget, action, state);
   const { roll, naturalRoll } = rollAttack(action.attackBonus, adv && !dis, dis && !adv);
   const buffBonus = rollAttackBuffBonus(attacker);
   if (buffBonus !== 0) {
@@ -3908,6 +3909,7 @@ export function createPersistentZone(state: BattleState, caster: Creature, actio
     skipActionsOnFailedSave: config.skipActionsOnFailedSave,
     obscuresSight: config.obscuresSight,
     silences: config.silences,
+    rangedWeaponAttacksDisadvantage: config.rangedWeaponAttacksDisadvantage,
     requiresConcentration: action.concentration === true,
   });
 }
@@ -4142,7 +4144,7 @@ function resolveAttack(
     && (target.monsterData.heroLevel ?? 0) >= 7
     && (!target.monsterData.heroSubclass || target.monsterData.heroSubclass === 'Hunter');
   const hiddenTarget = target.activeBuffs?.some(buff => buff.key === `hidden-from:${attacker.id}`) ?? false;
-  const dis = hasDisadvantage(attacker, target, action) || rangedDisadvantage || escapeTheHordeDisadvantage || hiddenTarget;
+  const dis = hasDisadvantage(attacker, target, action, state) || rangedDisadvantage || escapeTheHordeDisadvantage || hiddenTarget;
 
   // Check displacement
   const hasDisplacement = hasActiveTrait(target, 'Displacement');

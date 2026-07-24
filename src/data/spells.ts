@@ -454,6 +454,15 @@ export function compelledDuel(ability: SpellcastingAbility, mod: number, pb: num
   };
 }
 
+export function wardingWind(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Warding Wind', type: 'special', spellLevel: 2, spellSchool: 'evocation', castingAbility: ability,
+    description: 'A 10-foot aura of wind surrounds you for up to 10 minutes. Ranged weapon attacks through the aura have Disadvantage and the area is Difficult Terrain.',
+    concentration: true, durationRounds: 100, targetScope: 'self',
+    persistentZone: { radiusFt: 10, durationRounds: 100, triggers: [], difficultTerrain: true, rangedWeaponAttacksDisadvantage: true },
+  };
+}
+
 export function lightningArrow(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
   const dc = saveDC(mod, pb);
   return {
@@ -2135,7 +2144,7 @@ export function wallOfFire(ability: SpellcastingAbility, mod: number, pb: number
 
 type SpellFactory = (ability: SpellcastingAbility, mod: number, pb: number) => MonsterAction;
 const SPELL_FACTORIES: [string, SpellFactory][] = [
-  ['Magic Missile', () => magicMissile()], ['Lightning Arrow', lightningArrow], ['Silence', silence], ['Compelled Duel', compelledDuel],
+  ['Magic Missile', () => magicMissile()], ['Lightning Arrow', lightningArrow], ['Silence', silence], ['Compelled Duel', compelledDuel], ['Warding Wind', wardingWind],
   ['Blade Ward', bladeWard], ['Resistance', resistance], ['Shillelagh', shillelagh], ['Sorcerous Burst', sorcerousBurst], ['Poison Spray', poisonSpray], ['Produce Flame', produceFlame], ['Thorn Whip', thornWhip], ['Acid Splash', acidSplash], ['Starry Wisp', starryWisp], ['Thunderclap', thunderclap], ['Toll the Dead', tollTheDead], ['True Strike', trueStrike],
   ['Shield', shield], ['Hail of Thorns', hailOfThorns],
   ['Hellish Rebuke', hellishRebuke],
