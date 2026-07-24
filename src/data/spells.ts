@@ -549,11 +549,11 @@ export function armsOfHadar(ability: SpellcastingAbility, mod: number, pb: numbe
   };
 }
 
-export function colorSpray(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+export function colorSpray(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
   return {
     name: 'Color Spray', type: 'special', spellLevel: 1, spellSchool: 'illusion', castingAbility: ability,
-    description: '15-foot cone. Roll 6d10; creatures in ascending current HP become Blinded until the end of your next turn.',
-    savingThrow: { ability: 'con', dc: 0, hpPoolDice: '6d10', conditionOnFail: 'blinded', conditionDuration: 'end_of_next_turn', area: '15-foot cone' }, targetScope: 'area_enemies',
+    description: 'Each creature in a 15-foot cone must make a Constitution save or be Blinded until the end of your next turn.',
+    savingThrow: { ability: 'con', dc: saveDC(mod, pb), conditionOnFail: 'blinded', conditionDuration: 'end_of_next_turn', area: '15-foot cone' }, targetScope: 'area_enemies',
   };
 }
 

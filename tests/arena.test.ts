@@ -1888,6 +1888,12 @@ describe('Kaggle arena bridge', () => {
     expect(spells).not.toEqual(expect.arrayContaining(['Moonbeam', 'Spiritual Weapon']));
   });
 
+  it('offers Color Spray only to its SRD caster classes', () => {
+    for (const heroClass of ['Bard', 'Sorcerer', 'Wizard'] as const) expect(getAvailableSpells(heroClass, 5).some(action => action.name === 'Color Spray')).toBe(true);
+    expect(getAvailableSpells('Warlock', 5).some(action => action.name === 'Color Spray')).toBe(false);
+    expect(buildSpellAction('Color Spray', 'cha', 3, 3)).toMatchObject({ savingThrow: { ability: 'con', dc: 14, conditionOnFail: 'blinded', conditionDuration: 'end_of_next_turn', area: '15-foot cone' } });
+  });
+
   it('offers and resolves supported resource actions without trusting client parameters', () => {
     const encounter = new Encounter({ seed: 1 });
     const [fighter] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'red', position: { x: 0, y: 0 } });
