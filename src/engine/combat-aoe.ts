@@ -177,6 +177,7 @@ function applySaveBuff(state: BattleState, attacker: Creature, target: Creature,
     saveEnds: tmpl.saveEnds,
     appliedCondition: tmpl.appliedCondition,
     appliedConditions: tmpl.appliedConditions,
+    endsOnDamage: tmpl.endsOnDamage,
   });
   pushLog(state, {
     round: state.round, turn: state.turnIndex,

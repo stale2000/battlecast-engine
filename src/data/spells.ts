@@ -804,7 +804,7 @@ export function hypnoticPattern(ability: SpellcastingAbility, mod: number, pb: n
       area: '30-foot sphere',
     },
     targetScope: 'area_enemies',
-    buffOnFailedSave: { name: 'Hypnotic Pattern', key: 'hypnotic-pattern', requiresConcentration: true, appliedConditions: ['incapacitated'], saveEnds: { ability: 'wis', dc: saveDC(mod, pb), at: 'targetTurnEnd' } },
+    buffOnFailedSave: { name: 'Hypnotic Pattern', key: 'hypnotic-pattern', requiresConcentration: true, appliedConditions: ['incapacitated'], endsOnDamage: true },
   };
 }
 

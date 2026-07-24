@@ -519,6 +519,7 @@ export function applyBuffFromSpell(
     endsOnWeaponHit: tmpl.endsOnWeaponHit,
     appliedCondition: tmpl.appliedCondition,
     appliedConditions: tmpl.appliedConditions,
+    endsOnDamage: tmpl.endsOnDamage,
     temporaryHpAtTurnStart: tmpl.temporaryHpAtTurnStart,
     conditionImmunities: tmpl.conditionImmunities,
     saveEnds: tmpl.saveEnds,

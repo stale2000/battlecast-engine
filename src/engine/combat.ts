@@ -3145,6 +3145,16 @@ function applyDamage(state: BattleState, target: Creature, damage: number, damag
   processHydraDamage(state, target, damage, damageType, attacker);
   if (!target.isAlive) return damage;
 
+  for (const buff of [...(target.activeBuffs ?? [])]) {
+    if (!buff.endsOnDamage) continue;
+    target.activeBuffs = target.activeBuffs.filter(candidate => candidate !== buff);
+    for (const condition of buff.appliedConditions ?? (buff.appliedCondition ? [buff.appliedCondition] : [])) {
+      target.conditionTimers = target.conditionTimers.filter(timer => !(timer.condition === condition && timer.sourceId === buff.casterId));
+      if (!target.conditionTimers.some(timer => timer.condition === condition)) target.conditions = target.conditions.filter(candidate => candidate !== condition);
+    }
+    pushLog(state, { round: state.round, turn: state.turnIndex, actor: target.displayName, action: buff.name, details: `${target.displayName} takes damage and ends ${buff.name}.`, type: 'condition' });
+  }
+
   // Concentration check: a caster taking damage makes a CON save at
   // DC = max(10, floor(damage / 2)). Fail drops every concentration
   // buff they placed on anyone (their buffs typically live on
