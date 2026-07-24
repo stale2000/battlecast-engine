@@ -364,6 +364,8 @@ export interface MonsterAction {
   damageResistanceChoice?: { choices: string[]; selected?: string };
   /** Chooses one server-validated damage type for a spell effect. */
   damageTypeChoice?: { choices: string[]; selected?: string };
+  /** Chooses a server-validated combat effect for Bestow Curse. */
+  curseChoice?: { choices: Array<'attack_disadvantage' | 'damage_rider'>; selected?: 'attack_disadvantage' | 'damage_rider' };
   /** Ends one selected spell effect on a target. The selected key is server-owned. */
   dispelMagic?: { maxSpellLevel: number; selectedKey?: string };
   /** Failed targets use their Reaction to flee directly away, provoking opportunity attacks. */

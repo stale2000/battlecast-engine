@@ -296,6 +296,14 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
           }
           continue;
         }
+        if (action.curseChoice) {
+          for (const target of spellTargets(active, state, action)) {
+            for (const curseChoice of action.curseChoice.choices) {
+              actions.push({ id: `spell:${actionIndex}:${slug(action.name)}:${target.id}:${curseChoice}`, type: 'spell', actionName: action.name, actionIndex, targetId: target.id, curseChoice });
+            }
+          }
+          continue;
+        }
         for (const target of spellTargets(active, state, action)) {
           actions.push({ id: `spell:${actionIndex}:${slug(action.name)}:${target.id}`, type: 'spell', actionName: action.name, actionIndex, targetId: target.id });
         }
@@ -475,6 +483,8 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
             ? { ...baseSpell, damageResistanceChoice: { ...baseSpell.damageResistanceChoice, selected: legal.damageResistance }, buff: { ...baseSpell.buff, resistDamageTypes: [legal.damageResistance] } }
             : baseSpell && legal.damageType && baseSpell.damageTypeChoice
               ? { ...baseSpell, damageTypeChoice: { ...baseSpell.damageTypeChoice, selected: legal.damageType }, damageType: legal.damageType }
+              : baseSpell && legal.curseChoice && baseSpell.curseChoice && baseSpell.buffOnFailedSave
+                ? { ...baseSpell, curseChoice: { ...baseSpell.curseChoice, selected: legal.curseChoice }, buffOnFailedSave: { ...baseSpell.buffOnFailedSave, attackDisadvantage: legal.curseChoice === 'attack_disadvantage' ? true : undefined, damageRider: legal.curseChoice === 'damage_rider' ? '1d8 necrotic' : undefined } }
           : baseSpell;
       if (!spell || spell.name !== legal.actionName || !isSpellAction(spell)) throw new EncounterError(`Stale arena spell "${legal.id}".`);
       if (!target || !executeSpell(state, active, spell, target, spell.autoDarts || spell.multiTargetAttack || spell.multiTargetSave || spell.multiTargetBuff || spell.savingThrow?.area ? targets : undefined, legal.center)) throw new EncounterError(`Illegal or stale arena spell "${legal.id}".`);

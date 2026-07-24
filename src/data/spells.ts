@@ -701,9 +701,10 @@ export function revivify(ability: SpellcastingAbility, _mod: number, _pb: number
 export function bestowCurse(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
   return {
     name: 'Bestow Curse', type: 'special', spellLevel: 3, spellSchool: 'necromancy', castingAbility: ability, concentration: true, durationRounds: 10,
-    description: `One creature within 30 ft. WIS save DC ${saveDC(mod, pb)} or has Disadvantage on attack rolls; repeats the save at the end of each turn.`,
+    description: `One creature within 30 ft. WIS save DC ${saveDC(mod, pb)} or suffers the chosen combat curse for 1 minute; repeats the save at the end of each turn.`,
     savingThrow: { ability: 'wis', dc: saveDC(mod, pb) }, range: { normal: 30, long: 30 }, targetScope: 'one_enemy',
     buffOnFailedSave: { name: 'Bestow Curse', key: 'bestow-curse', requiresConcentration: true, attackDisadvantage: true, saveEnds: { ability: 'wis', dc: saveDC(mod, pb), at: 'targetTurnEnd' } },
+    curseChoice: { choices: ['attack_disadvantage', 'damage_rider'], selected: 'attack_disadvantage' },
   };
 }
 

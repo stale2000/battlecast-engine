@@ -13,7 +13,7 @@ import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
-import { bane, barkskin, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, dissonantWhispers, dispelMagic, fly, haste, hellishRebuke, heroism, invisibility, lesserRestoration, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, resistance, revivify, scorchingRay, shield, shiningSmite, spiritualWeapon, web, witchBolt } from '../src/data/spells.js';
+import { bane, barkskin, bestowCurse, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, dissonantWhispers, dispelMagic, fly, haste, hellishRebuke, heroism, invisibility, lesserRestoration, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, resistance, revivify, scorchingRay, shield, shiningSmite, spiritualWeapon, web, witchBolt } from '../src/data/spells.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
@@ -434,6 +434,21 @@ describe('Kaggle arena bridge', () => {
     withRng({ next: () => 0.5 }, () => resolveAttack(encounter.state!, attacker, target, attack));
     expect(target.currentHp).toBe(hp);
     expect(target.activeBuffs.find(buff => buff.key === 'mirror-image')?.mirrorImages).toBe(2);
+  });
+
+  it('binds Bestow Curse to the server-generated combat curse', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [bestowCurse('int', 3, 3)], additionalResources: { 'slot-3': 1 } } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 2, y: 0 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    const target = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
+    target.monsterData = { ...target.monsterData, abilities: { ...target.monsterData.abilities, wis: 1 } };
+    encounter.state!.initiativeOrder = [caster.id];
+    startArena(encounter);
+    const action = getLegalActions(encounter, caster.id).find(choice => choice.type === 'spell' && choice.actionName === 'Bestow Curse' && choice.curseChoice === 'damage_rider')!;
+    applyLegalAction(encounter, action);
+    expect(target.activeBuffs.find(buff => buff.key === 'bestow-curse')?.damageRider).toBe('1d8 necrotic');
   });
 
   it('repeats Call Lightning from authoritative concentration state without another slot', () => {
