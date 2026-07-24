@@ -46,7 +46,7 @@ import {
   BattleState, creatureDistance, distance,
   getEnemies, getAllies,
   executeSpell, hasBuff, hasResource, addBuff,
-  tryUseBonusActionDamageBuff,
+  tryUseBonusActionDamageBuff, useSpiritualWeaponAttack,
   isInCone, isInLine, bestDirectionalTargets,
   pushLog, getEffectiveMoveSpeed,
 } from './combat.js';
@@ -510,6 +510,19 @@ export function trySpellcast(state: BattleState, creature: Creature, beforeOffen
   // the creature can still attack/cast a main-action spell this turn.
   if (!creature.bonusActionUsed) {
     tryUseBonusActionDamageBuff(state, creature);
+  }
+
+  // Spiritual Weapon is already an authoritative persistent engine object.
+  // Reuse its validated resolver before considering new bonus-action casts so
+  // AI-controlled Clerics do not leave a live weapon idle for its full duration.
+  if (!creature.bonusActionUsed && creature.spiritualWeapon) {
+    const target = enemies
+      .filter(enemy => Math.max(
+        Math.abs(enemy.position.x - creature.spiritualWeapon!.position.x),
+        Math.abs(enemy.position.y - creature.spiritualWeapon!.position.y),
+      ) * 5 <= creature.spiritualWeapon!.moveFt + 5)
+      .sort((a, b) => a.currentHp - b.currentHp)[0];
+    if (target) useSpiritualWeaponAttack(state, creature, target);
   }
 
   if (!creature.bonusActionUsed) {

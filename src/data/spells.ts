@@ -1475,7 +1475,8 @@ export function dispelMagic(_ability: SpellcastingAbility, _mod: number, _pb: nu
     type: 'special',
     description: 'End one spell or buff on a creature within 120 ft. Automatically ends spells of 3rd level or lower.',
     spellLevel: 3,
-    targetScope: 'one_enemy',
+    dispelMagic: { maxSpellLevel: 3 },
+    targetScope: 'any_one',
     range: { normal: 120, long: 120 },
   };
 }

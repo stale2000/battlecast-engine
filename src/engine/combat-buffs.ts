@@ -266,6 +266,15 @@ export function removeBuff(creature: Creature, key: string): void {
   creature.activeBuffs = creature.activeBuffs.filter(b => b.key !== key);
 }
 
+/** End one spell effect without disturbing unrelated effects from its caster. */
+export function removeActiveBuff(state: BattleState, creature: Creature, buff: ActiveBuff): boolean {
+  if (!creature.activeBuffs.includes(buff)) return false;
+  creature.activeBuffs = creature.activeBuffs.filter(candidate => candidate !== buff);
+  clearBuffCondition(creature, buff);
+  clearConcentrationIfNoEffect(state, buff.casterId);
+  return true;
+}
+
 /**
  * Remove every buff sourced by the given caster that requires that caster's
  * concentration. Called when the caster loses concentration (fails a CON
@@ -299,12 +308,17 @@ export function dropConcentratedBuffsFrom(
       c.concentrationAura = undefined;
     }
   }
+  clearConcentrationIfNoEffect(state, casterId);
+  revealVisibleHiddenCreatures(state);
+}
+
+function clearConcentrationIfNoEffect(state: BattleState, casterId: string): void {
+  const caster = state.creatures.find(c => c.id === casterId);
   const stillConcentrating = state.creatures.some(creature =>
     creature.activeBuffs?.some(buff => buff.requiresConcentration && buff.casterId === casterId)
   ) || state.darknessZones?.some(zone => zone.requiresConcentration && zone.sourceId === casterId)
     || caster?.repeatableAreaSpell !== undefined;
   if (caster?.concentratingOn && !stillConcentrating) caster.concentratingOn = undefined;
-  revealVisibleHiddenCreatures(state);
 }
 
 function clearBuffCondition(creature: Creature, buff: ActiveBuff): void {

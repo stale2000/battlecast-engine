@@ -129,6 +129,23 @@ describe('Healing Word is bonus action', () => {
   });
 });
 
+describe('Spiritual Weapon bonus action', () => {
+  it('uses an existing Spiritual Weapon before its main-action spell choice', () => {
+    const cleric = createCreatureWithFixedHp(buildHero('Cleric', 5), 'blue', { x: 8, y: 10 }, 0);
+    const goblin = createCreatureWithFixedHp(md('Goblin Warrior'), 'red', { x: 10, y: 10 }, 0);
+    cleric.spiritualWeapon = {
+      position: { x: 9, y: 10 }, endRound: 10, moveFt: 20,
+      attackBonus: 6, damage: '1d8+3', damageType: 'force',
+    };
+    const state = initBattle([goblin, cleric], 20);
+
+    trySpellcast(state, cleric);
+
+    expect(cleric.bonusActionUsed).toBe(true);
+    expect(state.logs.some(log => log.action === 'Spiritual Weapon')).toBe(true);
+  });
+});
+
 describe('bonus action does not fire twice', () => {
   it('Rage is cast at most once per battle', () => {
     const barb = buildHero('Barbarian', 5);

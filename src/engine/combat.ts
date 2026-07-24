@@ -4476,7 +4476,7 @@ export {
   rollSaveWithBuffs, applyBuffDamageResistance, applyDamageRollPenalty,
   hasResource, consumeResource, restoreResource,
   lowestAvailableSlot, highestAvailableSlot,
-  hasBuff, getBuff, addBuff, removeBuff,
+  hasBuff, getBuff, addBuff, removeBuff, removeActiveBuff,
   dropConcentratedBuffsFrom, expireBuffsForCreature, expireSourceTurnBuffs, resetTurnFlags,
   attachConcentrationAura, processConcentrationAuras, checkAuraEntry, moveConcentrationAura,
 } from './combat-buffs.js';

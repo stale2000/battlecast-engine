@@ -27,7 +27,7 @@ import { rollDice, abilityModifier, maxDiceTotal } from './dice.js';
 import { creatureDistance, getFootprintSize, isPositionBlocked } from './combat-geometry.js';
 import { canSeePoint } from './visibility.js';
 import {
-  addBuff, dropConcentratedBuffsFrom,
+  addBuff, dropConcentratedBuffsFrom, removeActiveBuff,
   hasResource, consumeResource,
   attachConcentrationAura, rollSaveWithBuffs, getSpellSaveDcBonus, applyDamageRollPenalty,
 } from './combat-buffs.js';
@@ -479,6 +479,7 @@ export function applyBuffFromSpell(
     name: tmpl.name, key: tmpl.key, casterId: caster.id,
     appliedRound: state.round, endRound,
     requiresConcentration: tmpl.requiresConcentration,
+    spellLevel: action.spellLevel,
     attackBonus: tmpl.attackBonus,
     attackBonusDice: tmpl.attackBonusDice,
     saveBonusDice: tmpl.saveBonusDice,
@@ -854,6 +855,19 @@ export function executeSpell(
     caster.position = { ...aoeCenter };
     state.events.push({ kind: 'move', creatureId: caster.id, from, to: { ...aoeCenter }, durationMs: 0 });
     pushLog(state, { round: state.round, turn: state.turnIndex, actor: caster.displayName, action: castAction.name, details: `${caster.displayName} teleports to (${aoeCenter.x}, ${aoeCenter.y}).`, type: 'move' });
+    return true;
+  }
+
+  if (castAction.dispelMagic && primaryTarget) {
+    const effect = primaryTarget.activeBuffs
+      .filter(buff => buff.spellLevel !== undefined && buff.spellLevel <= castAction.dispelMagic!.maxSpellLevel)
+      .find(buff => buff.key === castAction.dispelMagic!.selectedKey);
+    if (!effect || !removeActiveBuff(state, primaryTarget, effect)) return false;
+    pushLog(state, {
+      round: state.round, turn: state.turnIndex, actor: caster.displayName,
+      action: castAction.name,
+      details: `${caster.displayName} dispels ${effect.name} on ${primaryTarget.displayName}.`, type: 'special',
+    });
     return true;
   }
 

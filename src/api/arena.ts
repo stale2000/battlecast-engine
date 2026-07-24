@@ -105,6 +105,9 @@ function spellTargets(active: Creature, state: NonNullable<Encounter['state']>, 
   if (action.targetScope === 'one_ally' || action.heal || action.layOnHands || action.removesConditions || action.grantsFlight) {
     return living.filter(c => c.team === active.team && inRange(c) && !((action.requiresNoHeavyArmor ?? false) && c.monsterData.wearingHeavyArmor) && (action.heal || action.layOnHands ? c.currentHp < c.maxHp || c.dying : action.removesConditions && !action.buff ? action.removesConditions.some(condition => c.conditions.includes(condition)) : true));
   }
+  if (action.targetScope === 'any_one') {
+    return living.filter(target => inRange(target) && (!action.range || canSee(state, active, target)));
+  }
   return living.filter(c => c.team !== active.team && attackInRange(active, c, action) && (!action.range || canSee(state, active, c)));
 }
 
@@ -239,6 +242,16 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
         }
         if (action.savingThrow?.area) {
           actions.push(...areaSpellActions(state, active, action, actionIndex));
+          continue;
+        }
+        if (action.dispelMagic) {
+          for (const target of spellTargets(active, state, action)) {
+            for (const effect of target.activeBuffs
+              .filter(buff => buff.spellLevel !== undefined && buff.spellLevel <= action.dispelMagic!.maxSpellLevel)
+              .sort((left, right) => left.key.localeCompare(right.key))) {
+              actions.push({ id: `spell:${actionIndex}:${slug(action.name)}:${target.id}:${slug(effect.key)}`, type: 'spell', actionName: action.name, actionIndex, targetId: target.id, effectKey: effect.key });
+            }
+          }
           continue;
         }
         for (const target of spellTargets(active, state, action)) {
@@ -405,7 +418,9 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       const baseSpell = getActiveActions(active)[legal.actionIndex];
       const spell = baseSpell && legal.areaShape
         ? { ...baseSpell, savingThrow: { ...baseSpell.savingThrow!, area: legal.areaShape } }
-        : baseSpell;
+        : baseSpell && legal.effectKey && baseSpell.dispelMagic
+          ? { ...baseSpell, dispelMagic: { ...baseSpell.dispelMagic, selectedKey: legal.effectKey } }
+          : baseSpell;
       if (!spell || spell.name !== legal.actionName || !isSpellAction(spell)) throw new EncounterError(`Stale arena spell "${legal.id}".`);
       if (!target || !executeSpell(state, active, spell, target, spell.autoDarts || spell.savingThrow?.area ? targets : undefined, legal.center)) throw new EncounterError(`Illegal or stale arena spell "${legal.id}".`);
       if (spell.isBonusAction) active.bonusActionUsed = true;

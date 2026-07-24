@@ -13,7 +13,7 @@ import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
-import { barkskin, bladeWard, blindingSmite, callLightning, dissonantWhispers, fly, hellishRebuke, heroism, lesserRestoration, magicWeapon, mistyStep, moonbeam, resistance, shield, shiningSmite, spiritualWeapon, web, witchBolt } from '../src/data/spells.js';
+import { barkskin, bladeWard, bless, blindingSmite, callLightning, dissonantWhispers, dispelMagic, fly, hellishRebuke, heroism, lesserRestoration, magicWeapon, mistyStep, moonbeam, resistance, shield, shiningSmite, spiritualWeapon, web, witchBolt } from '../src/data/spells.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
@@ -262,6 +262,23 @@ describe('Kaggle arena bridge', () => {
     dropConcentratedBuffsFrom(encounter.state!, caster.id);
     expect(target.conditions).not.toContain('restrained');
     expect(target.activeBuffs.some(buff => buff.key === 'web')).toBe(false);
+  });
+
+  it('offers only server-owned Dispel Magic targets and removes the selected effect', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [dispelMagic('int', 3, 3)], additionalResources: { 'slot-3': 1 } } });
+    encounter.addCreature({ heroClass: 'Cleric', heroLevel: 5, team: 'blue', position: { x: 2, y: 0 }, heroOverrides: { additionalActions: [bless()], additionalResources: { 'slot-1': 1 } } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    const target = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
+    expect(executeSpell(encounter.state!, target, bless(), target)).toBe(true);
+    expect(target.activeBuffs.some(buff => buff.key === 'bless' && buff.spellLevel === 1)).toBe(true);
+    encounter.state!.initiativeOrder = [caster.id];
+    startArena(encounter);
+    const action = getLegalActions(encounter, caster.id).find(choice => choice.type === 'spell' && choice.actionName === 'Dispel Magic')!;
+    expect(action).toMatchObject({ targetId: target.id, effectKey: 'bless' });
+    applyLegalAction(encounter, action);
+    expect(target.activeBuffs.some(buff => buff.key === 'bless')).toBe(false);
   });
 
   it('repeats Call Lightning from authoritative concentration state without another slot', () => {

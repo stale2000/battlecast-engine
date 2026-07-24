@@ -352,6 +352,8 @@ export interface MonsterAction {
   darkness?: { radius: number; durationRounds: number; requiresConcentration?: boolean };
   /** Server-validated teleport destination, used by spells such as Misty Step. */
   teleport?: { distanceFt: number };
+  /** Ends one selected spell effect on a target. The selected key is server-owned. */
+  dispelMagic?: { maxSpellLevel: number; selectedKey?: string };
   /** Failed targets use their Reaction to flee directly away, provoking opportunity attacks. */
   fleeOnFailedSave?: boolean;
   /** Creates a persistent spiritual weapon that can make later bonus-action attacks. */
@@ -779,6 +781,8 @@ export interface ActiveBuff {
   endRound: number;
   /** True if this buff is held up by the caster's concentration slot. */
   requiresConcentration?: boolean;
+  /** Slot level of the spell that created this effect, for Dispel Magic. */
+  spellLevel?: number;
   /**
    * Dice/flat bonus added to THIS creature's attack rolls. "1d4" for Bless,
    * "-1d4" for Bane.
