@@ -1689,7 +1689,7 @@ function buildOptionalSpells(
       pool.push(blindnessDeafness(spellAbility, mod, pb), blur(spellAbility, mod, pb), cloudOfDaggers(spellAbility, mod, pb), darkness(spellAbility, mod, pb), enlargeReduce(spellAbility, mod, pb), flamingSphere(spellAbility, mod, pb), invisibility(spellAbility, mod, pb), magicWeapon(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb), rayOfEnfeeblement(spellAbility, mod, pb), seeInvisibility(spellAbility, mod, pb));
       pool.push(acidArrow(spellAbility, mod, pb), summonFey(spellAbility, mod, pb), summonUndead(spellAbility, mod, pb), animateDead(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb), wardingWind(spellAbility, mod, pb));
       pool.push(mistyStep(spellAbility, mod, pb));
-      pool.push(dispelMagic(spellAbility, mod, pb), haste(spellAbility, mod, pb), slow(spellAbility, mod, pb), stinkingCloud(spellAbility, mod, pb), vampiricTouch(spellAbility, mod, pb));
+      pool.push(dispelMagic(spellAbility, mod, pb), haste(spellAbility, mod, pb), hypnoticPattern(spellAbility, mod, pb), slow(spellAbility, mod, pb), stinkingCloud(spellAbility, mod, pb), vampiricTouch(spellAbility, mod, pb));
       pool.push(counterspell(spellAbility, mod, pb));
       pool.push(bestowCurse(spellAbility, mod, pb), fear(spellAbility, mod, pb), fly(spellAbility, mod, pb));
       pool.push(wallOfFire(spellAbility, mod, pb));
@@ -1703,7 +1703,7 @@ function buildOptionalSpells(
       pool.push(blindnessDeafness(spellAbility, mod, pb), blur(spellAbility, mod, pb), darkness(spellAbility, mod, pb), enlargeReduce(spellAbility, mod, pb), flamingSphere(spellAbility, mod, pb), invisibility(spellAbility, mod, pb), magicWeapon(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb), seeInvisibility(spellAbility, mod, pb));
       pool.push(gustOfWind(spellAbility, mod, pb), web(spellAbility, mod, pb), wardingWind(spellAbility, mod, pb));
       pool.push(mistyStep(spellAbility, mod, pb));
-      pool.push(dispelMagic(spellAbility, mod, pb), haste(spellAbility, mod, pb), slow(spellAbility, mod, pb), stinkingCloud(spellAbility, mod, pb), vampiricTouch(spellAbility, mod, pb));
+      pool.push(dispelMagic(spellAbility, mod, pb), haste(spellAbility, mod, pb), hypnoticPattern(spellAbility, mod, pb), slow(spellAbility, mod, pb), stinkingCloud(spellAbility, mod, pb), vampiricTouch(spellAbility, mod, pb));
       pool.push(counterspell(spellAbility, mod, pb));
       pool.push(fear(spellAbility, mod, pb), fly(spellAbility, mod, pb));
       pool.push(wallOfFire(spellAbility, mod, pb));
@@ -2601,7 +2601,7 @@ export function getAvailableSpells(
       optional.push(blindnessDeafness(spellAbility, mod, pb), blur(spellAbility, mod, pb), cloudOfDaggers(spellAbility, mod, pb), darkness(spellAbility, mod, pb), enlargeReduce(spellAbility, mod, pb), magicWeapon(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb), rayOfEnfeeblement(spellAbility, mod, pb));
       optional.push(acidArrow(spellAbility, mod, pb), summonFey(spellAbility, mod, pb), summonUndead(spellAbility, mod, pb), animateDead(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb), wardingWind(spellAbility, mod, pb));
       optional.push(mistyStep(spellAbility, mod, pb));
-      optional.push(dispelMagic(spellAbility, mod, pb), haste(spellAbility, mod, pb), slow(spellAbility, mod, pb));
+      optional.push(dispelMagic(spellAbility, mod, pb), haste(spellAbility, mod, pb), hypnoticPattern(spellAbility, mod, pb), slow(spellAbility, mod, pb));
       optional.push(stinkingCloud(spellAbility, mod, pb));
       optional.push(vampiricTouch(spellAbility, mod, pb));
       optional.push(counterspell(spellAbility, mod, pb));
@@ -2616,7 +2616,7 @@ export function getAvailableSpells(
       optional.push(blindnessDeafness(spellAbility, mod, pb), blur(spellAbility, mod, pb), darkness(spellAbility, mod, pb), enlargeReduce(spellAbility, mod, pb), magicWeapon(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb));
       optional.push(gustOfWind(spellAbility, mod, pb), web(spellAbility, mod, pb), wardingWind(spellAbility, mod, pb));
       optional.push(mistyStep(spellAbility, mod, pb));
-      optional.push(dispelMagic(spellAbility, mod, pb), haste(spellAbility, mod, pb), slow(spellAbility, mod, pb));
+      optional.push(dispelMagic(spellAbility, mod, pb), haste(spellAbility, mod, pb), hypnoticPattern(spellAbility, mod, pb), slow(spellAbility, mod, pb));
       optional.push(stinkingCloud(spellAbility, mod, pb));
       optional.push(vampiricTouch(spellAbility, mod, pb));
       optional.push(counterspell(spellAbility, mod, pb));
