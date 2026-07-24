@@ -1730,6 +1730,7 @@ function buildOptionalSpells(
       break;
     case 'Bard':
       pool.push(starryWisp(spellAbility, mod, pb), thunderclap(spellAbility, mod, pb));
+      pool.push(thunderwave(spellAbility, mod, pb));
       pool.push(colorSpray(spellAbility, mod, pb), sleep(spellAbility, mod, pb));
       pool.push(heroism(spellAbility, mod, pb), longstrider(spellAbility, mod, pb));
       pool.push(faerieFire(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
@@ -2640,6 +2641,7 @@ export function getAvailableSpells(
       break;
     case 'Bard':
       optional.push(starryWisp(spellAbility, mod, pb), thunderclap(spellAbility, mod, pb));
+      optional.push(thunderwave(spellAbility, mod, pb));
       optional.push(colorSpray(spellAbility, mod, pb), sleep(spellAbility, mod, pb));
       optional.push(heroism(spellAbility, mod, pb), longstrider(spellAbility, mod, pb));
       optional.push(faerieFire(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
