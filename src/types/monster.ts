@@ -497,7 +497,7 @@ export interface BuffTemplate {
   /** Condition-specific saving throw Advantage, such as Protection from Poison. */
   saveAdvantageConditions?: Condition[];
   /** Repeat this save at the specified point and remove the buff on success. */
-  saveEnds?: { ability: keyof Abilities; dc: number; at: 'targetTurnEnd' };
+  saveEnds?: { ability: keyof Abilities; dc: number; at: 'targetTurnEnd'; advantageOnDamage?: boolean };
 }
 
 export interface MonsterTrait {
@@ -923,7 +923,9 @@ export interface ActiveBuff {
   saveAdvantageAbilities?: Array<keyof Abilities>;
   saveAdvantageConditions?: Condition[];
   /** Repeat this save at the specified point and remove the buff on success. */
-  saveEnds?: { ability: keyof Abilities; dc: number; at: 'targetTurnEnd' };
+  saveEnds?: { ability: keyof Abilities; dc: number; at: 'targetTurnEnd'; advantageOnDamage?: boolean };
+  /** A damage-triggered advantage marker consumed by the next save-end roll. */
+  saveAdvantageOnNextSave?: boolean;
 }
 
 /** A serialized area of magical darkness on the combat grid. */

@@ -13,7 +13,7 @@ import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
-import { acidArrow, bane, barkskin, bestowCurse, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, cloudOfDaggers, command, dissonantWhispers, dispelMagic, flamingSphere, fly, haste, hellishRebuke, heroism, inflictWounds, invisibility, lesserRestoration, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, seeInvisibility, shield, shiningSmite, spiritualWeapon, web, witchBolt } from '../src/data/spells.js';
+import { acidArrow, bane, barkskin, bestowCurse, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, cloudOfDaggers, command, dissonantWhispers, dispelMagic, flamingSphere, fly, haste, hellishRebuke, heroism, inflictWounds, invisibility, lesserRestoration, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, seeInvisibility, shield, shiningSmite, spiritualWeapon, tashasHideousLaughter, web, witchBolt } from '../src/data/spells.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
@@ -517,6 +517,20 @@ describe('Kaggle arena bridge', () => {
     withRng({ next: () => 0 }, () => processTargetTurnEndOngoingEffects(encounter.state!, target));
     expect(target.currentHp).toBe(hp - 6);
     expect(target.ongoingEffects).toEqual([]);
+  });
+
+  it('gives Tasha\'s Hideous Laughter damage-triggered save advantage', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [tashasHideousLaughter('int', 3, 3)], additionalResources: { 'slot-1': 1 } } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 2, y: 0 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    const target = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
+    withRng({ next: () => 0 }, () => expect(executeSpell(encounter.state!, caster, tashasHideousLaughter('int', 3, 3), target)).toBe(true));
+    applyDamage(encounter.state!, target, 1, 'force', caster);
+    const rolls = [0, 0.99];
+    withRng({ next: () => rolls.shift()! }, () => processTargetTurnEndOngoingEffects(encounter.state!, target));
+    expect(target.activeBuffs.some(buff => buff.key === 'hideous-laughter')).toBe(false);
   });
 
   it('protects a target from attacks by the listed creature types', () => {

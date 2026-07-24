@@ -2491,7 +2491,8 @@ export function processTargetTurnEndOngoingEffects(state: BattleState, target: C
   if (!target.isAlive) return;
   for (const buff of [...(target.activeBuffs ?? [])]) {
     if (buff.saveEnds?.at !== 'targetTurnEnd') continue;
-    const save = rollSaveWithBuffs(target, getEffectiveSaveModifier(target, buff.saveEnds.ability, state), false, buff.saveEnds.dc, buff.saveEnds.ability);
+    const save = rollSaveWithBuffs(target, getEffectiveSaveModifier(target, buff.saveEnds.ability, state), buff.saveAdvantageOnNextSave === true, buff.saveEnds.dc, buff.saveEnds.ability);
+    buff.saveAdvantageOnNextSave = false;
     const passed = save.total >= buff.saveEnds.dc;
     state.events.push({ kind: 'save', targetId: target.id, success: passed, durationMs: BASE_DURATIONS.save });
     pushLog(state, {
@@ -3002,6 +3003,11 @@ function applyDamage(state: BattleState, target: Creature, damage: number, damag
   const resisted = resolveDamageResistance(state, target, damage, damageType, isMagical, attacker);
   if (resisted.immune) return 0;
   damage = resisted.damage;
+  if (damage > 0) {
+    for (const buff of target.activeBuffs ?? []) {
+      if (buff.saveEnds?.advantageOnDamage) buff.saveAdvantageOnNextSave = true;
+    }
+  }
 
   // Buff-sourced damage resistance (Rage halves bludgeoning/piercing/slashing).
   const postBuff = ignoresPhysicalResistance(attacker, damageType)

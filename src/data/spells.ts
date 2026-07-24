@@ -425,7 +425,7 @@ export function tashasHideousLaughter(ability: SpellcastingAbility, mod: number,
     name: "Tasha's Hideous Laughter", type: 'special', spellLevel: 1, spellSchool: 'enchantment', castingAbility: ability, concentration: true, durationRounds: 10,
     description: `One creature within 30 ft. WIS save DC ${saveDC(mod, pb)} or Prone and Incapacitated; repeat the save at end of each turn.`,
     savingThrow: { ability: 'wis', dc: saveDC(mod, pb), conditionOnFail: 'incapacitated', additionalConditionsOnFail: ['prone'], conditionDuration: '1_minute' }, range: { normal: 30, long: 30 }, targetScope: 'one_enemy',
-    buffOnFailedSave: { name: "Tasha's Hideous Laughter", key: 'hideous-laughter', requiresConcentration: true, appliedConditions: ['incapacitated', 'prone'], saveEnds: { ability: 'wis', dc: saveDC(mod, pb), at: 'targetTurnEnd' } },
+    buffOnFailedSave: { name: "Tasha's Hideous Laughter", key: 'hideous-laughter', requiresConcentration: true, appliedConditions: ['incapacitated', 'prone'], saveEnds: { ability: 'wis', dc: saveDC(mod, pb), at: 'targetTurnEnd', advantageOnDamage: true } },
   };
 }
 
