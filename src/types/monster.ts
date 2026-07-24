@@ -164,6 +164,8 @@ export interface MonsterAction {
     ability: keyof Abilities;
     dc: number;
     damageOnFail?: string;
+    /** Alternate failed-save damage when the target is below its hit-point maximum. */
+    damageOnFailIfTargetWounded?: string;
     damageOnSuccess?: string; // usually "half"
     /** Additional simultaneous damage parts for mixed-damage saves such as Meteor Swarm. */
     extraDamageOnFail?: Array<{ damage: string; damageType: string }>;

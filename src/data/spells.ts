@@ -96,6 +96,15 @@ export function thunderclap(ability: SpellcastingAbility, mod: number, pb: numbe
   };
 }
 
+export function tollTheDead(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Toll the Dead', type: 'special', spellLevel: 0, spellSchool: 'necromancy', castingAbility: ability,
+    description: `The target makes a Wisdom save (DC ${saveDC(mod, pb)}); it takes 2d12 necrotic damage if it is wounded, or 2d8 necrotic damage otherwise.`,
+    damageType: 'necrotic', targetScope: 'one_enemy', range: { normal: 60, long: 60 },
+    savingThrow: { ability: 'wis', dc: saveDC(mod, pb), damageOnFail: '2d8', damageOnFailIfTargetWounded: '2d12' },
+  };
+}
+
 export function magicMissile(): MonsterAction {
   return {
     name: 'Magic Missile',
@@ -1922,7 +1931,7 @@ export function wallOfFire(ability: SpellcastingAbility, mod: number, pb: number
 type SpellFactory = (ability: SpellcastingAbility, mod: number, pb: number) => MonsterAction;
 const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Magic Missile', () => magicMissile()],
-  ['Blade Ward', bladeWard], ['Resistance', resistance], ['Poison Spray', poisonSpray], ['Thorn Whip', thornWhip], ['Acid Splash', acidSplash], ['Starry Wisp', starryWisp], ['Thunderclap', thunderclap],
+  ['Blade Ward', bladeWard], ['Resistance', resistance], ['Poison Spray', poisonSpray], ['Thorn Whip', thornWhip], ['Acid Splash', acidSplash], ['Starry Wisp', starryWisp], ['Thunderclap', thunderclap], ['Toll the Dead', tollTheDead],
   ['Shield', shield],
   ['Hellish Rebuke', hellishRebuke],
   ['Burning Hands', burningHands], ['Thunderwave', thunderwave], ['Sleep', sleep],

@@ -296,7 +296,7 @@ export function resolveSingleTargetSave(
     logTotalCoverFromContainer(state, attacker, target, action.name);
     return;
   }
-  const { ability, damageOnFail, damageOnSuccess, conditionOnFail, additionalConditionsOnFail, conditionDuration } = action.savingThrow;
+  const { ability, damageOnFail, damageOnFailIfTargetWounded, damageOnSuccess, conditionOnFail, additionalConditionsOnFail, conditionDuration } = action.savingThrow;
   const dc = action.savingThrow.dc + getSpellSaveDcBonus(attacker, action);
 
   const visual = getSingleTargetVisual(action.name);
@@ -345,7 +345,8 @@ export function resolveSingleTargetSave(
 
   state.events.push({ kind: 'save', targetId: target.id, success: passed, durationMs: BASE_DURATIONS.save });
 
-  if (damageOnFail) {
+  const effectiveDamageOnFail = target.currentHp < target.maxHp ? (damageOnFailIfTargetWounded ?? damageOnFail) : damageOnFail;
+  if (effectiveDamageOnFail) {
     const dmgType = action.damageType || inferDamageType(action.description) || 'untyped';
     const immune = isImmuneToDamageType(target, dmgType);
     if (immune) {
@@ -360,7 +361,7 @@ export function resolveSingleTargetSave(
 
     let dmg: number;
     if (passed && damageOnSuccess === 'half') {
-      dmg = Math.floor(rollDice(damageOnFail).total / 2);
+      dmg = Math.floor(rollDice(effectiveDamageOnFail).total / 2);
       pushLog(state, {
         round: state.round, turn: state.turnIndex,
         actor: target.displayName, action: 'Save',
@@ -377,7 +378,7 @@ export function resolveSingleTargetSave(
       if (action.buffOnSuccessfulSave) applySaveBuff(state, attacker, target, action, action.buffOnSuccessfulSave);
       return;
     } else {
-      dmg = rollDice(damageOnFail).total;
+      dmg = rollDice(effectiveDamageOnFail).total;
       pushLog(state, {
         round: state.round, turn: state.turnIndex,
         actor: target.displayName, action: 'Failed Save',
@@ -416,7 +417,7 @@ export function resolveSingleTargetSave(
     for (const condition of additionalConditionsOnFail ?? []) applyCondition(state, target, condition, attacker, conditionDuration || 'end_of_next_turn', dc, ability);
   }
 
-  if (!passed && !damageOnFail) {
+  if (!passed && !effectiveDamageOnFail) {
     applyActionRuntimeEffects(state, attacker, target, action, emptyDamageSummary());
   }
 
@@ -524,7 +525,7 @@ export function resolveAoE(
 ): void {
   if (!action.savingThrow) return;
 
-  const { ability, damageOnFail, damageOnSuccess, area, hpPoolDice } = action.savingThrow;
+  const { ability, damageOnFail, damageOnFailIfTargetWounded, damageOnSuccess, area, hpPoolDice } = action.savingThrow;
   const automaticDamage = action.persistentAura?.automaticDamage === true;
   const dc = action.savingThrow.dc + getSpellSaveDcBonus(attacker, action);
 
@@ -629,10 +630,11 @@ export function resolveAoE(
 
     const visualTarget: AoEDamageTarget = { targetId: target.id, saveSuccess: passed };
 
-    if (damageOnFail) {
+    const effectiveDamageOnFail = target.currentHp < target.maxHp ? (damageOnFailIfTargetWounded ?? damageOnFail) : damageOnFail;
+    if (effectiveDamageOnFail) {
       const aoeDmgType = action.damageType || inferDamageType(action.description) || 'untyped';
       const damageParts = [
-        { damage: damageOnFail, damageType: aoeDmgType, primary: true },
+        { damage: effectiveDamageOnFail, damageType: aoeDmgType, primary: true },
         ...(action.savingThrow.extraDamageOnFail ?? []).map(part => ({ ...part, primary: false })),
       ];
 
@@ -755,7 +757,7 @@ export function resolveAoE(
       });
       aoeDamageTargets.push(visualTarget);
       continue;
-    } else if (!damageOnFail) {
+    } else if (!effectiveDamageOnFail) {
       pushLog(state, {
         round: state.round, turn: state.turnIndex,
         actor: target.displayName, action: 'Failed Save',
@@ -775,7 +777,7 @@ export function resolveAoE(
       followUpEvents.push(...state.events.splice(emittedStart));
     }
 
-    if (!passed && !damageOnFail) {
+    if (!passed && !effectiveDamageOnFail) {
       const emittedStart = state.events.length;
       applyActionRuntimeEffects(state, attacker, target, action, emptyDamageSummary());
       followUpEvents.push(...state.events.splice(emittedStart));
