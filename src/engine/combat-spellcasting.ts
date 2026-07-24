@@ -869,6 +869,7 @@ export function executeSpell(
    */
   aoeCenter?: { x: number; y: number },
 ): boolean {
+  if (action.targetTypeRestriction && (!primaryTarget || primaryTarget.monsterData.type.toLowerCase() !== action.targetTypeRestriction.toLowerCase())) return false;
   if (action.sizeChangeChoice) {
     const direction = action.sizeChangeChoice.selected;
     const current = primaryTarget?.temporarySize ?? primaryTarget?.monsterData.size;

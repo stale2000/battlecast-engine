@@ -14,6 +14,8 @@ describe('level-three summon spells', () => {
     }
     expect(buildCustomHero('Wizard', 5, { spells: ['Summon Fey', 'Summon Undead'] }).actions.map(action => action.name)).toEqual(expect.arrayContaining(['Summon Fey', 'Summon Undead']));
     expect(buildCustomHero('Warlock', 5, { spells: ['Summon Fey', 'Summon Undead'] }).actions.map(action => action.name)).toEqual(expect.arrayContaining(['Summon Fey', 'Summon Undead']));
+    const putrid = summonUndead('int', 3, 3).summon!.variants.find(variant => variant.key === 'putrid')!;
+    expect(putrid.monsterData.actions[0].conditionOnHit).toMatchObject({ condition: 'paralyzed', save: { ability: 'con', dc: 14 }, duration: 'end_of_next_turn' });
   });
 
   it('creates an owned spirit, inserts it after the caster, and dismisses it on concentration loss', () => {

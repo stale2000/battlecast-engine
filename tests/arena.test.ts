@@ -14,7 +14,7 @@ import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildCustomHero, buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
-import { acidArrow, armorOfAgathys, bane, barkskin, beaconOfHope, bestowCurse, bladeWard, bless, blindingSmite, brandingSmite, buildSpellAction, callLightning, chromaticOrb, cloudOfDaggers, command, conjureAnimals, counterspell, cureWounds, dissonantWhispers, dispelMagic, enlargeReduce, entangle, ensnaringStrike, expeditiousRetreat, findSteed, fireball, flamingSphere, fly, grease, gustOfWind, haste, hellishRebuke, heroism, hungerOfHadar, inflictWounds, invisibility, lesserRestoration, mageArmor, magicWeapon, massHealingWord, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, searingSmite, seeInvisibility, shield, shiningSmite, slow, spikeGrowth, spiritualWeapon, summonBeast, tashasHideousLaughter, thunderousSmite, web, witchBolt, wrathfulSmite } from '../src/data/spells.js';
+import { acidArrow, armorOfAgathys, bane, barkskin, beaconOfHope, bestowCurse, bladeWard, bless, blindingSmite, brandingSmite, buildSpellAction, callLightning, chromaticOrb, cloudOfDaggers, command, conjureAnimals, counterspell, cureWounds, dissonantWhispers, dispelMagic, enlargeReduce, entangle, ensnaringStrike, expeditiousRetreat, findSteed, fireball, flamingSphere, fly, grease, gustOfWind, haste, hellishRebuke, heroism, holdPerson, hungerOfHadar, inflictWounds, invisibility, lesserRestoration, mageArmor, magicWeapon, massHealingWord, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, searingSmite, seeInvisibility, shield, shiningSmite, slow, spikeGrowth, spiritualWeapon, summonBeast, tashasHideousLaughter, thunderousSmite, web, witchBolt, wrathfulSmite } from '../src/data/spells.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
@@ -89,6 +89,20 @@ describe('Kaggle arena bridge', () => {
     const flight = getLegalActions(encounter, cleric.id).find(action => action.type === 'spell' && action.actionName === 'Fly' && action.targetId === ally.id)!;
     applyLegalAction(encounter, flight);
     expect(ally.temporaryFlightSpeed).toBe(60);
+  });
+
+  it('enforces target type restrictions in generated and applied spell actions', () => {
+    const encounter = new Encounter({ seed: 3 });
+    const [caster] = encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [holdPerson('int', 3, 3)], additionalResources: { 'slot-2': 1 } } });
+    encounter.addCreature({ monster: 'Commoner', team: 'blue', position: { x: 2, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 2, y: 1 } });
+    encounter.start();
+    encounter.state!.initiativeOrder = [caster.id];
+    startArena(encounter);
+    const actions = getLegalActions(encounter, caster.id).filter(action => action.actionName === 'Hold Person');
+    expect(actions).toHaveLength(1);
+    expect(actions[0].targetId).toBe(encounter.state!.creatures.find(creature => creature.monsterData.name === 'Commoner')?.id);
+    expect(() => applyLegalAction(encounter, { ...actions[0], targetId: encounter.state!.creatures.find(creature => creature.monsterData.name === 'Ogre')!.id })).toThrow(/Illegal or stale/);
   });
 
   it('resolves Mass Healing Word through supported primitives', () => {
@@ -2110,7 +2124,7 @@ describe('Kaggle arena bridge', () => {
       const [hero] = encounter.addCreature({ heroClass, heroLevel: 5, heroOverrides: { spells }, team: 'red', position: { x: 0, y: 0 } });
       const [ally] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'red', position: { x: 1, y: 1 } });
       const [fallenAlly] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'red', position: { x: 0, y: 1 } });
-      encounter.addCreature({ monster: 'Goblin Warrior', team: 'blue', position: { x: 1, y: 0 } });
+      encounter.addCreature({ monster: 'Commoner', team: 'blue', position: { x: 1, y: 0 } });
       encounter.start();
       const state = encounter.state!;
       state.initiativeOrder = [hero.id];

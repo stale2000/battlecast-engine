@@ -149,7 +149,8 @@ function spellTargets(active: Creature, state: NonNullable<Encounter['state']>, 
   if (action.targetScope === 'self') return [active];
   const inRange = (target: Creature) => {
     const range = action.range?.normal;
-    return range === undefined || creatureDistance(active, target) <= range;
+    return (range === undefined || creatureDistance(active, target) <= range)
+      && (!action.targetTypeRestriction || target.monsterData.type.toLowerCase() === action.targetTypeRestriction.toLowerCase());
   };
   if (action.targetScope === 'one_ally' || action.targetScope === 'all_allies_in_area' || action.heal || action.layOnHands || action.removesConditions || action.grantsFlight) {
     return living.filter(c => c.team === active.team && inRange(c) && !((action.requiresNoHeavyArmor ?? false) && c.monsterData.wearingHeavyArmor) && (action.heal || action.layOnHands ? c.currentHp < c.maxHp || c.dying : action.removesConditions && !action.buff ? action.removesConditions.some(condition => c.conditions.includes(condition)) : true));
@@ -157,7 +158,7 @@ function spellTargets(active: Creature, state: NonNullable<Encounter['state']>, 
   if (action.targetScope === 'any_one') {
     return living.filter(target => inRange(target) && (!action.range || canSee(state, active, target)));
   }
-  return living.filter(c => c.team !== active.team && attackInRange(active, c, action) && (!action.range || canSee(state, active, c)));
+  return living.filter(c => c.team !== active.team && inRange(c) && attackInRange(active, c, action) && (!action.range || canSee(state, active, c)));
 }
 
 function areaSpellActions(state: NonNullable<Encounter['state']>, active: Creature, action: MonsterAction, actionIndex: number): ArenaAction[] {
