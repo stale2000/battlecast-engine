@@ -779,6 +779,11 @@ export function executeSpell(
       || isPositionBlocked(aoeCenter, size, state.creatures, caster.id, state.terrainBlocked)
       || !canSeePoint(state, caster, aoeCenter)) return false;
   }
+  if (action.revive) {
+    const deathRound = primaryTarget?.stats.deathRound;
+    if (!primaryTarget || primaryTarget.isAlive || primaryTarget.team !== caster.team || deathRound === undefined
+      || state.round - deathRound > action.revive.maxDeathRounds) return false;
+  }
   const level = action.spellLevel ?? 0;
   let slotLevelUsed = level;
   let spellSlotUsedForThisCast: number | null = null;
@@ -885,6 +890,26 @@ export function executeSpell(
       round: state.round, turn: state.turnIndex, actor: caster.displayName,
       action: castAction.name,
       details: `${caster.displayName} dispels ${effect.name} on ${primaryTarget.displayName}.`, type: 'special',
+    });
+    return true;
+  }
+
+  if (castAction.revive && primaryTarget) {
+    const deathRound = primaryTarget.stats.deathRound;
+    if (primaryTarget.isAlive || primaryTarget.team !== caster.team || deathRound === undefined
+      || state.round - deathRound > castAction.revive.maxDeathRounds) return false;
+    primaryTarget.isAlive = true;
+    primaryTarget.currentHp = castAction.revive.hp;
+    primaryTarget.dying = false;
+    primaryTarget.deathSaves = undefined;
+    primaryTarget.conditions = [];
+    primaryTarget.conditionTimers = [];
+    primaryTarget.stats.deathRound = undefined;
+    primaryTarget.stats.diedFromSaves = undefined;
+    pushLog(state, {
+      round: state.round, turn: state.turnIndex, actor: caster.displayName,
+      action: castAction.name,
+      details: `${caster.displayName} restores ${primaryTarget.displayName} to life with ${primaryTarget.currentHp} HP.`, type: 'heal',
     });
     return true;
   }

@@ -101,7 +101,9 @@ function canCastArenaSpell(active: Creature, action: MonsterAction): boolean {
 
 function spellTargets(active: Creature, state: NonNullable<Encounter['state']>, action: MonsterAction): Creature[] {
   if (action.autoDarts || action.savingThrow?.area || action.targetScope === 'all_allies_in_area') return [];
-  const living = state.creatures.filter(c => c.isAlive && (!c.dying || action.heal !== undefined));
+  const living = action.revive
+    ? state.creatures.filter(c => !c.isAlive && c.team === active.team && c.stats.deathRound !== undefined && state.round - c.stats.deathRound <= action.revive!.maxDeathRounds)
+    : state.creatures.filter(c => c.isAlive && (!c.dying || action.heal !== undefined));
   if (action.targetScope === 'self') return [active];
   const inRange = (target: Creature) => {
     const range = action.range?.normal;

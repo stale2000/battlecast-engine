@@ -694,8 +694,8 @@ export function fear(ability: SpellcastingAbility, mod: number, pb: number): Mon
 export function revivify(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
   return {
     name: 'Revivify', type: 'special', spellLevel: 3, spellSchool: 'necromancy', castingAbility: ability,
-    description: 'A creature that died within the last minute returns to life with 1 HP. Arena supports downed allies.',
-    heal: { dice: '1' }, range: { normal: 5, long: 5 }, targetScope: 'one_ally',
+    description: 'A creature that died within the last minute returns to life with 1 HP.',
+    revive: { maxDeathRounds: 10, hp: 1 }, range: { normal: 5, long: 5 }, targetScope: 'one_ally',
   };
 }
 

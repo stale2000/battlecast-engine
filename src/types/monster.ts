@@ -352,6 +352,8 @@ export interface MonsterAction {
   darkness?: { radius: number; durationRounds: number; requiresConcentration?: boolean };
   /** Server-validated teleport destination, used by spells such as Misty Step. */
   teleport?: { distanceFt: number };
+  /** Restores a recently dead creature to life. */
+  revive?: { maxDeathRounds: number; hp: number };
   /** Ends one selected spell effect on a target. The selected key is server-owned. */
   dispelMagic?: { maxSpellLevel: number; selectedKey?: string };
   /** Failed targets use their Reaction to flee directly away, provoking opportunity attacks. */
