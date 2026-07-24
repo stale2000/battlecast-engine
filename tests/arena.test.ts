@@ -1191,6 +1191,13 @@ describe('Kaggle arena bridge', () => {
     expect(target.activeBuffs.some(buff => buff.key === 'test-ray-ends')).toBe(false);
   });
 
+  it('offers shared Darkness and Ray of Enfeeblement through the level-five spell picker', () => {
+    const wizardSpells = getAvailableSpells('Wizard', 5).map(action => action.name);
+    const warlockSpells = getAvailableSpells('Warlock', 5).map(action => action.name);
+    expect(wizardSpells).toEqual(expect.arrayContaining(['Darkness', 'Ray of Enfeeblement']));
+    expect(warlockSpells).toEqual(expect.arrayContaining(['Darkness', 'Ray of Enfeeblement']));
+  });
+
   it('automatically resolves Infernal Hellish Rebuke against a nearby damaging creature', () => {
     const encounter = new Encounter({ seed: 1 });
     const [tiefling] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, heroOverrides: { species: 'Tiefling', speciesChoice: 'Infernal', speciesCastingAbility: 'cha', additionalResources: { 'infernal-hellish-rebuke': 1 } }, team: 'red', position: { x: 0, y: 0 } });

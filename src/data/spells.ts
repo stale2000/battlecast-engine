@@ -396,6 +396,14 @@ export function fogCloud(ability: SpellcastingAbility, _mod: number, _pb: number
   };
 }
 
+export function darkness(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Darkness', type: 'special', spellLevel: 2, spellSchool: 'evocation', castingAbility: ability, concentration: true,
+    description: 'Magical Darkness fills a 15-foot-radius Sphere at a visible point within 60 feet for 10 minutes. Concentration.',
+    range: { normal: 60, long: 60 }, targetScope: 'self', darkness: { radius: 15, durationRounds: 100, requiresConcentration: true },
+  };
+}
+
 export function falseLife(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
   return {
     name: 'False Life', type: 'special', spellLevel: 1, spellSchool: 'necromancy', castingAbility: ability,
@@ -442,6 +450,16 @@ export function rayOfSickness(ability: SpellcastingAbility, mod: number, pb: num
     description: `Ranged spell attack +${spellAttackBonus(mod, pb)}, range 60 ft. 2d8 poison damage; CON save DC ${saveDC(mod, pb)} or Poisoned until your next turn.`,
     attackBonus: spellAttackBonus(mod, pb), damage: '2d8', damageType: 'poison', range: { normal: 60, long: 60 }, targetScope: 'one_enemy',
     conditionOnHit: { condition: 'poisoned', save: { ability: 'con', dc: saveDC(mod, pb) }, duration: 'end_of_next_turn' },
+  };
+}
+
+export function rayOfEnfeeblement(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Ray of Enfeeblement', type: 'special', spellLevel: 2, spellSchool: 'necromancy', castingAbility: ability, concentration: true, durationRounds: 10,
+    description: `60-foot ray. CON save DC ${saveDC(mod, pb)}; on a failure, the target has Disadvantage on Strength tests and subtracts 1d8 from damage rolls. It repeats the save at the end of each turn.`,
+    range: { normal: 60, long: 60 }, targetScope: 'one_enemy', savingThrow: { ability: 'con', dc: saveDC(mod, pb) },
+    buffOnFailedSave: { name: 'Ray of Enfeeblement', key: 'ray-of-enfeeblement', requiresConcentration: true, strengthTestDisadvantage: true, damageRollPenalty: '1d8', saveEnds: { ability: 'con', dc: saveDC(mod, pb), at: 'targetTurnEnd' } },
+    buffOnSuccessfulSave: { name: 'Ray of Enfeeblement', key: 'ray-of-enfeeblement-success', attackDisadvantage: true, expiresOnSourceTurnStart: true },
   };
 }
 
@@ -1658,8 +1676,9 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Arms of Hadar', armsOfHadar], ['Color Spray', colorSpray], ['Divine Favor', divineFavor],
   ['Armor of Agathys', armorOfAgathys], ['Faerie Fire', faerieFire], ['False Life', falseLife], ['Fog Cloud', fogCloud], ['Grease', grease], ['Longstrider', longstrider],
   ['Expeditious Retreat', expeditiousRetreat],
+  ['Darkness', darkness],
   ['Mage Armor', mageArmor],
-  ['Ray of Sickness', rayOfSickness], ["Tasha's Hideous Laughter", tashasHideousLaughter],
+  ['Ray of Enfeeblement', rayOfEnfeeblement], ['Ray of Sickness', rayOfSickness], ["Tasha's Hideous Laughter", tashasHideousLaughter],
   ['Scorching Ray', scorchingRay], ['Web', web], ['Spike Growth', spikeGrowth], ['Hold Person', holdPerson],
   ['Flaming Sphere', flamingSphere], ['Cloud of Daggers', cloudOfDaggers],
   ['Shatter', shatter], ['Moonbeam', moonbeam], ['Spiritual Weapon', spiritualWeapon],
