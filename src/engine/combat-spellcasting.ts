@@ -526,6 +526,7 @@ export function applyBuffFromSpell(
     endsOnAttackOrCast: tmpl.endsOnAttackOrCast,
     mirrorImages: tmpl.mirrorImages,
     sanctuarySaveDc: tmpl.sanctuarySaveDc,
+    attackersOfTypesHaveDisadvantage: tmpl.attackersOfTypesHaveDisadvantage,
     hasteAction: tmpl.hasteAction,
     saveAdvantageAbilities: tmpl.saveAdvantageAbilities,
     saveEnds: tmpl.saveEnds,

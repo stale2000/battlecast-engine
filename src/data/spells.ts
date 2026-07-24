@@ -334,6 +334,16 @@ export function sanctuary(ability: SpellcastingAbility, mod: number, pb: number)
   };
 }
 
+export function protectionFromEvilAndGood(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Protection from Evil and Good', type: 'special', spellLevel: 1, spellSchool: 'abjuration', castingAbility: ability,
+    concentration: true, durationRounds: 100,
+    description: 'One willing creature has protection from Aberrations, Celestials, Elementals, Fey, Fiends, and Undead for 10 minutes: those creatures have Disadvantage on attacks against it, and it cannot be Charmed or Frightened by them.',
+    range: { normal: 10, long: 10 }, targetScope: 'one_ally',
+    buff: { name: 'Protection from Evil and Good', key: 'protection-evil-good', requiresConcentration: true, attackersOfTypesHaveDisadvantage: ['Aberration', 'Celestial', 'Elemental', 'Fey', 'Fiend', 'Undead'], conditionImmunities: ['charmed', 'frightened'] },
+  };
+}
+
 export function heroism(ability: SpellcastingAbility, mod: number, _pb: number): MonsterAction {
   return {
     name: 'Heroism', type: 'special', spellLevel: 1, spellSchool: 'enchantment', castingAbility: ability, concentration: true, durationRounds: 10,
@@ -1562,6 +1572,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Burning Hands', burningHands], ['Thunderwave', thunderwave], ['Sleep', sleep],
   ['Bless', () => bless()], ['Bane', bane], ['Cure Wounds', cureWounds],
   ['Sanctuary', sanctuary],
+  ['Protection from Evil and Good', protectionFromEvilAndGood],
   ['Healing Word', healingWord], ['Shield of Faith', () => shieldOfFaith()],
   ['Heroism', heroism],
   ['Guiding Bolt', guidingBolt], ['Dissonant Whispers', dissonantWhispers],

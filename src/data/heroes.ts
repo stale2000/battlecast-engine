@@ -33,7 +33,7 @@ import {
   magicMissile, burningHands, thunderwave, sleep,
   scorchingRay, web, shatter, moonbeam, holdPerson, spiritualWeapon,
   fireball, lightningBolt, spiritGuardians, callLightning, hypnoticPattern,
-  bless, bane, cureWounds, healingWord, heroism, sanctuary, shieldOfFaith, guidingBolt,
+  bless, bane, cureWounds, healingWord, heroism, protectionFromEvilAndGood, sanctuary, shieldOfFaith, guidingBolt,
   hex, huntersMark, dissonantWhispers, entangle,
   iceStorm, banishment, blight, fireShield, stoneskin, deathWard,
   coneOfCold, flameStrike, holdMonster, massCureWounds, synapticStatic,
@@ -1705,7 +1705,7 @@ function buildOptionalSpells(
       pool.push(dispelMagic(spellAbility, mod, pb));
       break;
     case 'Cleric':
-      pool.push(inflictWounds(spellAbility, mod, pb), command(spellAbility, mod, pb), sanctuary(spellAbility, mod, pb));
+      pool.push(inflictWounds(spellAbility, mod, pb), command(spellAbility, mod, pb), protectionFromEvilAndGood(spellAbility, mod, pb), sanctuary(spellAbility, mod, pb));
       pool.push(blindnessDeafness(spellAbility, mod, pb));
       pool.push(lesserRestoration(spellAbility, mod, pb));
       pool.push(dispelMagic(spellAbility, mod, pb));
@@ -1728,6 +1728,7 @@ function buildOptionalSpells(
       break;
     case 'Paladin':
       pool.push(heroism(spellAbility, mod, pb));
+      pool.push(protectionFromEvilAndGood(spellAbility, mod, pb));
       pool.push(divineFavor(spellAbility, mod, pb));
       pool.push(command(spellAbility, mod, pb));
       pool.push(holdPerson(spellAbility, mod, pb), moonbeam(spellAbility, mod, pb), spiritualWeapon(spellAbility, mod, pb));

@@ -483,6 +483,8 @@ export interface BuffTemplate {
   mirrorImages?: number;
   /** Attackers must pass this Wisdom save before harming the protected creature. */
   sanctuarySaveDc?: number;
+  /** Attackers of these creature types have Disadvantage against the target. */
+  attackersOfTypesHaveDisadvantage?: string[];
   /** Grants the restricted one-attack/Dash/Disengage/Hide action from Haste. */
   hasteAction?: boolean;
   /** Ability-specific saving throw Advantage, such as Haste's Dexterity saves. */
@@ -904,6 +906,7 @@ export interface ActiveBuff {
   endsOnAttackOrCast?: boolean;
   mirrorImages?: number;
   sanctuarySaveDc?: number;
+  attackersOfTypesHaveDisadvantage?: string[];
   hasteAction?: boolean;
   saveAdvantageAbilities?: Array<keyof Abilities>;
   /** Repeat this save at the specified point and remove the buff on success. */

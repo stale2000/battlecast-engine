@@ -982,6 +982,7 @@ function hasDisadvantage(attacker: Creature, target: Creature, action: MonsterAc
 
   // Weapon Mastery: Sap gives the target Disadvantage on its next attack roll.
   if (attacker.activeBuffs?.some(b => b.attackDisadvantage) || target.activeBuffs?.some(b => b.attackersHaveDisadvantage)) dis = true;
+  if (target.activeBuffs?.some(buff => buff.attackersOfTypesHaveDisadvantage?.some(type => type.toLowerCase() === attacker.monsterData.type.toLowerCase()))) dis = true;
   if ((action.attackAbility === 'str' || (!action.attackAbility && action.type === 'melee'))
       && attacker.activeBuffs?.some(b => b.strengthTestDisadvantage)) dis = true;
 
