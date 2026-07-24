@@ -463,6 +463,10 @@ export interface BuffTemplate {
   temporaryHpAtTurnStart?: number;
   /** Conditions this buff prevents while it lasts. */
   conditionImmunities?: Condition[];
+  /** Grants the restricted one-attack/Dash/Disengage/Hide action from Haste. */
+  hasteAction?: boolean;
+  /** Ability-specific saving throw Advantage, such as Haste's Dexterity saves. */
+  saveAdvantageAbilities?: Array<keyof Abilities>;
   /** Repeat this save at the specified point and remove the buff on success. */
   saveEnds?: { ability: keyof Abilities; dc: number; at: 'targetTurnEnd' };
 }
@@ -875,6 +879,8 @@ export interface ActiveBuff {
   endsOnDamage?: boolean;
   temporaryHpAtTurnStart?: number;
   conditionImmunities?: Condition[];
+  hasteAction?: boolean;
+  saveAdvantageAbilities?: Array<keyof Abilities>;
   /** Repeat this save at the specified point and remove the buff on success. */
   saveEnds?: { ability: keyof Abilities; dc: number; at: 'targetTurnEnd' };
 }

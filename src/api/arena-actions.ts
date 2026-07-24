@@ -9,17 +9,17 @@ export type ClassFeatureArenaAction =
  * only where the engine will validate and consume them.
  */
 export type ArenaAction =
-  | { id: string; type: 'attack'; actionName: string; actionIndex: number; targetId: string; goliathFeature?: GoliathAttackFeature }
+  | { id: string; type: 'attack'; actionName: string; actionIndex: number; targetId: string; goliathFeature?: GoliathAttackFeature; hasteAction?: boolean }
   | { id: string; type: 'spell'; actionName: string; actionIndex: number; targetId: string; targetIds?: string[]; center?: { x: number; y: number }; areaShape?: string; effectKey?: string }
   | { id: string; type: 'spell_teleport'; actionName: string; actionIndex: number; destination?: { x: number; y: number } }
   | { id: string; type: 'repeat_spell'; buffKey: string; targetId: string }
   | { id: string; type: 'spiritual_weapon'; targetId: string }
   | { id: string; type: 'repeat_area_spell'; spellName: string; targetId: string; targetIds: string[]; center?: { x: number; y: number }; areaShape?: string }
   | { id: 'move_aura'; type: 'move_aura'; destination?: { x: number; y: number } }
-  | { id: 'dash' | 'bonus_dash'; type: 'dash'; isBonusAction: boolean }
+  | { id: 'dash' | 'bonus_dash' | 'haste_dash'; type: 'dash'; isBonusAction: boolean; hasteAction?: boolean }
   | { id: 'dodge'; type: 'dodge' }
-  | { id: 'disengage' | 'bonus_disengage'; type: 'disengage'; isBonusAction: boolean }
-  | { id: 'hide' | 'bonus_hide'; type: 'hide'; isBonusAction: boolean }
+  | { id: 'disengage' | 'bonus_disengage' | 'haste_disengage'; type: 'disengage'; isBonusAction: boolean; hasteAction?: boolean }
+  | { id: 'hide' | 'bonus_hide' | 'haste_hide'; type: 'hide'; isBonusAction: boolean; hasteAction?: boolean }
   | { id: string; type: 'escape_grapple'; sourceId: string; ability: 'str' | 'dex' }
   | { id: string; type: 'help'; targetId: string }
   | { id: string; type: 'healer_battle_medic'; targetId: string }

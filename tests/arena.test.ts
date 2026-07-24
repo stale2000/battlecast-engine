@@ -13,7 +13,7 @@ import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
-import { barkskin, bladeWard, bless, blindingSmite, callLightning, dissonantWhispers, dispelMagic, fly, hellishRebuke, heroism, lesserRestoration, magicWeapon, mistyStep, moonbeam, resistance, shield, shiningSmite, spiritualWeapon, web, witchBolt } from '../src/data/spells.js';
+import { barkskin, bladeWard, bless, blindingSmite, callLightning, dissonantWhispers, dispelMagic, fly, haste, hellishRebuke, heroism, lesserRestoration, magicWeapon, mistyStep, moonbeam, resistance, shield, shiningSmite, spiritualWeapon, web, witchBolt } from '../src/data/spells.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
@@ -279,6 +279,23 @@ describe('Kaggle arena bridge', () => {
     expect(action).toMatchObject({ targetId: target.id, effectKey: 'bless' });
     applyLegalAction(encounter, action);
     expect(target.activeBuffs.some(buff => buff.key === 'bless')).toBe(false);
+  });
+
+  it('uses Haste speed, Dexterity-save advantage, and one restricted extra action', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [haste('int', 3, 3)], additionalResources: { 'slot-3': 1 } } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    expect(executeSpell(encounter.state!, caster, haste('int', 3, 3), caster)).toBe(true);
+    expect(getEffectiveMoveSpeed(caster, encounter.state!)).toBeGreaterThanOrEqual(60);
+    encounter.state!.initiativeOrder = [caster.id];
+    startArena(encounter);
+    const normalAttack = getLegalActions(encounter, caster.id).find(action => action.type === 'attack' && !action.hasteAction)!;
+    applyLegalAction(encounter, normalAttack);
+    const hasteAttack = getLegalActions(encounter, caster.id).find(action => action.type === 'attack' && action.hasteAction)!;
+    applyLegalAction(encounter, hasteAttack);
+    expect(caster.turnFlags.arenaHasteActionUsed).toBe(true);
   });
 
   it('repeats Call Lightning from authoritative concentration state without another slot', () => {

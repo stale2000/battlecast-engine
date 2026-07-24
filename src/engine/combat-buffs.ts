@@ -126,13 +126,15 @@ export function rollSaveWithBuffs(
     (saver.monsterData.heroSpecies === 'Dwarf' && condition === 'poisoned') ||
     (saver.monsterData.heroSpecies === 'Elf' && condition === 'charmed') ||
     (saver.monsterData.heroSpecies === 'Halfling' && condition === 'frightened');
+  const buffSaveAdvantage = ability !== undefined && (saver.activeBuffs ?? [])
+    .some(buff => buff.saveAdvantageAbilities?.includes(ability));
   const saveDisadvantageKeys = (saver.activeBuffs ?? [])
     .filter(b => b.saveDisadvantage)
     .map(b => b.key);
 
   const halflingLuck = saver.monsterData.heroSpecies === 'Halfling';
   const strengthTestDisadvantage = ability === 'str' && (saver.activeBuffs ?? []).some(buff => buff.strengthTestDisadvantage);
-  const result = rollSave(mod, advantage || barbarianSaveAdvantage || gnomishCunning || speciesConditionAdvantage, saveDisadvantageKeys.length > 0 || strengthTestDisadvantage, halflingLuck);
+  const result = rollSave(mod, advantage || barbarianSaveAdvantage || gnomishCunning || speciesConditionAdvantage || buffSaveAdvantage, saveDisadvantageKeys.length > 0 || strengthTestDisadvantage, halflingLuck);
   if (saveDisadvantageKeys.length > 0) {
     saver.activeBuffs = saver.activeBuffs.filter(b => !saveDisadvantageKeys.includes(b.key));
   }
@@ -149,7 +151,7 @@ export function rollSaveWithBuffs(
       && saver.monsterData.heroClass === 'Monk' && (saver.monsterData.heroLevel ?? 0) >= 14
       && hasResource(saver, 'ki')) {
     consumeResource(saver, 'ki');
-    const reroll = rollSave(mod, advantage || barbarianSaveAdvantage || gnomishCunning || speciesConditionAdvantage, false, halflingLuck);
+    const reroll = rollSave(mod, advantage || barbarianSaveAdvantage || gnomishCunning || speciesConditionAdvantage || buffSaveAdvantage, false, halflingLuck);
     const rerollBonus = rollSaveBuffBonus(saver);
     reroll.total += rerollBonus;
     reroll.modifier += rerollBonus;
@@ -160,7 +162,7 @@ export function rollSaveWithBuffs(
       && saver.monsterData.heroClass === 'Fighter' && (saver.monsterData.heroLevel ?? 0) >= 9
       && hasResource(saver, 'indomitable')) {
     consumeResource(saver, 'indomitable');
-    const reroll = rollSave(mod, advantage || speciesConditionAdvantage, false, halflingLuck);
+    const reroll = rollSave(mod, advantage || speciesConditionAdvantage || buffSaveAdvantage, false, halflingLuck);
     const rerollBonus = rollSaveBuffBonus(saver);
     reroll.total += rerollBonus + (saver.monsterData.heroLevel ?? 0);
     reroll.modifier += rerollBonus;

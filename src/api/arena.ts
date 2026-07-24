@@ -78,6 +78,11 @@ function attacksUsed(creature: Creature): number {
   return Object.keys(creature.turnFlags).filter(key => key.startsWith('arena-attack-')).length;
 }
 
+function hasUnusedHasteAction(creature: Creature): boolean {
+  return !creature.turnFlags.arenaHasteActionUsed
+    && (creature.activeBuffs ?? []).some(buff => buff.hasteAction);
+}
+
 function monkUnarmedAction(active: Creature): [number, MonsterAction] | undefined {
   const entries = getActiveActions(active).entries();
   return Array.from(entries).find(([, action]) => action.type === 'melee' && action.attackBonus !== undefined && action.name === 'Martial Arts (Unarmed)')
@@ -217,10 +222,12 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
   const enemies = state.creatures.filter(c => c.team !== active.team && c.isAlive && !c.dying);
   const actions: ArenaAction[] = [];
   const attackInProgress = attacksUsed(active) > 0;
-  if (!active.hasActed) {
+  const hasteOnly = active.hasActed && hasUnusedHasteAction(active);
+  if (!active.hasActed || hasteOnly) {
     for (const [actionIndex, action] of getActiveActions(active).entries()) {
       if (action.legendaryOnly || action.reactionOnly || action.type === 'multiattack') continue;
       if (isSpellAction(action)) {
+        if (hasteOnly) continue;
         if (action.spiritualWeapon && active.spiritualWeapon && active.spiritualWeapon.endRound > state.round) continue;
         if (action.repeatableAreaSpell && active.repeatableAreaSpell && active.repeatableAreaSpell.endRound > state.round) continue;
         if ((!action.replacesAttack && attackInProgress) || (action.replacesAttack && attacksUsed(active) >= attackRollBudget(active)) || !canCastArenaSpell(active, action)) continue;
@@ -259,11 +266,12 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
         }
         continue;
       }
-      if (action.attackBonus === undefined || attacksUsed(active) >= attackRollBudget(active)) continue;
+      if (action.attackBonus === undefined || (!hasteOnly && attacksUsed(active) >= attackRollBudget(active))) continue;
       if (action.loading && active.turnFlags[`arena-loading-${actionIndex}`]) continue;
       for (const target of enemies) {
         if (!attackInRange(active, target, action) || (action.type === 'ranged' && !canSee(state, active, target) && !canDetectWithTremorsense(active, target))) continue;
-        actions.push({ id: `attack:${actionIndex}:${slug(action.name)}:${target.id}`, type: 'attack', actionName: action.name, actionIndex, targetId: target.id });
+        actions.push({ id: `attack:${actionIndex}:${slug(action.name)}:${target.id}${hasteOnly ? ':haste' : ''}`, type: 'attack', actionName: action.name, actionIndex, targetId: target.id, ...(hasteOnly ? { hasteAction: true } : {}) });
+        if (hasteOnly) continue;
         for (const feature of getGoliathAttackFeatures(active, target)) {
           actions.push({ id: `attack:${actionIndex}:${slug(action.name)}:${target.id}:goliath-${feature}`, type: 'attack', actionName: action.name, actionIndex, targetId: target.id, goliathFeature: feature });
         }
@@ -306,6 +314,11 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
       actions.push({ id: `escape_grapple:${timer.sourceId}:str`, type: 'escape_grapple', sourceId: timer.sourceId, ability: 'str' });
       actions.push({ id: `escape_grapple:${timer.sourceId}:dex`, type: 'escape_grapple', sourceId: timer.sourceId, ability: 'dex' });
     }
+  }
+  if (hasteOnly) {
+    if (active.movementRemaining > 0) actions.push({ id: 'haste_dash', type: 'dash', isBonusAction: false, hasteAction: true });
+    if (enemies.some(target => creatureDistance(active, target) <= 5)) actions.push({ id: 'haste_disengage', type: 'disengage', isBonusAction: false, hasteAction: true });
+    if (enemies.some(target => canHideFrom(state, active, target))) actions.push({ id: 'haste_hide', type: 'hide', isBonusAction: false, hasteAction: true });
   }
   if (active.monsterData.heroClass === 'Rogue' && !active.bonusActionUsed && !active.hasMovedThisTurn && !active.turnFlags.steadyAim) {
     if (active.movementRemaining > 0) actions.push({ id: 'bonus_dash', type: 'dash', isBonusAction: true });
@@ -409,8 +422,11 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
           throw new EncounterError(error instanceof Error ? error.message : 'Illegal or stale Goliath Giant Ancestry.');
         }
       }
-      active.turnFlags[`arena-attack-${attacksUsed(active)}`] = true;
-      active.hasActed = attacksUsed(active) >= attackRollBudget(active);
+      if (legal.hasteAction) active.turnFlags.arenaHasteActionUsed = true;
+      else {
+        active.turnFlags[`arena-attack-${attacksUsed(active)}`] = true;
+        active.hasActed = attacksUsed(active) >= attackRollBudget(active);
+      }
       checkBattleComplete(state);
     } else if (legal.type === 'spell') {
       const targets = (legal.targetIds ?? [legal.targetId]).map(id => state.creatures.find(c => c.id === id)).filter((target): target is Creature => Boolean(target));
@@ -475,6 +491,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
     } else if (legal.type === 'dash') {
       active.movementRemaining += getEffectiveMoveSpeed(active, state);
       if (legal.isBonusAction) active.bonusActionUsed = true;
+      else if (legal.hasteAction) active.turnFlags.arenaHasteActionUsed = true;
       else active.hasActed = true;
       pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Dash', details: `${active.displayName} dashes.`, type: 'move' });
     } else if (legal.type === 'dodge') {
@@ -484,6 +501,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
     } else if (legal.type === 'disengage') {
       active.turnFlags.arenaDisengaged = true;
       if (legal.isBonusAction) active.bonusActionUsed = true;
+      else if (legal.hasteAction) active.turnFlags.arenaHasteActionUsed = true;
       else active.hasActed = true;
       pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Disengage', details: `${active.displayName} disengages.`, type: 'move' });
     } else if (legal.type === 'hide') {
@@ -501,6 +519,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
         successes++;
       }
       if (legal.isBonusAction) active.bonusActionUsed = true;
+      else if (legal.hasteAction) active.turnFlags.arenaHasteActionUsed = true;
       else active.hasActed = true;
       pushLog(state, {
         round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Hide',

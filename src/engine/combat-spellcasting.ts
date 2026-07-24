@@ -523,6 +523,8 @@ export function applyBuffFromSpell(
     endsOnDamage: tmpl.endsOnDamage,
     temporaryHpAtTurnStart: tmpl.temporaryHpAtTurnStart,
     conditionImmunities: tmpl.conditionImmunities,
+    hasteAction: tmpl.hasteAction,
+    saveAdvantageAbilities: tmpl.saveAdvantageAbilities,
     saveEnds: tmpl.saveEnds,
   };
   addBuff(target, buff);

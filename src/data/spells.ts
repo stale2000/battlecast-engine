@@ -1487,7 +1487,7 @@ export function haste(ability: SpellcastingAbility, _mod: number, _pb: number): 
   return {
     name: 'Haste',
     type: 'special',
-    description: 'One willing creature within 30 ft. +2 AC, doubled speed, extra action each turn. Concentration, 1 minute. (Simulated as +2 AC buff.)',
+    description: 'One willing creature within 30 ft. +2 AC, +30 feet of Speed, Advantage on DEX saves, and one restricted extra action each turn (one attack, Dash, Disengage, or Hide). Concentration, 1 minute.',
     spellLevel: 3,
     concentration: true,
     durationRounds: 10,
@@ -1496,6 +1496,9 @@ export function haste(ability: SpellcastingAbility, _mod: number, _pb: number): 
       name: 'Haste', key: 'haste',
       requiresConcentration: true,
       acBonus: 2,
+      speedBonus: 30,
+      hasteAction: true,
+      saveAdvantageAbilities: ['dex'],
     },
     range: { normal: 30, long: 30 },
     targetScope: 'one_ally',
