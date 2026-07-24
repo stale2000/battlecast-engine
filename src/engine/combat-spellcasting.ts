@@ -34,7 +34,7 @@ import {
 import { resolveAoE } from './combat-aoe.js';
 import {
   applyDamage, gainHp, pushLog, resolveAttack, getAliveCreatures,
-  getEffectiveSaveModifier, resolveSpellReflection, createPersistentZone,
+  getEffectiveMoveSpeed, getEffectiveSaveModifier, resolveSpellReflection, createPersistentZone,
   type BattleState,
 } from './combat.js';
 
@@ -503,6 +503,7 @@ export function applyBuffFromSpell(
     maxHpBonus: tmpl.maxHpBonus,
     damageRider: tmpl.damageRider,
     bonusActionDamage: tmpl.bonusActionDamage,
+    bonusActionDash: tmpl.bonusActionDash,
     bonusActionDamageType: tmpl.bonusActionDamageType,
     bonusActionDamageRange: tmpl.bonusActionDamageRange,
     endsWhenTargetDies: tmpl.endsWhenTargetDies,
@@ -882,6 +883,10 @@ export function executeSpell(
   }
   const castAction = scaleAttackSpellForSlot(action, slotLevelUsed);
   if (tryAutomaticCounterspell(state, caster, castAction)) return true;
+  if (castAction.dashOnCast) {
+    caster.movementRemaining += getEffectiveMoveSpeed(caster, state);
+    pushLog(state, { round: state.round, turn: state.turnIndex, actor: caster.displayName, action: 'Dash', details: `${caster.displayName} dashes while casting ${castAction.name}.`, type: 'move' });
+  }
 
   if (castAction.darkness && aoeCenter) {
     if (castAction.darkness.requiresConcentration) {

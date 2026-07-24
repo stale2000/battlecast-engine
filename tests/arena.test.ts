@@ -13,7 +13,7 @@ import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
-import { acidArrow, armorOfAgathys, bane, barkskin, bestowCurse, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, cloudOfDaggers, command, counterspell, dissonantWhispers, dispelMagic, entangle, fireball, flamingSphere, fly, grease, gustOfWind, haste, hellishRebuke, heroism, inflictWounds, invisibility, lesserRestoration, mageArmor, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, seeInvisibility, shield, shiningSmite, spikeGrowth, spiritualWeapon, tashasHideousLaughter, web, witchBolt } from '../src/data/spells.js';
+import { acidArrow, armorOfAgathys, bane, barkskin, bestowCurse, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, cloudOfDaggers, command, counterspell, dissonantWhispers, dispelMagic, entangle, expeditiousRetreat, fireball, flamingSphere, fly, grease, gustOfWind, haste, hellishRebuke, heroism, inflictWounds, invisibility, lesserRestoration, mageArmor, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, seeInvisibility, shield, shiningSmite, spikeGrowth, spiritualWeapon, tashasHideousLaughter, web, witchBolt } from '../src/data/spells.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
@@ -232,6 +232,26 @@ describe('Kaggle arena bridge', () => {
     expect(attacker.currentHp).toBe(attackerHp - 45);
     expect(warlock.temporaryHp).toBe(0);
     expect(warlock.activeBuffs.some(buff => buff.key === 'armor-of-agathys')).toBe(false);
+  });
+
+  it('resolves Expeditious Retreat dashes through the authoritative arena action path', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [expeditiousRetreat('int', 3, 3)], additionalResources: { 'slot-1': 1 } } });
+    encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'blue', position: { x: 1, y: 0 } });
+    encounter.start();
+    const wizard = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    encounter.state!.turnIndex = encounter.state!.initiativeOrder.indexOf(wizard.id);
+    wizard.hasActed = false;
+    wizard.bonusActionUsed = false;
+    wizard.movementRemaining = 30;
+    const cast = getLegalActions(encounter, wizard.id).find(action => action.type === 'spell' && action.actionName === 'Expeditious Retreat')!;
+    applyLegalAction(encounter, cast);
+    expect(wizard.movementRemaining).toBe(60);
+    expect(wizard.bonusActionUsed).toBe(true);
+    wizard.bonusActionUsed = false;
+    wizard.movementRemaining = 30;
+    applyLegalAction(encounter, getLegalActions(encounter, wizard.id).find(action => action.id === 'spell_bonus_dash')!);
+    expect(wizard.movementRemaining).toBe(60);
   });
 
   it('applies Heroism each turn and prevents frightened while concentration lasts', () => {

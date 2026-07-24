@@ -392,6 +392,9 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
   if (active.monsterData.heroClass === 'Rogue' && !active.bonusActionUsed && !active.hasMovedThisTurn && !active.turnFlags.steadyAim) {
     if (active.movementRemaining > 0) actions.push({ id: 'bonus_dash', type: 'dash', isBonusAction: true });
   }
+  if (!active.bonusActionUsed && active.movementRemaining > 0 && active.activeBuffs.some(buff => buff.bonusActionDash)) {
+    actions.push({ id: 'spell_bonus_dash', type: 'dash', isBonusAction: true });
+  }
   if (!active.hasActed && hasOriginFeat(active, 'Healer') && hasResource(active, 'healer-kit')) {
     for (const target of state.creatures.filter(candidate => candidate.team === active.team && candidate.isAlive && !candidate.dying && candidate.currentHp < candidate.maxHp && creatureDistance(active, candidate) <= 5 && hasResource(candidate, 'hit-die') && !candidate.activeBuffs?.some(buff => buff.key === 'healer-battle-medic'))) {
       if (heroHitDie(target)) actions.push({ id: `healer_battle_medic:${target.id}`, type: 'healer_battle_medic', targetId: target.id });

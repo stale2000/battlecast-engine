@@ -193,6 +193,8 @@ export interface MonsterAction {
    *  Bonus actions can be used alongside a main action on the same turn
    *  (e.g., Rage + Greataxe, Hex + Eldritch Blast, Healing Word + Rapier). */
   isBonusAction?: boolean;
+  /** The spell takes the Dash action as part of its casting. */
+  dashOnCast?: boolean;
   /** A reaction-timed spell resolved automatically by the authoritative engine. */
   reactionOnly?: boolean;
   /** Uses one attack from an Attack action instead of consuming the whole action. */
@@ -424,6 +426,8 @@ export interface BuffTemplate {
   damageRider?: string;
   /** Damage this buff can deal when its caster spends a later bonus action (2024 Witch Bolt). */
   bonusActionDamage?: string;
+  /** The affected creature can take Dash as a Bonus Action. */
+  bonusActionDash?: boolean;
   /** Damage type for bonusActionDamage. */
   bonusActionDamageType?: string;
   /** Maximum range in feet for the bonus-action damage link. */
@@ -866,6 +870,8 @@ export interface ActiveBuff {
   damageRider?: string;
   /** Damage this buff can deal when its caster spends a later bonus action (2024 Witch Bolt). */
   bonusActionDamage?: string;
+  /** The affected creature can take Dash as a Bonus Action. */
+  bonusActionDash?: boolean;
   /** Damage type for bonusActionDamage. */
   bonusActionDamageType?: string;
   /** Maximum range in feet for the bonus-action damage link. */

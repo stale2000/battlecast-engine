@@ -16,7 +16,7 @@ export type ArenaAction =
   | { id: string; type: 'spiritual_weapon'; targetId: string }
   | { id: string; type: 'repeat_area_spell'; spellName: string; targetId: string; targetIds: string[]; center?: { x: number; y: number }; areaShape?: string }
   | { id: 'move_aura'; type: 'move_aura'; destination?: { x: number; y: number } }
-  | { id: 'dash' | 'bonus_dash' | 'haste_dash'; type: 'dash'; isBonusAction: boolean; hasteAction?: boolean }
+  | { id: 'dash' | 'bonus_dash' | 'haste_dash' | 'spell_bonus_dash'; type: 'dash'; isBonusAction: boolean; hasteAction?: boolean }
   | { id: 'dodge'; type: 'dodge' }
   | { id: 'disengage' | 'bonus_disengage' | 'haste_disengage'; type: 'disengage'; isBonusAction: boolean; hasteAction?: boolean }
   | { id: 'hide' | 'bonus_hide' | 'haste_hide'; type: 'hide'; isBonusAction: boolean; hasteAction?: boolean }

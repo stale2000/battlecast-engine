@@ -412,6 +412,14 @@ export function armorOfAgathys(ability: SpellcastingAbility, _mod: number, _pb: 
   };
 }
 
+export function expeditiousRetreat(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Expeditious Retreat', type: 'special', spellLevel: 1, spellSchool: 'transmutation', castingAbility: ability, isBonusAction: true, dashOnCast: true, concentration: true, durationRounds: 100,
+    description: 'You take the Dash action. Until the spell ends, you can take the Dash action as a Bonus Action.', targetScope: 'self',
+    buff: { name: 'Expeditious Retreat', key: 'expeditious-retreat', requiresConcentration: true, bonusActionDash: true },
+  };
+}
+
 export function mageArmor(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
   return {
     name: 'Mage Armor', type: 'special', spellLevel: 1, spellSchool: 'abjuration', castingAbility: ability, durationRounds: 4800,
@@ -1649,6 +1657,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Inflict Wounds', inflictWounds], ['Witch Bolt', witchBolt],
   ['Arms of Hadar', armsOfHadar], ['Color Spray', colorSpray], ['Divine Favor', divineFavor],
   ['Armor of Agathys', armorOfAgathys], ['Faerie Fire', faerieFire], ['False Life', falseLife], ['Fog Cloud', fogCloud], ['Grease', grease], ['Longstrider', longstrider],
+  ['Expeditious Retreat', expeditiousRetreat],
   ['Mage Armor', mageArmor],
   ['Ray of Sickness', rayOfSickness], ["Tasha's Hideous Laughter", tashasHideousLaughter],
   ['Scorching Ray', scorchingRay], ['Web', web], ['Spike Growth', spikeGrowth], ['Hold Person', holdPerson],
