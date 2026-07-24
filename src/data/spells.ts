@@ -1761,7 +1761,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Enlarge/Reduce', enlargeReduce],
   ['Mage Armor', mageArmor],
   ['Ray of Enfeeblement', rayOfEnfeeblement], ['Ray of Sickness', rayOfSickness], ["Tasha's Hideous Laughter", tashasHideousLaughter],
-  ['Scorching Ray', scorchingRay], ['Web', web], ['Spike Growth', spikeGrowth], ['Hold Person', holdPerson],
+  ['Scorching Ray', scorchingRay], ['Summon Beast', summonBeast], ['Web', web], ['Spike Growth', spikeGrowth], ['Hold Person', holdPerson],
   ['Flaming Sphere', flamingSphere], ['Cloud of Daggers', cloudOfDaggers],
   ['Shatter', shatter], ['Moonbeam', moonbeam], ['Spiritual Weapon', spiritualWeapon],
   ['Aid', aid], ['Magic Weapon', magicWeapon], ['Shining Smite', shiningSmite],

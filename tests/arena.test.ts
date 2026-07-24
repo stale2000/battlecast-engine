@@ -14,7 +14,7 @@ import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildCustomHero, buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
-import { acidArrow, armorOfAgathys, bane, barkskin, beaconOfHope, bestowCurse, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, cloudOfDaggers, command, counterspell, cureWounds, dissonantWhispers, dispelMagic, enlargeReduce, entangle, expeditiousRetreat, fireball, flamingSphere, fly, grease, gustOfWind, haste, hellishRebuke, heroism, inflictWounds, invisibility, lesserRestoration, mageArmor, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, seeInvisibility, shield, shiningSmite, slow, spikeGrowth, spiritualWeapon, summonBeast, tashasHideousLaughter, web, witchBolt } from '../src/data/spells.js';
+import { acidArrow, armorOfAgathys, bane, barkskin, beaconOfHope, bestowCurse, bladeWard, bless, blindingSmite, buildSpellAction, callLightning, chromaticOrb, cloudOfDaggers, command, counterspell, cureWounds, dissonantWhispers, dispelMagic, enlargeReduce, entangle, expeditiousRetreat, fireball, flamingSphere, fly, grease, gustOfWind, haste, hellishRebuke, heroism, inflictWounds, invisibility, lesserRestoration, mageArmor, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, seeInvisibility, shield, shiningSmite, slow, spikeGrowth, spiritualWeapon, summonBeast, tashasHideousLaughter, web, witchBolt } from '../src/data/spells.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
@@ -1987,6 +1987,7 @@ describe('Kaggle arena bridge', () => {
   });
 
   it('summons a controlled Bestial Spirit with validated placement and removes it on concentration loss or expiry', () => {
+    expect(buildSpellAction('Summon Beast', 'wis', 3, 3)?.summon).toBeTruthy();
     expect(buildCustomHero('Druid', 5, { spells: ['Summon Beast'] }).actions.some(action => action.name === 'Summon Beast')).toBe(true);
     const encounter = new Encounter({ seed: 1, gridSize: 12 });
     const [caster] = encounter.addCreature({
