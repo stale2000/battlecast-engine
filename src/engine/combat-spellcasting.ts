@@ -951,6 +951,30 @@ export function executeSpell(
   }
   const castAction = scaleAttackSpellForSlot(action, slotLevelUsed);
   if (tryAutomaticCounterspell(state, caster, castAction)) return true;
+  if (castAction.attackThenArea && primaryTarget) {
+    resolveAttack(state, caster, primaryTarget, castAction);
+    const burst = {
+      ...castAction,
+      name: `${castAction.name} Burst`,
+      type: 'special' as const,
+      targetScope: 'area_enemies' as const,
+      damageType: castAction.attackThenArea.damageType,
+      savingThrow: {
+        ability: castAction.attackThenArea.saveAbility,
+        dc: castAction.attackThenArea.saveDc,
+        damageOnFail: castAction.attackThenArea.damage,
+        damageOnSuccess: 'half' as const,
+        area: `${castAction.attackThenArea.radiusFt}-foot sphere`,
+      },
+      attackBonus: undefined,
+      damage: undefined,
+      attackThenArea: undefined,
+    };
+    const radius = castAction.attackThenArea.radiusFt;
+    const burstTargets = getAliveCreatures(state).filter(target => creatureDistance(target, primaryTarget) <= radius);
+    if (burstTargets.length) resolveAoE(state, caster, burst, burstTargets, primaryTarget.position, undefined, true);
+    return true;
+  }
   if (castAction.postHit && primaryTarget) {
     return executePostHitSpell(state, caster, castAction, primaryTarget, slotLevelUsed);
   }

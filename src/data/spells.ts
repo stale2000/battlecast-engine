@@ -864,6 +864,14 @@ export function thunderousSmite(ability: SpellcastingAbility, mod: number, pb: n
   };
 }
 
+export function brandingSmite(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Branding Smite', type: 'special', spellLevel: 2, spellSchool: 'evocation', castingAbility: ability,
+    description: 'Bonus action immediately after a melee or unarmed hit. The hit deals 2d6 radiant damage, and the target is outlined in light and cannot benefit from the Invisible condition while you maintain Concentration.',
+    isBonusAction: true, concentration: true, postHit: { trigger: 'melee_hit' }, targetScope: 'one_enemy', damage: '2d6', damageType: 'radiant',
+  };
+}
+
 export function spikeGrowth(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
   return {
     name: 'Spike Growth', type: 'special', spellLevel: 2, spellSchool: 'transmutation', castingAbility: ability, concentration: true, durationRounds: 100,
@@ -1672,6 +1680,16 @@ export function inflictWounds(ability: SpellcastingAbility, mod: number, pb: num
   };
 }
 
+export function iceKnife(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Ice Knife', type: 'ranged', spellLevel: 1, spellSchool: 'conjuration', castingAbility: ability,
+    description: `Ranged spell attack within 60 feet for 1d10 piercing damage. Hit or miss, the shard explodes; the target and each creature within 5 feet make a Dexterity save (DC ${saveDC(mod, pb)}) or take 2d6 cold damage.`,
+    attackBonus: spellAttackBonus(mod, pb), damage: '1d10', damageType: 'piercing', magical: true,
+    range: { normal: 60, long: 60 }, targetScope: 'one_enemy',
+    attackThenArea: { damage: '2d6', damageType: 'cold', radiusFt: 5, saveAbility: 'dex', saveDc: saveDC(mod, pb) },
+  };
+}
+
 export function command(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
   return {
     name: 'Command',
@@ -1916,6 +1934,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Guiding Bolt', guidingBolt], ['Dissonant Whispers', dissonantWhispers],
   ['Entangle', entangle], ['Command', command], ['Chromatic Orb', chromaticOrb],
   ['Inflict Wounds', inflictWounds], ['Witch Bolt', witchBolt],
+  ['Ice Knife', iceKnife],
   ['Arms of Hadar', armsOfHadar], ['Color Spray', colorSpray], ['Divine Favor', divineFavor],
   ['Armor of Agathys', armorOfAgathys], ['Faerie Fire', faerieFire], ['False Life', falseLife], ['Fog Cloud', fogCloud], ['Grease', grease], ['Longstrider', longstrider],
   ['Expeditious Retreat', expeditiousRetreat],
@@ -1928,7 +1947,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Flaming Sphere', flamingSphere], ['Cloud of Daggers', cloudOfDaggers],
   ['Shatter', shatter], ['Moonbeam', moonbeam], ['Spiritual Weapon', spiritualWeapon],
   ['Aid', aid], ['Magic Weapon', magicWeapon], ['Shining Smite', shiningSmite],
-  ['Ensnaring Strike', ensnaringStrike], ['Searing Smite', searingSmite], ['Thunderous Smite', thunderousSmite], ['Wrathful Smite', wrathfulSmite],
+  ['Branding Smite', brandingSmite], ['Ensnaring Strike', ensnaringStrike], ['Searing Smite', searingSmite], ['Thunderous Smite', thunderousSmite], ['Wrathful Smite', wrathfulSmite],
   ['Blindness/Deafness', blindnessDeafness], ['Mirror Image', mirrorImage],
   ['Invisibility', invisibility],
   ['Counterspell', counterspell],

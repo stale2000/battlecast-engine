@@ -2073,7 +2073,7 @@ describe('Kaggle arena bridge', () => {
   });
 
   it('resolves a legal representative of every selectable level-5 spell', () => {
-    const noTurnChoice = new Set(['Shield', 'Hellish Rebuke', 'Counterspell', 'Dispel Magic', 'Ensnaring Strike', 'Searing Smite', 'Thunderous Smite', 'Wrathful Smite']);
+    const noTurnChoice = new Set(['Shield', 'Hellish Rebuke', 'Counterspell', 'Dispel Magic', 'Branding Smite', 'Ensnaring Strike', 'Searing Smite', 'Thunderous Smite', 'Wrathful Smite']);
     for (const heroClass of HERO_CLASS_NAMES) {
       const spells = getAvailableSpells(heroClass, 5).filter(spell => spell.spellLevel > 0).map(spell => spell.name);
       if (!spells.length) continue;

@@ -332,6 +332,14 @@ export interface MonsterAction {
   autoDartDamageType?: string;
   /** Multiple independent spell attack rolls, e.g. Scorching Ray. */
   multiTargetAttack?: { count: number };
+  /** A projectile hit/miss followed by a target-centered saving-throw burst. */
+  attackThenArea?: {
+    damage: string;
+    damageType: string;
+    radiusFt: number;
+    saveAbility: keyof Abilities;
+    saveDc: number;
+  };
   /** A saving throw spell that selects up to this many individual targets. */
   multiTargetSave?: { maxTargets: number };
   /** A buff spell that selects up to this many allied targets. */

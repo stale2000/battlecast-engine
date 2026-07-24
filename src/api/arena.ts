@@ -345,6 +345,14 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
       if (isSpellAction(action)) {
         if (action.postHit) continue;
         if (hasteOnly) continue;
+        if (action.attackThenArea) {
+          const targets = enemies.filter(target => attackInRange(active, target, action));
+          actions.push(...targets.map(target => ({
+            id: `spell:${actionIndex}:${slug(action.name)}:target:${target.id}`,
+            type: 'spell' as const, actionName: action.name, actionIndex, targetId: target.id,
+          })));
+          continue;
+        }
         if (action.spiritualWeapon && active.spiritualWeapon && active.spiritualWeapon.endRound > state.round) continue;
         if (action.repeatableAreaSpell && active.repeatableAreaSpell && active.repeatableAreaSpell.endRound > state.round) continue;
         if ((!action.replacesAttack && attackInProgress) || (action.replacesAttack && attacksUsed(active) >= attackRollBudget(active)) || !canCastArenaSpell(active, action)) continue;
@@ -641,7 +649,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
               : baseSpell && legal.curseChoice ? withCurseChoice(baseSpell, legal.curseChoice)
           : baseSpell;
       if (!spell || spell.name !== legal.actionName || !isSpellAction(spell)) throw new EncounterError(`Stale arena spell "${legal.id}".`);
-      if (!target || !executeSpell(state, active, spell, target, spell.autoDarts || spell.multiTargetAttack || spell.multiTargetSave || spell.multiTargetBuff || spell.multiTargetHeal || spell.savingThrow?.area || spell.persistentZone ? targets : undefined, legal.center)) throw new EncounterError(`Illegal or stale arena spell "${legal.id}".`);
+      if (!target || !executeSpell(state, active, spell, target, spell.autoDarts || spell.multiTargetAttack || spell.multiTargetSave || spell.multiTargetBuff || spell.multiTargetHeal || spell.attackThenArea || spell.savingThrow?.area || spell.persistentZone ? targets : undefined, legal.center)) throw new EncounterError(`Illegal or stale arena spell "${legal.id}".`);
       if (spell.isBonusAction) active.bonusActionUsed = true;
       else if (spell.replacesAttack) {
         active.turnFlags[`arena-attack-${attacksUsed(active)}`] = true;
