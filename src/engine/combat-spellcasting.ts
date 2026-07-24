@@ -593,6 +593,7 @@ export function applyBuffFromSpell(
     weaponAttacksMagical: tmpl.weaponAttacksMagical,
     weaponDamageRider: tmpl.weaponDamageRider,
     weaponHitArea: tmpl.weaponHitArea,
+    weaponDamageReplacement: tmpl.weaponDamageReplacement,
     weaponDamageDie: tmpl.weaponDamageDie,
     weaponNames: tmpl.weaponNames,
     weaponAttackAbility: tmpl.weaponAttackAbility,
@@ -692,6 +693,15 @@ function scaleAttackSpellForSlot(action: MonsterAction, slotLevelUsed: number): 
     if (!match) return action;
     const damage = `${parseInt(match[1], 10) + extra}d10`;
     return { ...action, buff: { ...action.buff, weaponHitArea: { ...action.buff.weaponHitArea, damage } } };
+  }
+
+  if (action.name === 'Lightning Arrow' && action.buff?.weaponDamageReplacement) {
+    const extra = Math.max(0, slotLevelUsed - (action.spellLevel ?? 3));
+    if (!extra) return action;
+    const match = action.buff.weaponDamageReplacement.damage.match(/^(\d+)d8$/);
+    if (!match) return action;
+    const damage = `${parseInt(match[1], 10) + extra}d8`;
+    return { ...action, buff: { ...action.buff, weaponDamageReplacement: { ...action.buff.weaponDamageReplacement, damage } } };
   }
 
   if (action.name !== 'Witch Bolt' || !action.damage) return action;

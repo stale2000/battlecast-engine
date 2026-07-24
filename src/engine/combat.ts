@@ -4010,6 +4010,35 @@ function resolveWeaponHitArea(
   dropConcentratedBuffsFrom(state, attacker.id);
 }
 
+function resolveWeaponDamageReplacement(
+  state: BattleState,
+  attacker: Creature,
+  target: Creature,
+): { damage: string; damageType: string } | undefined {
+  const buff = attacker.activeBuffs.find(candidate => candidate.weaponDamageReplacement);
+  const config = buff?.weaponDamageReplacement;
+  if (!config) return undefined;
+  const targets = state.creatures.filter(creature => creature.isAlive && creature.id !== target.id && creatureDistance(target, creature) <= config.radiusFt);
+  if (targets.length) {
+    resolveAoE(state, attacker, {
+      name: buff!.name,
+      type: 'special', description: `${buff!.name} burst`, damageType: config.damageType,
+      savingThrow: { ability: config.saveAbility, dc: config.saveDc, damageOnFail: config.damage, damageOnSuccess: 'half', area: `${config.radiusFt}-foot sphere` },
+    }, targets, target.position, undefined, true);
+  }
+  dropConcentratedBuffsFrom(state, attacker.id);
+  return { damage: config.damage, damageType: config.damageType };
+}
+
+function applyWeaponReplacementMiss(state: BattleState, attacker: Creature, target: Creature): void {
+  const replacement = resolveWeaponDamageReplacement(state, attacker, target);
+  if (!replacement) return;
+  const amount = rollActionDamage({ name: 'Lightning Arrow', type: 'ranged', description: '', damageType: replacement.damageType }, replacement.damage, false);
+  const half = Math.floor(amount / 2);
+  applyDamage(state, target, half, replacement.damageType, attacker, false, true);
+  pushLog(state, { round: state.round, turn: state.turnIndex, actor: attacker.displayName, action: 'Lightning Arrow', details: `${target.displayName} takes ${half} ${replacement.damageType} damage from the lightning burst.`, damage: half, type: 'damage' });
+}
+
 function resolveAttack(
   state: BattleState,
   attacker: Creature,
@@ -4271,6 +4300,9 @@ function resolveAttack(
     });
     applyWeaponMasteryOnMiss(state, attacker, target, action);
     tryApplyPotentCantripMiss(state, attacker, target, action);
+    if (action.type === 'ranged' && action.spellLevel === undefined) {
+      applyWeaponReplacementMiss(state, attacker, target);
+    }
     return;
   }
 
@@ -4288,17 +4320,20 @@ function resolveAttack(
     ) : false;
 
     if (action.damage) {
+      const replacement = action.type === 'ranged' && action.spellLevel === undefined
+        ? attacker.activeBuffs.find(candidate => candidate.weaponDamageReplacement)?.weaponDamageReplacement
+        : undefined;
       const weaponDamageDie = action.spellLevel === undefined
         ? attacker.activeBuffs?.find(buff => (!buff.weaponNames || buff.weaponNames.includes(action.name)) && buff.weaponDamageDie)?.weaponDamageDie
         : undefined;
-      const damageExpression = weaponDamageDie ? action.damage.replace(/^\d+d\d+/i, weaponDamageDie) : action.damage;
+      const damageExpression = replacement?.damage ?? (weaponDamageDie ? action.damage.replace(/^\d+d\d+/i, weaponDamageDie) : action.damage);
       const overchannelDamage = tryConsumeWizardOverchannel(state, attacker, action, damageExpression);
       let totalDmg = applyDamageRollPenalty(attacker, overchannelDamage ?? rollActionDamage(action, damageExpression, isCrit, action.rerollDamageOnes));
       if (overchannelDamage === null && hasOriginFeat(attacker, 'Savage Attacker') && !attacker.turnFlags.savageAttackerUsed && action.spellLevel === undefined && (action.type === 'melee' || action.type === 'ranged')) {
         totalDmg = Math.max(totalDmg, applyDamageRollPenalty(attacker, rollActionDamage(action, damageExpression, isCrit, action.rerollDamageOnes)));
         attacker.turnFlags.savageAttackerUsed = true;
       }
-      const mainType = action.damageType || 'bludgeoning';
+      const mainType = replacement?.damageType ?? (action.damageType || 'bludgeoning');
       const draconicBonus = draconicElementalAffinityBonus(attacker, action, mainType);
       if (draconicBonus > 0) {
         totalDmg += draconicBonus;
@@ -4391,6 +4426,7 @@ function resolveAttack(
 
       const appliedMainDamage = applyDamage(state, target, totalDmg, mainType, attacker, true, (action.magical ?? false) || weaponMagic, isCrit || autoCrit);
       addDamageToSummary(actionDamageSummary, appliedMainDamage, mainType);
+      if (replacement) resolveWeaponDamageReplacement(state, attacker, target);
       dealtActionDamage = appliedMainDamage > 0;
       if (!target.isAlive) target.stats.killedByAction = action.name;
       hitEvt.targetHpAfter = target.currentHp;
@@ -4651,6 +4687,7 @@ function resolveAttack(
     applyWeaponMasteryOnMiss(state, attacker, target, action);
     grantStudiedAttacksAdvantage(state, attacker, target, action);
     tryApplyPotentCantripMiss(state, attacker, target, action);
+    if (action.type === 'ranged' && action.spellLevel === undefined) applyWeaponReplacementMiss(state, attacker, target);
   }
 }
 

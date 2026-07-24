@@ -434,6 +434,19 @@ export function hailOfThorns(ability: SpellcastingAbility, mod: number, pb: numb
   };
 }
 
+export function lightningArrow(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  const dc = saveDC(mod, pb);
+  return {
+    name: 'Lightning Arrow', type: 'special', spellLevel: 3, spellSchool: 'transmutation', castingAbility: ability,
+    description: `The next ranged weapon attack before concentration ends replaces its weapon damage with 4d8 lightning. On a hit, creatures within 10 feet of the target make a DEX save (DC ${dc}) for half damage; on a miss, the target takes half damage and the burst still resolves.`,
+    isBonusAction: true, concentration: true, durationRounds: 10, targetScope: 'self',
+    buff: {
+      name: 'Lightning Arrow', key: 'lightning-arrow', requiresConcentration: true,
+      weaponDamageReplacement: { damage: '4d8', damageType: 'lightning', radiusFt: 10, saveAbility: 'dex', saveDc: dc },
+    },
+  };
+}
+
 export function wardingBond(): MonsterAction {
   return {
     name: 'Warding Bond',
@@ -2090,7 +2103,7 @@ export function wallOfFire(ability: SpellcastingAbility, mod: number, pb: number
 
 type SpellFactory = (ability: SpellcastingAbility, mod: number, pb: number) => MonsterAction;
 const SPELL_FACTORIES: [string, SpellFactory][] = [
-  ['Magic Missile', () => magicMissile()],
+  ['Magic Missile', () => magicMissile()], ['Lightning Arrow', lightningArrow],
   ['Blade Ward', bladeWard], ['Resistance', resistance], ['Shillelagh', shillelagh], ['Sorcerous Burst', sorcerousBurst], ['Poison Spray', poisonSpray], ['Produce Flame', produceFlame], ['Thorn Whip', thornWhip], ['Acid Splash', acidSplash], ['Starry Wisp', starryWisp], ['Thunderclap', thunderclap], ['Toll the Dead', tollTheDead], ['True Strike', trueStrike],
   ['Shield', shield], ['Hail of Thorns', hailOfThorns],
   ['Hellish Rebuke', hellishRebuke],

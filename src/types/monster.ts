@@ -566,6 +566,8 @@ export interface BuffTemplate {
   weaponDamageRider?: string;
   /** Save-based burst on the next ranged weapon hit, centered on its target. */
   weaponHitArea?: { damage: string; damageType: string; radiusFt: number; saveAbility: keyof Abilities; saveDc: number };
+  /** Replaces the next ranged weapon's damage and detonates on hit or miss. */
+  weaponDamageReplacement?: { damage: string; damageType: string; radiusFt: number; saveAbility: keyof Abilities; saveDc: number };
   /** Replaces the base weapon damage die while this buff is active (Shillelagh). */
   weaponDamageDie?: string;
   /** Restricts weapon overrides to named weapons (for example Club/Quarterstaff). */
@@ -1073,6 +1075,8 @@ export interface ActiveBuff {
   weaponDamageRider?: string;
   /** Save-based burst on the next ranged weapon hit, centered on its target. */
   weaponHitArea?: { damage: string; damageType: string; radiusFt: number; saveAbility: keyof Abilities; saveDc: number };
+  /** Replaces the next ranged weapon's damage and detonates on hit or miss. */
+  weaponDamageReplacement?: { damage: string; damageType: string; radiusFt: number; saveAbility: keyof Abilities; saveDc: number };
   /** Replaces the base weapon damage die while this buff is active (Shillelagh). */
   weaponDamageDie?: string;
   /** Restricts weapon overrides to named weapons (for example Club/Quarterstaff). */
