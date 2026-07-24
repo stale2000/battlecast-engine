@@ -4,7 +4,7 @@ import { Encounter } from '../src/api/encounter.js';
 import { getActiveCreature, getLegalActions, applyLegalAction, startArena } from '../src/api/arena.js';
 import { isFrightenedMoveLegal, reachableMovementDestinations } from '../src/engine/ai-movement.js';
 import { processTurnStart } from '../src/engine/ai-turn.js';
-import { applyDamage, applyDamageRollPenalty, executeSpell, getEffectiveMoveSpeed, hasDisadvantage, processTargetTurnEndOngoingEffects, resolveAttack, rollAllInitiatives, runDeathSave } from '../src/engine/combat.js';
+import { applyDamage, applyDamageRollPenalty, executeSpell, getEffectiveMoveSpeed, hasDisadvantage, processTargetTurnEndOngoingEffects, processTargetTurnStartOngoingEffects, resolveAttack, rollAllInitiatives, runDeathSave, triggerPersistentZones } from '../src/engine/combat.js';
 import { dropConcentratedBuffsFrom } from '../src/engine/combat-buffs.js';
 import { canSee } from '../src/engine/ai-targeting.js';
 import { rollSaveWithBuffs } from '../src/engine/combat-buffs.js';
@@ -13,7 +13,7 @@ import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
-import { acidArrow, bane, barkskin, bestowCurse, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, cloudOfDaggers, command, dissonantWhispers, dispelMagic, flamingSphere, fly, grease, haste, hellishRebuke, heroism, inflictWounds, invisibility, lesserRestoration, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, seeInvisibility, shield, shiningSmite, spiritualWeapon, tashasHideousLaughter, web, witchBolt } from '../src/data/spells.js';
+import { acidArrow, bane, barkskin, bestowCurse, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, cloudOfDaggers, command, dissonantWhispers, dispelMagic, entangle, flamingSphere, fly, grease, haste, hellishRebuke, heroism, inflictWounds, invisibility, lesserRestoration, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, seeInvisibility, shield, shiningSmite, spiritualWeapon, tashasHideousLaughter, web, witchBolt } from '../src/data/spells.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
@@ -259,9 +259,29 @@ describe('Kaggle arena bridge', () => {
     withRng({ next: () => 0 }, () => expect(executeSpell(encounter.state!, caster, web('int', 3, 3), target, [target], target.position)).toBe(true));
     expect(target.conditions).toContain('restrained');
     expect(target.activeBuffs.some(buff => buff.key === 'web')).toBe(true);
+    expect(encounter.state!.persistentZones).toHaveLength(1);
+    target.conditions = [];
+    target.activeBuffs = [];
+    withRng({ next: () => 0 }, () => processTargetTurnStartOngoingEffects(encounter.state!, target));
+    expect(target.conditions).toContain('restrained');
     dropConcentratedBuffsFrom(encounter.state!, caster.id);
     expect(target.conditions).not.toContain('restrained');
     expect(target.activeBuffs.some(buff => buff.key === 'web')).toBe(false);
+    expect(encounter.state!.persistentZones).toHaveLength(0);
+  });
+
+  it('reapplies Entangle when a creature enters its persisted area', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Druid', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [entangle('wis', 3, 3)], additionalResources: { 'slot-1': 1 } } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    const target = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
+    withRng({ next: () => 0 }, () => expect(executeSpell(encounter.state!, caster, entangle('wis', 3, 3), target, [target], target.position)).toBe(true));
+    target.conditions = [];
+    target.activeBuffs = [];
+    withRng({ next: () => 0 }, () => triggerPersistentZones(encounter.state!, target, 'entry'));
+    expect(target.conditions).toContain('restrained');
   });
 
   it('offers only server-owned Dispel Magic targets and removes the selected effect', () => {

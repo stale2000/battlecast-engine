@@ -292,9 +292,8 @@ export function dropConcentratedBuffsFrom(
   state.darknessZones = state.darknessZones?.filter(zone =>
     !(zone.requiresConcentration && zone.sourceId === casterId)
   );
-  state.persistentZones = state.persistentZones?.filter(zone =>
-    !(zone.requiresConcentration && zone.sourceId === casterId)
-  );
+  const removedZones = (state.persistentZones ?? []).filter(zone => zone.requiresConcentration && zone.sourceId === casterId);
+  state.persistentZones = state.persistentZones?.filter(zone => !removedZones.includes(zone));
   const caster = state.creatures.find(c => c.id === casterId);
   if (caster) caster.repeatableAreaSpell = undefined;
   for (const creature of state.creatures) {
@@ -307,6 +306,10 @@ export function dropConcentratedBuffsFrom(
     && caster?.monsterData.heroClass === 'Ranger'
     && (caster.monsterData.heroLevel ?? 0) >= 13;
   for (const c of state.creatures) {
+    for (const zone of removedZones) {
+      c.conditionTimers = c.conditionTimers.filter(timer => !(timer.sourceId === casterId && timer.condition === zone.conditionOnFail));
+      if (!c.conditionTimers.some(timer => timer.condition === zone.conditionOnFail)) c.conditions = c.conditions.filter(condition => condition !== zone.conditionOnFail);
+    }
     if (!c.activeBuffs) continue;
     const removed = c.activeBuffs.filter(b => b.requiresConcentration && b.casterId === casterId && !(preserveHuntersMark && b.key === 'hunters-mark'));
     c.activeBuffs = c.activeBuffs.filter(b => !removed.includes(b));
