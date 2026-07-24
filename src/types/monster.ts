@@ -397,6 +397,8 @@ export interface MonsterAction {
   };
   /** Enables a later no-slot repeat of this concentration spell (Call Lightning). */
   repeatableAreaSpell?: true;
+  /** Enables a later no-slot repeat of this concentration spell as an Action. */
+  repeatableActionSpell?: { healFromDamage?: boolean };
   /** The spell cannot affect a target wearing Heavy armor (Barkskin). */
   requiresNoHeavyArmor?: boolean;
   /**
@@ -775,6 +777,15 @@ export interface Creature {
     saveAbility: keyof Abilities;
     saveDC: number;
     area: string;
+  };
+  /** State for a concentration spell that repeats its original action without another slot. */
+  repeatableActionSpell?: {
+    name: string;
+    endRound: number;
+    damageType: string;
+    damageDice: string;
+    attackBonus: number;
+    healFromDamage?: boolean;
   };
   /** Active 2024 Wild Shape overlay. When present, the Druid fights as a beast:
    *  beast AC/speed/attacks/physical stats replace the Druid's, spellcasting

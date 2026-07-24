@@ -376,6 +376,9 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
       }
     }
   }
+  if (!active.hasActed && active.repeatableActionSpell && active.repeatableActionSpell.endRound > state.round) {
+    for (const target of enemies.filter(target => creatureDistance(active, target) <= 5)) actions.push({ id: `repeat_action_spell:${slug(active.repeatableActionSpell.name)}:${target.id}`, type: 'repeat_action_spell', spellName: active.repeatableActionSpell.name, targetId: target.id });
+  }
   actions.push(...repeatAreaSpellActions(state, active));
   if (!active.hasActed && active.concentrationAura?.origin === 'point' && active.concentrationAura.moveFt && active.concentrationAura.endRound > state.round) actions.push({ id: 'move_aura', type: 'move_aura' });
   if (reachableMovementDestinations(active, state).length) actions.push({ id: 'move_to', type: 'move_to' });
@@ -572,6 +575,15 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
         name: repeat.name, type: 'special', description: `Repeat ${repeat.name}.`, damageType: repeat.damageType,
         savingThrow: { ability: repeat.saveAbility, dc: repeat.saveDC, damageOnFail: repeat.damageDice, damageOnSuccess: 'half', area: legal.areaShape },
       }, targets, legal.center, undefined, true);
+      active.hasActed = true;
+      checkBattleComplete(state);
+    } else if (legal.type === 'repeat_action_spell') {
+      const repeat = active.repeatableActionSpell;
+      const target = state.creatures.find(creature => creature.id === legal.targetId);
+      if (!repeat || repeat.name !== legal.spellName || !target || target.team === active.team || !target.isAlive || creatureDistance(active, target) > 5) throw new EncounterError(`Illegal or stale repeated action spell "${legal.id}".`);
+      const before = target.currentHp;
+      resolveAttack(state, active, target, { name: repeat.name, type: 'melee', description: `Repeat ${repeat.name}.`, attackBonus: repeat.attackBonus, damage: repeat.damageDice, damageType: repeat.damageType, magical: true });
+      if (repeat.healFromDamage) applyHealing(state, active, Math.floor(Math.max(0, before - target.currentHp) / 2), active, repeat.name);
       active.hasActed = true;
       checkBattleComplete(state);
     } else if (legal.type === 'move_aura') {

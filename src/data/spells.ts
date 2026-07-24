@@ -1678,6 +1678,10 @@ export function stinkingCloud(ability: SpellcastingAbility, _mod: number, _pb: n
   };
 }
 
+export function vampiricTouch(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return { name: 'Vampiric Touch', type: 'melee', description: 'Make a melee spell attack for 3d6 necrotic damage and regain half the damage dealt. Repeat as an Action while concentrating.', spellLevel: 3, spellSchool: 'necromancy', castingAbility: ability, concentration: true, durationRounds: 10, attackBonus: mod + pb, damage: '3d6', damageType: 'necrotic', magical: true, range: { normal: 5, long: 5 }, targetScope: 'one_enemy', repeatableActionSpell: { healFromDamage: true } };
+}
+
 export function wallOfFire(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
   return {
     name: 'Wall of Fire',
@@ -1744,6 +1748,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Fear', fear], ['Fly', fly], ['Revivify', revivify],
   ['Beacon of Hope', beaconOfHope],
   ['Stinking Cloud', stinkingCloud],
+  ['Vampiric Touch', vampiricTouch],
   ['Slow', slow],
   ['Bestow Curse', bestowCurse],
   ['Ice Storm', iceStorm], ['Banishment', banishment], ['Blight', blight],

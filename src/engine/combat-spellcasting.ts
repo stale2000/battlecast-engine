@@ -998,6 +998,15 @@ export function executeSpell(
     return true;
   }
 
+  if (castAction.repeatableActionSpell && castAction.attackBonus !== undefined && castAction.damage && primaryTarget) {
+    caster.repeatableActionSpell = { name: castAction.name, endRound: state.round + (castAction.durationRounds ?? 10), damageType: castAction.damageType ?? 'untyped', damageDice: castAction.damage, attackBonus: castAction.attackBonus, healFromDamage: castAction.repeatableActionSpell.healFromDamage };
+    caster.concentratingOn = castAction.name;
+    const before = primaryTarget.currentHp;
+    resolveAttack(state, caster, primaryTarget, castAction);
+    if (castAction.repeatableActionSpell.healFromDamage) applyHealing(state, caster, Math.floor(Math.max(0, before - primaryTarget.currentHp) / 2), caster, castAction.name);
+    return true;
+  }
+
   if (castAction.buffOnFailedSave?.requiresConcentration) {
     dropConcentratedBuffsFrom(state, caster.id);
     caster.concentratingOn = castAction.buffOnFailedSave.key;
