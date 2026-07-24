@@ -55,6 +55,17 @@ export function poisonSpray(ability: SpellcastingAbility, mod: number, pb: numbe
   };
 }
 
+/** Produce Flame's combat mode: a ranged fire spell attack. */
+export function produceFlame(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  const dice = pb >= 6 ? '4d8' : pb >= 4 ? '3d8' : pb >= 3 ? '2d8' : '1d8';
+  return {
+    name: 'Produce Flame', type: 'ranged', spellLevel: 0, spellSchool: 'conjuration', castingAbility: ability,
+    description: `Ranged spell attack within 60 feet. Hit: ${dice} fire damage.`,
+    attackBonus: spellAttackBonus(mod, pb), damage: dice, damageType: 'fire', magical: true,
+    range: { normal: 60, long: 60 }, targetScope: 'one_enemy',
+  };
+}
+
 export function thornWhip(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
   const dice = pb >= 6 ? '4d6' : pb >= 4 ? '3d6' : pb >= 3 ? '2d6' : '1d6';
   return {
@@ -2066,7 +2077,7 @@ export function wallOfFire(ability: SpellcastingAbility, mod: number, pb: number
 type SpellFactory = (ability: SpellcastingAbility, mod: number, pb: number) => MonsterAction;
 const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Magic Missile', () => magicMissile()],
-  ['Blade Ward', bladeWard], ['Resistance', resistance], ['Shillelagh', shillelagh], ['Sorcerous Burst', sorcerousBurst], ['Poison Spray', poisonSpray], ['Thorn Whip', thornWhip], ['Acid Splash', acidSplash], ['Starry Wisp', starryWisp], ['Thunderclap', thunderclap], ['Toll the Dead', tollTheDead], ['True Strike', trueStrike],
+  ['Blade Ward', bladeWard], ['Resistance', resistance], ['Shillelagh', shillelagh], ['Sorcerous Burst', sorcerousBurst], ['Poison Spray', poisonSpray], ['Produce Flame', produceFlame], ['Thorn Whip', thornWhip], ['Acid Splash', acidSplash], ['Starry Wisp', starryWisp], ['Thunderclap', thunderclap], ['Toll the Dead', tollTheDead], ['True Strike', trueStrike],
   ['Shield', shield],
   ['Hellish Rebuke', hellishRebuke],
   ['Burning Hands', burningHands], ['Thunderwave', thunderwave], ['Sleep', sleep],

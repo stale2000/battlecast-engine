@@ -43,7 +43,7 @@ import {
   blindnessDeafness, invisibility, mirrorImage, seeInvisibility, dispelMagic, haste, wallOfFire,
   aid, magicWeapon, shiningSmite,
   acidArrow, acidSplash, armsOfHadar, barkskin, bestowCurse, bladeWard, blur, colorSpray, darkness, divineFavor, enlargeReduce, expeditiousRetreat, faerieFire, falseLife, fear, flameBlade, fly, fogCloud, grease, gustOfWind, heatMetal, iceKnife, lesserRestoration, mistyStep,
-  armorOfAgathys, beaconOfHope, longstrider, mageArmor, massHealingWord, passWithoutTrace, poisonSpray, rayOfEnfeeblement, rayOfSickness, revivify, slow, starryWisp, stinkingCloud, tashasHideousLaughter, thunderclap, thornWhip, tollTheDead, trueStrike, vampiricTouch,
+  armorOfAgathys, beaconOfHope, longstrider, mageArmor, massHealingWord, passWithoutTrace, poisonSpray, produceFlame, rayOfEnfeeblement, rayOfSickness, revivify, slow, starryWisp, stinkingCloud, tashasHideousLaughter, thunderclap, thornWhip, tollTheDead, trueStrike, vampiricTouch,
   protectionFromPoison, resistance, shillelagh, sorcerousBurst, shield, hellishRebuke, sleetStorm, hungerOfHadar, windWall, brandingSmite, ensnaringStrike, searingSmite, thunderousSmite, wrathfulSmite,
   circleOfDeath, chainLightning, disintegrate, fingerOfDeath,
   befuddlement, powerWordHeal, powerWordKill, meteorSwarm,
@@ -1721,7 +1721,7 @@ function buildOptionalSpells(
       pool.push(revivify(spellAbility, mod, pb));
       break;
     case 'Druid':
-      pool.push(poisonSpray(spellAbility, mod, pb), resistance(spellAbility, mod, pb), shillelagh(spellAbility, mod, pb), starryWisp(spellAbility, mod, pb), thunderclap(spellAbility, mod, pb), thornWhip(spellAbility, mod, pb), iceKnife(spellAbility, mod, pb));
+      pool.push(poisonSpray(spellAbility, mod, pb), produceFlame(spellAbility, mod, pb), resistance(spellAbility, mod, pb), shillelagh(spellAbility, mod, pb), starryWisp(spellAbility, mod, pb), thunderclap(spellAbility, mod, pb), thornWhip(spellAbility, mod, pb), iceKnife(spellAbility, mod, pb));
       pool.push(summonBeast(spellAbility, mod, pb), summonFey(spellAbility, mod, pb));
       pool.push(barkskin(spellAbility, mod, pb), faerieFire(spellAbility, mod, pb), flameBlade(spellAbility, mod, pb), flamingSphere(spellAbility, mod, pb), heatMetal(spellAbility, mod, pb), fogCloud(spellAbility, mod, pb), longstrider(spellAbility, mod, pb), protectionFromEvilAndGood(spellAbility, mod, pb), protectionFromPoison(spellAbility, mod, pb));
       pool.push(lesserRestoration(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb), passWithoutTrace(spellAbility, mod, pb), spikeGrowth(spellAbility, mod, pb), sleetStorm(spellAbility, mod, pb), windWall(spellAbility, mod, pb));
@@ -2634,7 +2634,7 @@ export function getAvailableSpells(
       optional.push(revivify(spellAbility, mod, pb));
       break;
     case 'Druid':
-      optional.push(poisonSpray(spellAbility, mod, pb), resistance(spellAbility, mod, pb), shillelagh(spellAbility, mod, pb), starryWisp(spellAbility, mod, pb), thunderclap(spellAbility, mod, pb), thornWhip(spellAbility, mod, pb), iceKnife(spellAbility, mod, pb));
+      optional.push(poisonSpray(spellAbility, mod, pb), produceFlame(spellAbility, mod, pb), resistance(spellAbility, mod, pb), shillelagh(spellAbility, mod, pb), starryWisp(spellAbility, mod, pb), thunderclap(spellAbility, mod, pb), thornWhip(spellAbility, mod, pb), iceKnife(spellAbility, mod, pb));
       optional.push(summonBeast(spellAbility, mod, pb), summonFey(spellAbility, mod, pb));
       optional.push(barkskin(spellAbility, mod, pb), faerieFire(spellAbility, mod, pb), flameBlade(spellAbility, mod, pb), flamingSphere(spellAbility, mod, pb), heatMetal(spellAbility, mod, pb), fogCloud(spellAbility, mod, pb), longstrider(spellAbility, mod, pb), protectionFromEvilAndGood(spellAbility, mod, pb), protectionFromPoison(spellAbility, mod, pb));
       optional.push(lesserRestoration(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb), passWithoutTrace(spellAbility, mod, pb), spikeGrowth(spellAbility, mod, pb), sleetStorm(spellAbility, mod, pb), windWall(spellAbility, mod, pb));
