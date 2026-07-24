@@ -317,8 +317,9 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
   if (!state || !active || active.id !== creatureId) return [];
   if (state.pendingHit) {
     if (state.pendingHit.attackerId !== active.id) return [];
+    const activeActions = getActiveActions(active);
     const pendingTarget = state.creatures.find(candidate => candidate.id === state.pendingHit!.targetId);
-    const pendingActions = state.pendingHit.actionIndexes.map(index => ({ index, action: getActiveActions(active)[index] })).filter(({ action }) => action?.postHit?.trigger === 'weapon_hit' || action?.postHit?.trigger === 'melee_hit');
+    const pendingActions = state.pendingHit.actionIndexes.map(index => ({ index, action: activeActions[index] })).filter(({ action }) => action?.postHit?.trigger === 'weapon_hit' || action?.postHit?.trigger === 'melee_hit');
     if (!pendingTarget || !pendingTarget.isAlive || !pendingActions.length) return [{ id: `post_hit:${active.id}:decline`, type: 'post_hit', actionName: 'post-hit', actionIndex: -1, targetId: state.pendingHit.targetId, decline: true }];
     const actions: ArenaAction[] = [{ id: `post_hit:${active.id}:decline`, type: 'post_hit', actionName: 'post-hit', actionIndex: -1, targetId: pendingTarget.id, decline: true }];
     for (const { index, action } of pendingActions) if (action && canCastArenaSpell(active, action) && action.isBonusAction && !active.bonusActionUsed) {
