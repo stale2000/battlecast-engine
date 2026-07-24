@@ -324,6 +324,16 @@ export function entangle(ability: SpellcastingAbility, mod: number, pb: number):
   };
 }
 
+export function sanctuary(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Sanctuary', type: 'special', spellLevel: 1, spellSchool: 'abjuration', castingAbility: ability,
+    isBonusAction: true, durationRounds: 10,
+    description: `One creature within 30 feet is warded for 1 minute. A creature targeting it with an attack must first pass a DC ${saveDC(mod, pb)} WIS save. The ward ends if its target attacks or casts a spell.`,
+    range: { normal: 30, long: 30 }, targetScope: 'one_ally',
+    buff: { name: 'Sanctuary', key: 'sanctuary', sanctuarySaveDc: saveDC(mod, pb), endsOnAttackOrCast: true },
+  };
+}
+
 export function heroism(ability: SpellcastingAbility, mod: number, _pb: number): MonsterAction {
   return {
     name: 'Heroism', type: 'special', spellLevel: 1, spellSchool: 'enchantment', castingAbility: ability, concentration: true, durationRounds: 10,
@@ -1551,6 +1561,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Hellish Rebuke', hellishRebuke],
   ['Burning Hands', burningHands], ['Thunderwave', thunderwave], ['Sleep', sleep],
   ['Bless', () => bless()], ['Bane', bane], ['Cure Wounds', cureWounds],
+  ['Sanctuary', sanctuary],
   ['Healing Word', healingWord], ['Shield of Faith', () => shieldOfFaith()],
   ['Heroism', heroism],
   ['Guiding Bolt', guidingBolt], ['Dissonant Whispers', dissonantWhispers],

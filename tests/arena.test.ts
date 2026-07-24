@@ -13,7 +13,7 @@ import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
-import { bane, barkskin, bestowCurse, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, dissonantWhispers, dispelMagic, fly, haste, hellishRebuke, heroism, invisibility, lesserRestoration, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, resistance, revivify, scorchingRay, shield, shiningSmite, spiritualWeapon, web, witchBolt } from '../src/data/spells.js';
+import { bane, barkskin, bestowCurse, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, dissonantWhispers, dispelMagic, fly, haste, hellishRebuke, heroism, invisibility, lesserRestoration, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, resistance, revivify, sanctuary, scorchingRay, shield, shiningSmite, spiritualWeapon, web, witchBolt } from '../src/data/spells.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
@@ -461,6 +461,21 @@ describe('Kaggle arena bridge', () => {
     frightened.activeBuffs.push({ name: 'Fear', key: 'fear', casterId: source.id, appliedRound: 1, endRound: 11, appliedConditions: ['frightened'] });
     expect(isFrightenedMoveLegal(frightened, { x: 4, y: 0 }, encounter.state!)).toBe(false);
     expect(isFrightenedMoveLegal(frightened, { x: 6, y: 0 }, encounter.state!)).toBe(true);
+  });
+
+  it('makes attackers pass Sanctuary before they can deal damage', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Cleric', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [sanctuary('wis', 3, 3)], additionalResources: { 'slot-1': 1 } } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
+    encounter.start();
+    const protectedCreature = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    const attacker = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
+    const attack = attacker.monsterData.actions.find(action => action.type === 'melee' && action.attackBonus !== undefined)!;
+    expect(executeSpell(encounter.state!, protectedCreature, sanctuary('wis', 3, 3), protectedCreature)).toBe(true);
+    const hp = protectedCreature.currentHp;
+    withRng({ next: () => 0 }, () => resolveAttack(encounter.state!, attacker, protectedCreature, attack));
+    expect(protectedCreature.currentHp).toBe(hp);
+    expect(encounter.state!.logs.some(log => log.action === 'Sanctuary')).toBe(true);
   });
 
   it('repeats Call Lightning from authoritative concentration state without another slot', () => {

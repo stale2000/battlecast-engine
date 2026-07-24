@@ -481,6 +481,8 @@ export interface BuffTemplate {
   endsOnAttackOrCast?: boolean;
   /** Remaining illusory duplicates that can intercept attacks. */
   mirrorImages?: number;
+  /** Attackers must pass this Wisdom save before harming the protected creature. */
+  sanctuarySaveDc?: number;
   /** Grants the restricted one-attack/Dash/Disengage/Hide action from Haste. */
   hasteAction?: boolean;
   /** Ability-specific saving throw Advantage, such as Haste's Dexterity saves. */
@@ -901,6 +903,7 @@ export interface ActiveBuff {
   conditionImmunities?: Condition[];
   endsOnAttackOrCast?: boolean;
   mirrorImages?: number;
+  sanctuarySaveDc?: number;
   hasteAction?: boolean;
   saveAdvantageAbilities?: Array<keyof Abilities>;
   /** Repeat this save at the specified point and remove the buff on success. */

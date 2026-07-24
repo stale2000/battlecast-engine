@@ -33,7 +33,7 @@ import {
   magicMissile, burningHands, thunderwave, sleep,
   scorchingRay, web, shatter, moonbeam, holdPerson, spiritualWeapon,
   fireball, lightningBolt, spiritGuardians, callLightning, hypnoticPattern,
-  bless, bane, cureWounds, healingWord, heroism, shieldOfFaith, guidingBolt,
+  bless, bane, cureWounds, healingWord, heroism, sanctuary, shieldOfFaith, guidingBolt,
   hex, huntersMark, dissonantWhispers, entangle,
   iceStorm, banishment, blight, fireShield, stoneskin, deathWard,
   coneOfCold, flameStrike, holdMonster, massCureWounds, synapticStatic,
@@ -1705,7 +1705,7 @@ function buildOptionalSpells(
       pool.push(dispelMagic(spellAbility, mod, pb));
       break;
     case 'Cleric':
-      pool.push(inflictWounds(spellAbility, mod, pb), command(spellAbility, mod, pb));
+      pool.push(inflictWounds(spellAbility, mod, pb), command(spellAbility, mod, pb), sanctuary(spellAbility, mod, pb));
       pool.push(blindnessDeafness(spellAbility, mod, pb));
       pool.push(lesserRestoration(spellAbility, mod, pb));
       pool.push(dispelMagic(spellAbility, mod, pb));
