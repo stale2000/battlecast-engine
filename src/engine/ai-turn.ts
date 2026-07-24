@@ -481,6 +481,18 @@ export function processTurnStart(state: BattleState, creature: Creature): boolea
   }
   processRecharges(creature);
   resetMovementStateForTurn(state, creature);
+  const forcedDodge = creature.activeBuffs.find(buff => buff.forcedDodgeSave);
+  if (forcedDodge?.forcedDodgeSave) {
+    const { ability, dc } = forcedDodge.forcedDodgeSave;
+    const save = rollSaveWithBuffs(creature, getEffectiveSaveModifier(creature, ability, state), false, dc, ability);
+    const passed = save.total >= dc;
+    state.events.push({ kind: 'save', targetId: creature.id, success: passed, durationMs: BASE_DURATIONS.save });
+    if (!passed) {
+      creature.turnFlags.dodge = true;
+      creature.hasActed = true;
+      pushLog(state, { round: state.round, turn: state.turnIndex, actor: creature.displayName, action: forcedDodge.name, details: `${creature.displayName} is forced to Dodge (${save.total} vs DC ${dc}).`, type: 'condition' });
+    }
+  }
   return true;
 }
 

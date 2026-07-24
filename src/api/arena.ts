@@ -166,6 +166,23 @@ function originalArea(action: MonsterAction): string {
   return action.savingThrow?.area?.toLowerCase() ?? (action.persistentZone ? `${action.persistentZone.radiusFt}-foot sphere` : '');
 }
 
+function withCurseChoice(spell: MonsterAction, choice: NonNullable<ArenaAction & { type: 'spell' }>['curseChoice']): MonsterAction {
+  if (!spell.curseChoice || !spell.buffOnFailedSave || !choice) return spell;
+  const ability = choice.startsWith('ability_') ? choice.slice('ability_'.length) as keyof Creature['monsterData']['abilities'] : undefined;
+  return {
+    ...spell,
+    curseChoice: { ...spell.curseChoice, selected: choice },
+    buffOnFailedSave: {
+      ...spell.buffOnFailedSave,
+      attackDisadvantage: choice === 'attack_disadvantage' ? true : undefined,
+      attackDisadvantageAgainstCaster: choice === 'attack_disadvantage' ? true : undefined,
+      damageRider: choice === 'damage_rider' ? '1d8 necrotic' : undefined,
+      saveDisadvantageAbilities: ability ? [ability] : undefined,
+      forcedDodgeSave: choice === 'forced_dodge' && spell.savingThrow ? { ability: 'wis', dc: spell.savingThrow.dc } : undefined,
+    },
+  };
+}
+
 function repeatAreaSpellActions(state: NonNullable<Encounter['state']>, active: Creature): ArenaAction[] {
   const repeat = active.repeatableAreaSpell;
   if (!repeat || repeat.endRound <= state.round || active.hasActed) return [];
@@ -491,8 +508,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
             ? { ...baseSpell, damageResistanceChoice: { ...baseSpell.damageResistanceChoice, selected: legal.damageResistance }, buff: { ...baseSpell.buff, resistDamageTypes: [legal.damageResistance] } }
             : baseSpell && legal.damageType && baseSpell.damageTypeChoice
               ? { ...baseSpell, damageTypeChoice: { ...baseSpell.damageTypeChoice, selected: legal.damageType }, damageType: legal.damageType }
-              : baseSpell && legal.curseChoice && baseSpell.curseChoice && baseSpell.buffOnFailedSave
-                ? { ...baseSpell, curseChoice: { ...baseSpell.curseChoice, selected: legal.curseChoice }, buffOnFailedSave: { ...baseSpell.buffOnFailedSave, attackDisadvantage: legal.curseChoice === 'attack_disadvantage' ? true : undefined, damageRider: legal.curseChoice === 'damage_rider' ? '1d8 necrotic' : undefined } }
+              : baseSpell && legal.curseChoice ? withCurseChoice(baseSpell, legal.curseChoice)
           : baseSpell;
       if (!spell || spell.name !== legal.actionName || !isSpellAction(spell)) throw new EncounterError(`Stale arena spell "${legal.id}".`);
       if (!target || !executeSpell(state, active, spell, target, spell.autoDarts || spell.multiTargetAttack || spell.multiTargetSave || spell.multiTargetBuff || spell.savingThrow?.area || spell.persistentZone ? targets : undefined, legal.center)) throw new EncounterError(`Illegal or stale arena spell "${legal.id}".`);

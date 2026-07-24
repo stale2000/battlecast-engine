@@ -133,10 +133,12 @@ export function rollSaveWithBuffs(
   const saveDisadvantageKeys = (saver.activeBuffs ?? [])
     .filter(b => b.saveDisadvantage)
     .map(b => b.key);
+  const abilitySaveDisadvantage = ability !== undefined && (saver.activeBuffs ?? [])
+    .some(buff => buff.saveDisadvantageAbilities?.includes(ability));
 
   const halflingLuck = saver.monsterData.heroSpecies === 'Halfling';
   const strengthTestDisadvantage = ability === 'str' && (saver.activeBuffs ?? []).some(buff => buff.strengthTestDisadvantage);
-  const result = rollSave(mod, advantage || barbarianSaveAdvantage || gnomishCunning || speciesConditionAdvantage || buffSaveAdvantage || buffConditionSaveAdvantage, saveDisadvantageKeys.length > 0 || strengthTestDisadvantage, halflingLuck);
+  const result = rollSave(mod, advantage || barbarianSaveAdvantage || gnomishCunning || speciesConditionAdvantage || buffSaveAdvantage || buffConditionSaveAdvantage, saveDisadvantageKeys.length > 0 || abilitySaveDisadvantage || strengthTestDisadvantage, halflingLuck);
   if (saveDisadvantageKeys.length > 0) {
     saver.activeBuffs = saver.activeBuffs.filter(b => !saveDisadvantageKeys.includes(b.key));
   }

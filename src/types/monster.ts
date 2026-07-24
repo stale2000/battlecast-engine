@@ -368,7 +368,7 @@ export interface MonsterAction {
   /** Chooses one server-validated damage type for a spell effect. */
   damageTypeChoice?: { choices: string[]; selected?: string };
   /** Chooses a server-validated combat effect for Bestow Curse. */
-  curseChoice?: { choices: Array<'attack_disadvantage' | 'damage_rider'>; selected?: 'attack_disadvantage' | 'damage_rider' };
+  curseChoice?: { choices: Array<'ability_str' | 'ability_dex' | 'ability_con' | 'ability_int' | 'ability_wis' | 'ability_cha' | 'attack_disadvantage' | 'forced_dodge' | 'damage_rider'>; selected?: 'ability_str' | 'ability_dex' | 'ability_con' | 'ability_int' | 'ability_wis' | 'ability_cha' | 'attack_disadvantage' | 'forced_dodge' | 'damage_rider' };
   /** Ends one selected spell effect on a target. The selected key is server-owned. */
   dispelMagic?: { maxSpellLevel: number; selectedKey?: string };
   /** Failed targets use their Reaction to flee directly away, provoking opportunity attacks. */
@@ -446,10 +446,13 @@ export interface BuffTemplate {
   advantageForAllAttackers?: boolean;
   /** Weapon Mastery: Sap gives this creature Disadvantage on attack rolls while active. */
   attackDisadvantage?: boolean;
+  attackDisadvantageAgainstCaster?: boolean;
   /** Attackers have Disadvantage against this creature, e.g. Blur. */
   attackersHaveDisadvantage?: boolean;
   /** One-shot rider such as Barbarian Staggering Blow: next save has Disadvantage. */
   saveDisadvantage?: boolean;
+  saveDisadvantageAbilities?: Array<keyof Abilities>;
+  forcedDodgeSave?: { ability: keyof Abilities; dc: number };
   /** Weapon Mastery: Slow reduces this creature's speed while active. */
   speedPenalty?: number;
   /** Longstrider-style increase to all movement speeds. */
@@ -890,9 +893,12 @@ export interface ActiveBuff {
   advantageForAllAttackers?: boolean;
   /** Weapon Mastery: Sap gives this creature Disadvantage on attack rolls while active. */
   attackDisadvantage?: boolean;
+  attackDisadvantageAgainstCaster?: boolean;
   attackersHaveDisadvantage?: boolean;
   /** One-shot rider such as Barbarian Staggering Blow: next save has Disadvantage. */
   saveDisadvantage?: boolean;
+  saveDisadvantageAbilities?: Array<keyof Abilities>;
+  forcedDodgeSave?: { ability: keyof Abilities; dc: number };
   /** Weapon Mastery: Slow reduces this creature's speed while active. */
   speedPenalty?: number;
   /** Longstrider-style increase to all movement speeds. */

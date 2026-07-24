@@ -484,9 +484,27 @@ describe('Kaggle arena bridge', () => {
     target.monsterData = { ...target.monsterData, abilities: { ...target.monsterData.abilities, wis: 1 } };
     encounter.state!.initiativeOrder = [caster.id];
     startArena(encounter);
+    expect(getLegalActions(encounter, caster.id).filter(choice => choice.type === 'spell' && choice.actionName === 'Bestow Curse')).toHaveLength(9);
     const action = getLegalActions(encounter, caster.id).find(choice => choice.type === 'spell' && choice.actionName === 'Bestow Curse' && choice.curseChoice === 'damage_rider')!;
     applyLegalAction(encounter, action);
     expect(target.activeBuffs.find(buff => buff.key === 'bestow-curse')?.damageRider).toBe('1d8 necrotic');
+  });
+
+  it('applies Bestow Curse forced Dodge at the start of the target turn', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [bestowCurse('int', 3, 3)], additionalResources: { 'slot-3': 1 } } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 2, y: 0 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    const target = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
+    target.monsterData = { ...target.monsterData, abilities: { ...target.monsterData.abilities, wis: 1 } };
+    encounter.state!.initiativeOrder = [caster.id];
+    startArena(encounter);
+    const action = getLegalActions(encounter, caster.id).find(choice => choice.type === 'spell' && choice.actionName === 'Bestow Curse' && choice.curseChoice === 'forced_dodge')!;
+    withRng({ next: () => 0 }, () => applyLegalAction(encounter, action));
+    withRng({ next: () => 0 }, () => expect(processTurnStart(encounter.state!, target)).toBe(true));
+    expect(target.hasActed).toBe(true);
+    expect(target.turnFlags.dodge).toBe(true);
   });
 
   it('rejects voluntary movement closer to the source of Fear', () => {
