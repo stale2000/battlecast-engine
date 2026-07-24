@@ -187,6 +187,7 @@ describe('getAvailableSpells', () => {
     for (const spell of ['Counterspell', 'Cloud of Daggers']) expect(names('Warlock')).toContain(spell);
     for (const spell of ['Branding Smite', 'Searing Smite', 'Thunderous Smite', 'Wrathful Smite']) expect(names('Paladin')).toContain(spell);
     expect(names('Ranger')).toContain('Ensnaring Strike');
+    expect(names('Druid')).toContain('Wind Wall');
     expect(names('Warlock')).toContain('Hunger of Hadar');
   });
 

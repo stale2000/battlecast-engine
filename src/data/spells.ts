@@ -1889,6 +1889,17 @@ export function hungerOfHadar(ability: SpellcastingAbility, mod: number, pb: num
   };
 }
 
+export function windWall(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Wind Wall', type: 'special', spellLevel: 3, spellSchool: 'evocation', castingAbility: ability,
+    concentration: true, durationRounds: 10,
+    description: `A 60-foot line of strong wind appears within 120 feet. Creatures in it make a Strength save (DC ${saveDC(mod, pb)}) for 4d8 bludgeoning damage, half on a success. Concentration, 1 minute.`,
+    range: { normal: 120, long: 120 }, targetScope: 'area_enemies', damageType: 'bludgeoning',
+    savingThrow: { ability: 'str', dc: saveDC(mod, pb), damageOnFail: '4d8', damageOnSuccess: 'half', area: '60-foot line' },
+    persistentZone: { radiusFt: 60, durationRounds: 10, triggers: ['entry', 'turnStart'], shape: 'line' },
+  };
+}
+
 export function stinkingCloud(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
   return {
     name: 'Stinking Cloud', type: 'special', spellLevel: 3, spellSchool: 'conjuration', castingAbility: ability, concentration: true, durationRounds: 10,
@@ -1973,6 +1984,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Mass Healing Word', massHealingWord],
   ['Sleet Storm', sleetStorm],
   ['Hunger of Hadar', hungerOfHadar],
+  ['Wind Wall', windWall],
   ['Stinking Cloud', stinkingCloud],
   ['Vampiric Touch', vampiricTouch],
   ['Slow', slow],

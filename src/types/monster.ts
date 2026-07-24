@@ -1099,6 +1099,9 @@ export interface PersistentZone {
   saveDC?: number;
   conditionOnFail?: Condition;
   conditionDuration?: ConditionDuration;
+  damageOnFail?: string;
+  damageOnSuccess?: 'half';
+  damageType?: string;
   triggers: Array<'entry' | 'turnStart' | 'turnEnd'>;
   difficultTerrain?: boolean;
   difficultTerrainTowardSource?: boolean;

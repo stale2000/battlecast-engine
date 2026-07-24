@@ -3883,6 +3883,7 @@ export function createPersistentZone(state: BattleState, caster: Creature, actio
   state.persistentZones.push({
     sourceId: caster.id, name: action.name, x: center.x, y: center.y, radius: config.radiusFt,
     endRound: state.round + config.durationRounds, saveAbility: save?.ability, saveDC: save ? save.dc + getSpellSaveDcBonus(caster, action) : undefined,
+    damageOnFail: save?.damageOnFail, damageOnSuccess: save?.damageOnSuccess === 'half' ? 'half' : undefined, damageType: action.damageType,
     conditionOnFail: save?.conditionOnFail, conditionDuration: save?.conditionDuration ?? 'end_of_next_turn', triggers: config.triggers,
     difficultTerrain: config.difficultTerrain, difficultTerrainTowardSource: config.difficultTerrainTowardSource, damagePer5Ft: config.damagePer5Ft,
     shape: config.shape, origin: config.shape === 'line' ? { ...caster.position } : undefined, direction: config.shape === 'line' ? { ...center } : undefined, pushOnFailedSave: config.pushOnFailedSave,
@@ -3941,6 +3942,15 @@ export function triggerPersistentZones(state: BattleState, target: Creature, tri
     const save = rollSaveWithBuffs(target, getEffectiveSaveModifier(target, zone.saveAbility, state), hasActiveTrait(target, 'Magic Resistance'), zone.saveDC, zone.saveAbility, zone.conditionOnFail);
     const passed = save.total >= zone.saveDC;
     state.events.push({ kind: 'save', targetId: target.id, success: passed, durationMs: BASE_DURATIONS.save });
+    if (zone.damageOnFail && target.isAlive) {
+      const raw = rollDice(zone.damageOnFail).total;
+      const damage = passed && zone.damageOnSuccess === 'half' ? Math.floor(raw / 2) : raw;
+      const before = target.currentHp;
+      pushLog(state, { round: state.round, turn: state.turnIndex, actor: source.displayName, action: zone.name, details: `${target.displayName} takes ${damage} ${zone.damageType ?? 'untyped'} damage from ${zone.name}.`, damage, type: 'damage' });
+      const event = pushHitEvent(state, target.id, damage, zone.damageType ?? 'untyped', false, before);
+      applyDamage(state, target, damage, zone.damageType ?? 'untyped', source, false, true);
+      event.targetHpAfter = target.currentHp;
+    }
     if (passed) continue;
     if (zone.conditionOnFail) applyCondition(state, target, zone.conditionOnFail, source, zone.conditionDuration, zone.saveDC, zone.saveAbility);
     if (zone.skipActionsOnFailedSave) {
