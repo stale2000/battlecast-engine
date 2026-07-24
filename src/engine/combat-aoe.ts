@@ -174,6 +174,7 @@ function applySaveBuff(state: BattleState, attacker: Creature, target: Creature,
     strengthTestDisadvantage: tmpl.strengthTestDisadvantage,
     damageRollPenalty: tmpl.damageRollPenalty,
     saveEnds: tmpl.saveEnds,
+    appliedCondition: tmpl.appliedCondition,
   });
   pushLog(state, {
     round: state.round, turn: state.turnIndex,

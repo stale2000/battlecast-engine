@@ -445,6 +445,8 @@ export interface BuffTemplate {
   weaponConditionOnHit?: MonsterAction['conditionOnHit'];
   /** Removes this buff when its damage rider lands. */
   endsOnWeaponHit?: boolean;
+  /** Condition paired with this buff and removed whenever the buff ends. */
+  appliedCondition?: Condition;
   /** Temporary HP granted at the start of each of the target's turns. */
   temporaryHpAtTurnStart?: number;
   /** Conditions this buff prevents while it lasts. */
@@ -843,6 +845,7 @@ export interface ActiveBuff {
   weaponDamageRider?: string;
   weaponConditionOnHit?: MonsterAction['conditionOnHit'];
   endsOnWeaponHit?: boolean;
+  appliedCondition?: Condition;
   temporaryHpAtTurnStart?: number;
   conditionImmunities?: Condition[];
   /** Repeat this save at the specified point and remove the buff on success. */

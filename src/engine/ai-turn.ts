@@ -9,7 +9,7 @@ import {
   processRegeneration, processRecharges, checkBattleComplete, applyDamage, applyCondition, applyTemporaryHp, pushLog,
   type TacticType,
   hasBuff, hasResource, consumeResource, addBuff,
-  processConcentrationAuras, checkAuraEntry, expireSourceTurnBuffs, dropConcentratedBuffsFrom,
+  processConcentrationAuras, checkAuraEntry, expireBuffsForCreature, expireSourceTurnBuffs, dropConcentratedBuffsFrom,
   runDeathSave, stabiliseDyingAlly,
   getActiveSize, getActiveSpeed, getActiveTraits, hasActiveTrait,
   getEffectiveMoveSpeed, getEffectiveSaveModifier, getHydraHeadCount, canTakeReactions,
@@ -368,7 +368,7 @@ export function processTurnStart(state: BattleState, creature: Creature): boolea
   }
   expireSourceTurnBuffs(state, creature);
   if (creature.activeBuffs) {
-    creature.activeBuffs = creature.activeBuffs.filter(b => b.endRound > state.round);
+    expireBuffsForCreature(creature, state.round);
     for (const buff of creature.activeBuffs) {
       if (buff.temporaryHpAtTurnStart) applyTemporaryHp(state, creature, buff.temporaryHpAtTurnStart, creature, buff.name);
     }

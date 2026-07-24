@@ -454,8 +454,10 @@ export function web(ability: SpellcastingAbility, mod: number, pb: number): Mons
   return {
     name: 'Web',
     type: 'special',
-    description: `20-foot sphere. DEX save DC ${saveDC(mod, pb)}; on fail, Restrained until escape (repeat STR save). Concentration.`,
+    description: `20-foot sphere. DEX save DC ${saveDC(mod, pb)}; on fail, Restrained until it succeeds on a STR save at the end of its turn. Concentration.`,
     spellLevel: 2,
+    concentration: true,
+    durationRounds: 10,
     castingAbility: ability,
     savingThrow: {
       ability: 'dex', dc: saveDC(mod, pb),
@@ -463,6 +465,7 @@ export function web(ability: SpellcastingAbility, mod: number, pb: number): Mons
       conditionDuration: '1_minute',
       area: '20-foot sphere',
     },
+    buffOnFailedSave: { name: 'Web', key: 'web', requiresConcentration: true, appliedCondition: 'restrained', saveEnds: { ability: 'str', dc: saveDC(mod, pb), at: 'targetTurnEnd' } },
     targetScope: 'area_enemies',
   };
 }

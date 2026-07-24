@@ -13,7 +13,7 @@ import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
-import { barkskin, bladeWard, blindingSmite, fly, hellishRebuke, heroism, lesserRestoration, magicWeapon, mistyStep, moonbeam, resistance, shield, shiningSmite, spiritualWeapon, witchBolt } from '../src/data/spells.js';
+import { barkskin, bladeWard, blindingSmite, fly, hellishRebuke, heroism, lesserRestoration, magicWeapon, mistyStep, moonbeam, resistance, shield, shiningSmite, spiritualWeapon, web, witchBolt } from '../src/data/spells.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
@@ -247,6 +247,21 @@ describe('Kaggle arena bridge', () => {
     applyLegalAction(encounter, attack);
     expect(encounter.state!.logs.filter(log => log.action === 'Spiritual Weapon')).toHaveLength(logs + 1);
     expect(cleric.bonusActionUsed).toBe(true);
+  });
+
+  it('ends Web restraint when its concentration is dropped', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [web('int', 3, 3)], additionalResources: { 'slot-2': 1 } } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    const target = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
+    withRng({ next: () => 0 }, () => expect(executeSpell(encounter.state!, caster, web('int', 3, 3), target, [target], target.position)).toBe(true));
+    expect(target.conditions).toContain('restrained');
+    expect(target.activeBuffs.some(buff => buff.key === 'web')).toBe(true);
+    dropConcentratedBuffsFrom(encounter.state!, caster.id);
+    expect(target.conditions).not.toContain('restrained');
+    expect(target.activeBuffs.some(buff => buff.key === 'web')).toBe(false);
   });
 
   it('rejects a restored arena state with a changed round cap', () => {

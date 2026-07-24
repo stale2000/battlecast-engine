@@ -2494,7 +2494,13 @@ export function processTargetTurnEndOngoingEffects(state: BattleState, target: C
       details: passed ? `${target.displayName} ends ${buff.name}. (${save.total} vs DC ${buff.saveEnds.dc})` : `${target.displayName} remains affected by ${buff.name}. (${save.total} vs DC ${buff.saveEnds.dc})`,
       type: passed ? 'save' : 'condition',
     });
-    if (passed) target.activeBuffs = target.activeBuffs.filter(candidate => candidate !== buff);
+    if (passed) {
+      target.activeBuffs = target.activeBuffs.filter(candidate => candidate !== buff);
+      if (buff.appliedCondition) {
+        target.conditionTimers = target.conditionTimers.filter(timer => !(timer.condition === buff.appliedCondition && timer.sourceId === buff.casterId));
+        if (!target.conditionTimers.some(timer => timer.condition === buff.appliedCondition)) target.conditions = target.conditions.filter(condition => condition !== buff.appliedCondition);
+      }
+    }
   }
   if (!target.ongoingEffects?.length) return;
   for (const effect of [...target.ongoingEffects]) {

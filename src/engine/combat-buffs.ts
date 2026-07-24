@@ -285,9 +285,9 @@ export function dropConcentratedBuffsFrom(
     && (caster.monsterData.heroLevel ?? 0) >= 13;
   for (const c of state.creatures) {
     if (!c.activeBuffs) continue;
-    c.activeBuffs = c.activeBuffs.filter(b =>
-      !(b.requiresConcentration && b.casterId === casterId && !(preserveHuntersMark && b.key === 'hunters-mark'))
-    );
+    const removed = c.activeBuffs.filter(b => b.requiresConcentration && b.casterId === casterId && !(preserveHuntersMark && b.key === 'hunters-mark'));
+    c.activeBuffs = c.activeBuffs.filter(b => !removed.includes(b));
+    for (const buff of removed) clearBuffCondition(c, buff);
     if (c.id === casterId && c.concentrationAura) {
       state.events.push({
         kind: 'concentrationAura', creatureId: c.id, active: false,
@@ -305,21 +305,29 @@ export function dropConcentratedBuffsFrom(
   revealVisibleHiddenCreatures(state);
 }
 
+function clearBuffCondition(creature: Creature, buff: ActiveBuff): void {
+  if (!buff.appliedCondition) return;
+  creature.conditionTimers = creature.conditionTimers.filter(timer => !(timer.condition === buff.appliedCondition && timer.sourceId === buff.casterId));
+  if (!creature.conditionTimers.some(timer => timer.condition === buff.appliedCondition)) creature.conditions = creature.conditions.filter(condition => condition !== buff.appliedCondition);
+}
+
 /**
  * Tick buff durations at the START of the casting-creature's turn (SRD
  * "beginning of your turn" rule). Buffs whose endRound has passed are
  * removed, along with their concentration effects.
  */
 export function expireBuffsForCreature(creature: Creature, currentRound: number): void {
+  const expired = creature.activeBuffs.filter(b => b.endRound <= currentRound);
   creature.activeBuffs = creature.activeBuffs.filter(b => b.endRound > currentRound);
+  for (const buff of expired) clearBuffCondition(creature, buff);
 }
 
 /** Remove source-turn mastery debuffs at the start of the source creature's next turn. */
 export function expireSourceTurnBuffs(state: BattleState, source: Creature): void {
   for (const c of state.creatures) {
-    c.activeBuffs = (c.activeBuffs ?? []).filter(b =>
-      !(b.expiresOnSourceTurnStart && b.casterId === source.id && b.appliedRound < state.round)
-    );
+    const expired = (c.activeBuffs ?? []).filter(b => b.expiresOnSourceTurnStart && b.casterId === source.id && b.appliedRound < state.round);
+    c.activeBuffs = (c.activeBuffs ?? []).filter(b => !expired.includes(b));
+    for (const buff of expired) clearBuffCondition(c, buff);
   }
 }
 
