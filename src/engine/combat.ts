@@ -2427,6 +2427,8 @@ function applyOngoingDamage(state: BattleState, target: Creature, effect: NonNul
 
 export function processTargetTurnStartOngoingEffects(state: BattleState, target: Creature): void {
   if (!target.isAlive) return;
+  triggerPersistentZones(state, target, 'turnStart');
+  if (!target.isAlive) return;
   if (target.ongoingEffects?.length) {
     for (const effect of [...target.ongoingEffects]) {
       if (!target.isAlive) break;
@@ -3797,10 +3799,11 @@ export function createPersistentZone(state: BattleState, caster: Creature, actio
     sourceId: caster.id, name: action.name, x: center.x, y: center.y, radius: config.radiusFt,
     endRound: state.round + config.durationRounds, saveAbility: save.ability, saveDC: save.dc + getSpellSaveDcBonus(caster, action),
     conditionOnFail: save.conditionOnFail, conditionDuration: save.conditionDuration ?? 'end_of_next_turn', triggers: config.triggers,
+    requiresConcentration: action.concentration === true,
   });
 }
 
-export function triggerPersistentZones(state: BattleState, target: Creature, trigger: 'entry' | 'turnEnd'): void {
+export function triggerPersistentZones(state: BattleState, target: Creature, trigger: 'entry' | 'turnStart' | 'turnEnd'): void {
   state.persistentZones = (state.persistentZones ?? []).filter(zone => zone.endRound > state.round);
   for (const zone of state.persistentZones ?? []) {
     if (!zone.triggers.includes(trigger) || distance(target.position, { x: zone.x, y: zone.y }) > zone.radius) continue;

@@ -321,6 +321,7 @@ export function entangle(ability: SpellcastingAbility, mod: number, pb: number):
     },
     targetScope: 'area_enemies',
     buffOnFailedSave: { name: 'Entangle', key: 'entangle', requiresConcentration: true, appliedConditions: ['restrained'], saveEnds: { ability: 'str', dc: saveDC(mod, pb), at: 'targetTurnEnd' } },
+    persistentZone: { radiusFt: 20, durationRounds: 10, triggers: ['entry'] },
   };
 }
 
@@ -490,6 +491,7 @@ export function web(ability: SpellcastingAbility, mod: number, pb: number): Mons
     },
     buffOnFailedSave: { name: 'Web', key: 'web', requiresConcentration: true, appliedCondition: 'restrained', saveEnds: { ability: 'str', dc: saveDC(mod, pb), at: 'targetTurnEnd' } },
     targetScope: 'area_enemies',
+    persistentZone: { radiusFt: 20, durationRounds: 10, triggers: ['entry', 'turnStart'] },
   };
 }
 

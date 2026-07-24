@@ -292,6 +292,9 @@ export function dropConcentratedBuffsFrom(
   state.darknessZones = state.darknessZones?.filter(zone =>
     !(zone.requiresConcentration && zone.sourceId === casterId)
   );
+  state.persistentZones = state.persistentZones?.filter(zone =>
+    !(zone.requiresConcentration && zone.sourceId === casterId)
+  );
   const caster = state.creatures.find(c => c.id === casterId);
   if (caster) caster.repeatableAreaSpell = undefined;
   for (const creature of state.creatures) {
@@ -330,6 +333,7 @@ function clearConcentrationIfNoEffect(state: BattleState, casterId: string): voi
   const stillConcentrating = state.creatures.some(creature =>
     creature.activeBuffs?.some(buff => buff.requiresConcentration && buff.casterId === casterId)
   ) || state.darknessZones?.some(zone => zone.requiresConcentration && zone.sourceId === casterId)
+    || state.persistentZones?.some(zone => zone.requiresConcentration && zone.sourceId === casterId)
     || caster?.repeatableAreaSpell !== undefined;
   if (caster?.concentratingOn && !stillConcentrating) caster.concentratingOn = undefined;
 }

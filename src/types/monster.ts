@@ -378,7 +378,7 @@ export interface MonsterAction {
   /** A damaging concentration area that remains after the initial cast. */
   persistentAura?: { moveFt?: number; automaticDamage?: boolean; damageOnInitialCast?: boolean };
   /** Creates a static control zone whose triggers are resolved by the engine. */
-  persistentZone?: { radiusFt: number; durationRounds: number; triggers: Array<'entry' | 'turnEnd'> };
+  persistentZone?: { radiusFt: number; durationRounds: number; triggers: Array<'entry' | 'turnStart' | 'turnEnd'> };
   /** Enables a later no-slot repeat of this concentration spell (Call Lightning). */
   repeatableAreaSpell?: true;
   /** The spell cannot affect a target wearing Heavy armor (Barkskin). */
@@ -952,7 +952,8 @@ export interface PersistentZone {
   saveDC: number;
   conditionOnFail: Condition;
   conditionDuration: ConditionDuration;
-  triggers: Array<'entry' | 'turnEnd'>;
+  triggers: Array<'entry' | 'turnStart' | 'turnEnd'>;
+  requiresConcentration: boolean;
 }
 
 export interface CreatureStats {
