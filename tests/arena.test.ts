@@ -2023,6 +2023,23 @@ describe('Kaggle arena bridge', () => {
     }
   });
 
+  it('exposes and resolves the level-5 Poison Spray cantrip for every SRD caster that has it', () => {
+    for (const heroClass of ['Druid', 'Sorcerer', 'Warlock', 'Wizard'] as const) {
+      expect(getAvailableSpells(heroClass, 5).some(spell => spell.name === 'Poison Spray')).toBe(true);
+    }
+    expect(buildSpellAction('Poison Spray', 'wis', 3, 3)).toMatchObject({ spellLevel: 0, damage: '2d12', range: { normal: 30, long: 30 } });
+    const encounter = new Encounter({ seed: 1 });
+    const [druid] = encounter.addCreature({ heroClass: 'Druid', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { spells: ['Poison Spray'] } });
+    const [target] = encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 2, y: 0 } });
+    encounter.start(); encounter.state!.initiativeOrder = [druid.id]; startArena(encounter);
+    const action = getLegalActions(encounter, druid.id).find(candidate => candidate.actionName === 'Poison Spray')!;
+    const activeTarget = encounter.state!.creatures.find(creature => creature.id === target.id)!;
+    const hp = activeTarget.currentHp;
+    expect(() => applyLegalAction(encounter, action)).not.toThrow();
+    expect(activeTarget.currentHp).toBeLessThanOrEqual(hp);
+    expect(encounter.state!.logs.some(log => log.action === 'Poison Spray')).toBe(true);
+  });
+
   it('summons a controlled Bestial Spirit with validated placement and removes it on concentration loss or expiry', () => {
     expect(buildSpellAction('Summon Beast', 'wis', 3, 3)?.summon).toBeTruthy();
     expect(buildCustomHero('Druid', 5, { spells: ['Summon Beast'] }).actions.some(action => action.name === 'Summon Beast')).toBe(true);

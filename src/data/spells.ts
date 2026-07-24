@@ -45,6 +45,16 @@ export function resistance(ability: SpellcastingAbility, _mod: number, _pb: numb
   };
 }
 
+export function poisonSpray(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  const dice = pb >= 6 ? '4d12' : pb >= 4 ? '3d12' : pb >= 3 ? '2d12' : '1d12';
+  return {
+    name: 'Poison Spray', type: 'ranged', spellLevel: 0, spellSchool: 'necromancy', castingAbility: ability,
+    description: `Ranged spell attack within 30 feet. Hit: ${dice} poison damage.`,
+    attackBonus: spellAttackBonus(mod, pb), damage: dice, damageType: 'poison', magical: true,
+    range: { normal: 30, long: 30 }, targetScope: 'one_enemy',
+  };
+}
+
 export function magicMissile(): MonsterAction {
   return {
     name: 'Magic Missile',
@@ -1756,7 +1766,7 @@ export function wallOfFire(ability: SpellcastingAbility, mod: number, pb: number
 type SpellFactory = (ability: SpellcastingAbility, mod: number, pb: number) => MonsterAction;
 const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Magic Missile', () => magicMissile()],
-  ['Blade Ward', bladeWard], ['Resistance', resistance],
+  ['Blade Ward', bladeWard], ['Resistance', resistance], ['Poison Spray', poisonSpray],
   ['Shield', shield],
   ['Hellish Rebuke', hellishRebuke],
   ['Burning Hands', burningHands], ['Thunderwave', thunderwave], ['Sleep', sleep],
