@@ -1129,6 +1129,16 @@ export function executeSpell(
     return true;
   }
 
+  if (castAction.flameBlade && primaryTarget?.id === caster.id && castAction.attackBonus !== undefined && castAction.damage) {
+    caster.repeatableActionSpell = {
+      name: castAction.name, endRound: state.round + (castAction.durationRounds ?? 10),
+      damageType: castAction.damageType ?? 'fire', damageDice: castAction.damage, attackBonus: castAction.attackBonus,
+    };
+    caster.concentratingOn = castAction.name;
+    pushLog(state, { round: state.round, turn: state.turnIndex, actor: caster.displayName, action: castAction.name, details: `${caster.displayName} conjures a flaming blade.`, type: 'special' });
+    return true;
+  }
+
   if (castAction.repeatableAreaSpell && castAction.savingThrow?.damageOnFail && primaryTarget && aoeTargets) {
     caster.repeatableAreaSpell = {
       name: castAction.name, endRound: state.round + (castAction.durationRounds ?? 10), damageType: castAction.damageType ?? 'untyped',

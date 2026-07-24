@@ -419,6 +419,8 @@ export interface MonsterAction {
   fleeOnFailedSave?: boolean;
   /** Creates a persistent spiritual weapon that can make later bonus-action attacks. */
   spiritualWeapon?: { moveFt: number };
+  /** Creates a concentration-bound melee spell weapon usable as a later Action. */
+  flameBlade?: true;
   /** A damaging concentration area that remains after the initial cast. */
   persistentAura?: {
     moveFt?: number;

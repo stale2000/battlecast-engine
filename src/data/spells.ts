@@ -122,6 +122,16 @@ export function shillelagh(ability: SpellcastingAbility, _mod: number, _pb: numb
   };
 }
 
+export function flameBlade(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Flame Blade', type: 'special', spellLevel: 2, spellSchool: 'evocation', castingAbility: ability,
+    concentration: true, durationRounds: 10, isBonusAction: true, targetScope: 'self', flameBlade: true,
+    attackBonus: spellAttackBonus(mod, pb), damage: '3d6', damageType: 'fire', magical: true,
+    repeatableActionSpell: {},
+    description: `A flaming blade appears in your hand. As an Action on later turns, make a melee spell attack for 3d6 fire damage. Concentration.`,
+  };
+}
+
 export function magicMissile(): MonsterAction {
   return {
     name: 'Magic Missile',
@@ -2068,7 +2078,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Mage Armor', mageArmor],
   ['Ray of Enfeeblement', rayOfEnfeeblement], ['Ray of Sickness', rayOfSickness], ["Tasha's Hideous Laughter", tashasHideousLaughter],
   ['Scorching Ray', scorchingRay], ['Summon Beast', summonBeast], ['Summon Fey', summonFey], ['Summon Undead', summonUndead], ['Find Steed', findSteed], ['Conjure Animals', conjureAnimals], ['Web', web], ['Spike Growth', spikeGrowth], ['Hold Person', holdPerson],
-  ['Flaming Sphere', flamingSphere], ['Heat Metal', heatMetal], ['Cloud of Daggers', cloudOfDaggers],
+  ['Flaming Sphere', flamingSphere], ['Flame Blade', flameBlade], ['Heat Metal', heatMetal], ['Cloud of Daggers', cloudOfDaggers],
   ['Shatter', shatter], ['Moonbeam', moonbeam], ['Spiritual Weapon', spiritualWeapon],
   ['Aid', aid], ['Magic Weapon', magicWeapon], ['Shining Smite', shiningSmite],
   ['Branding Smite', brandingSmite], ['Ensnaring Strike', ensnaringStrike], ['Searing Smite', searingSmite], ['Thunderous Smite', thunderousSmite], ['Wrathful Smite', wrathfulSmite],
