@@ -4468,6 +4468,6 @@ export {
   lowestAvailableSlot, highestAvailableSlot,
   hasBuff, getBuff, addBuff, removeBuff,
   dropConcentratedBuffsFrom, expireBuffsForCreature, expireSourceTurnBuffs, resetTurnFlags,
-  attachConcentrationAura, processConcentrationAuras, checkAuraEntry,
+  attachConcentrationAura, processConcentrationAuras, checkAuraEntry, moveConcentrationAura,
 } from './combat-buffs.js';
 export type { AnimationEvent } from '../types/animation.js';

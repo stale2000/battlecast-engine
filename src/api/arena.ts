@@ -16,6 +16,7 @@ import {
   pushLog,
   resolveAttack,
   resolveAoE,
+  moveConcentrationAura,
   tryUseBonusActionDamageBuff,
   useSpiritualWeaponAttack,
   escapeGrapple,
@@ -271,6 +272,7 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
     }
   }
   actions.push(...repeatAreaSpellActions(state, active));
+  if (!active.hasActed && active.concentrationAura?.origin === 'point' && active.concentrationAura.moveFt && active.concentrationAura.endRound > state.round) actions.push({ id: 'move_aura', type: 'move_aura' });
   if (reachableMovementDestinations(active, state).length) actions.push({ id: 'move_to', type: 'move_to' });
   actions.push(...getClassFeatureLegalActions(active));
   if (!active.hasActed && !attackInProgress) {
@@ -376,7 +378,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
   const active = getActiveCreature(encounter);
   if (!state || !active) throw new EncounterError('No active creature.');
   const legal = getLegalActions(encounter, active.id).find(candidate => candidate.id === action.id);
-  if (!legal || (legal.type !== 'move_to' && legal.type !== 'species_teleport' && legal.type !== 'spell_teleport' && !sameArenaAction(legal, action))) {
+  if (!legal || (legal.type !== 'move_to' && legal.type !== 'move_aura' && legal.type !== 'species_teleport' && legal.type !== 'spell_teleport' && !sameArenaAction(legal, action))) {
     throw new EncounterError(`Illegal or stale arena action "${action.id}".`);
   }
   encounter.runWithRng(() => {
@@ -436,6 +438,11 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
         name: repeat.name, type: 'special', description: `Repeat ${repeat.name}.`, damageType: repeat.damageType,
         savingThrow: { ability: repeat.saveAbility, dc: repeat.saveDC, damageOnFail: repeat.damageDice, damageOnSuccess: 'half', area: legal.areaShape },
       }, targets, legal.center, undefined, true);
+      active.hasActed = true;
+      checkBattleComplete(state);
+    } else if (legal.type === 'move_aura') {
+      const destination = action.type === 'move_aura' ? action.destination : undefined;
+      if (!destination || !moveConcentrationAura(state, active, destination)) throw new EncounterError('Illegal or stale concentration-aura destination.');
       active.hasActed = true;
       checkBattleComplete(state);
     } else if (legal.type === 'move_to') {

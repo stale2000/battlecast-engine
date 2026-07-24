@@ -282,6 +282,26 @@ describe('Kaggle arena bridge', () => {
     expect(caster.hasActed).toBe(true);
   });
 
+  it('moves Moonbeam through a validated aura destination and damages newly covered enemies', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Druid', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [moonbeam('wis', 3, 3)], additionalResources: { 'slot-2': 1 } } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 5, y: 0 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    const first = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
+    const second = encounter.state!.creatures.filter(creature => creature.team === 'blue')[1]!;
+    expect(executeSpell(encounter.state!, caster, moonbeam('wis', 3, 3), first, [first], first.position)).toBe(true);
+    encounter.state!.round++;
+    encounter.state!.initiativeOrder = [caster.id];
+    startArena(encounter);
+    const move = getLegalActions(encounter, caster.id).find(action => action.type === 'move_aura')!;
+    const hp = second.currentHp;
+    applyLegalAction(encounter, { ...move, destination: { ...second.position } });
+    expect(caster.concentrationAura?.point).toEqual(second.position);
+    expect(second.currentHp).toBeLessThan(hp);
+  });
+
   it('rejects a restored arena state with a changed round cap', () => {
     const initial = kaggleStep(init());
     const team = initial.statuses.red === 'ACTIVE' ? 'red' : 'blue';

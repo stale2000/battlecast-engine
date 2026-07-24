@@ -414,6 +414,36 @@ export function processConcentrationAuras(state: BattleState, creature: Creature
   }
 }
 
+/** Move a point-origin concentration aura and resolve entry damage for newly covered enemies. */
+export function moveConcentrationAura(state: BattleState, caster: Creature, destination: { x: number; y: number }): boolean {
+  const aura = caster.concentrationAura;
+  const oldPoint = aura?.point;
+  const gridSize = state.gridSize ?? 20;
+  if (!aura || aura.origin !== 'point' || !oldPoint || !aura.moveFt || aura.endRound <= state.round
+    || !Number.isInteger(destination.x) || !Number.isInteger(destination.y)
+    || destination.x < 0 || destination.y < 0 || destination.x >= gridSize || destination.y >= gridSize
+    || Math.max(Math.abs(destination.x - oldPoint.x), Math.abs(destination.y - oldPoint.y)) * 5 > aura.moveFt) return false;
+  aura.point = { ...destination };
+  pushLog(state, {
+    round: state.round, turn: state.turnIndex, actor: caster.displayName, action: aura.spellName,
+    details: `${caster.displayName} moves ${aura.spellName} to (${destination.x}, ${destination.y}).`, type: 'move',
+  });
+  for (const target of state.creatures) {
+    if (!target.isAlive || target.team === caster.team || distance(target.position, oldPoint) <= aura.radiusFt || distance(target.position, destination) > aura.radiusFt) continue;
+    const save = rollSaveWithBuffs(target, getEffectiveSaveModifier(target, aura.saveAbility, state), hasActiveTrait(target, 'Magic Resistance'), aura.saveDC, aura.saveAbility);
+    const passed = save.total >= aura.saveDC;
+    state.events.push({ kind: 'save', targetId: target.id, success: passed, durationMs: BASE_DURATIONS.save });
+    const damage = passed ? Math.floor(rollDice(aura.damageDice).total / 2) : rollDice(aura.damageDice).total;
+    pushLog(state, { round: state.round, turn: state.turnIndex, actor: target.displayName, action: aura.spellName, details: `${target.displayName} ${passed ? 'resists' : 'fails against'} moved ${aura.spellName} (${save.total} vs DC ${aura.saveDC}) and takes ${damage} ${aura.damageType} damage.`, damage, type: 'damage' });
+    const hpBefore = target.currentHp;
+    state.events.push({ kind: 'hit', targetId: target.id, damage, damageType: aura.damageType, critical: false, targetHpBefore: hpBefore, targetHpAfter: hpBefore, durationMs: BASE_DURATIONS.hit });
+    applyDamage(state, target, damage, aura.damageType, caster, false, true);
+    const hit = state.events[state.events.length - (target.isAlive ? 1 : 2)] as { kind: 'hit'; targetHpAfter: number };
+    if (hit.kind === 'hit') hit.targetHpAfter = target.currentHp;
+  }
+  return true;
+}
+
 /**
  * Movement-entry check: when `creature` moves from `oldPos` to its new
  * position, resolve damage for every enemy aura it just entered, plus
