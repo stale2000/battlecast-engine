@@ -481,6 +481,8 @@ export function holdPerson(ability: SpellcastingAbility, mod: number, pb: number
     type: 'special',
     description: `One Humanoid within 60 ft. WIS save DC ${saveDC(mod, pb)}; on fail, Paralyzed for 1 minute (repeat save each turn). Concentration.`,
     spellLevel: 2,
+    concentration: true,
+    durationRounds: 10,
     castingAbility: ability,
     targetTypeRestriction: 'Humanoid',
     conditionOnHit: {
@@ -497,6 +499,7 @@ export function holdPerson(ability: SpellcastingAbility, mod: number, pb: number
     },
     range: { normal: 60, long: 60 },
     targetScope: 'one_enemy',
+    buffOnFailedSave: { name: 'Hold Person', key: 'hold-person', requiresConcentration: true, appliedConditions: ['paralyzed'], saveEnds: { ability: 'wis', dc: saveDC(mod, pb), at: 'targetTurnEnd' } },
   };
 }
 
@@ -684,6 +687,7 @@ export function fear(ability: SpellcastingAbility, mod: number, pb: number): Mon
     name: 'Fear', type: 'special', spellLevel: 3, spellSchool: 'illusion', castingAbility: ability, concentration: true, durationRounds: 10,
     description: `30-foot cone. WIS save DC ${saveDC(mod, pb)} or Frightened for 1 minute; repeat the save at the end of each turn.`,
     savingThrow: { ability: 'wis', dc: saveDC(mod, pb), conditionOnFail: 'frightened', conditionDuration: '1_minute', area: '30-foot cone' }, targetScope: 'area_enemies',
+    buffOnFailedSave: { name: 'Fear', key: 'fear', requiresConcentration: true, appliedConditions: ['frightened'], saveEnds: { ability: 'wis', dc: saveDC(mod, pb), at: 'targetTurnEnd' } },
   };
 }
 
@@ -800,6 +804,7 @@ export function hypnoticPattern(ability: SpellcastingAbility, mod: number, pb: n
       area: '30-foot sphere',
     },
     targetScope: 'area_enemies',
+    buffOnFailedSave: { name: 'Hypnotic Pattern', key: 'hypnotic-pattern', requiresConcentration: true, appliedConditions: ['incapacitated'], saveEnds: { ability: 'wis', dc: saveDC(mod, pb), at: 'targetTurnEnd' } },
   };
 }
 
