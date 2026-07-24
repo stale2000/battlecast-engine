@@ -375,7 +375,7 @@ describe('Kaggle arena bridge', () => {
   it('selects and resolves each Scorching Ray independently', () => {
     const encounter = new Encounter({ seed: 1 });
     encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [scorchingRay('int', 3, 3)], additionalResources: { 'slot-2': 1 } } });
-    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 2, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
     encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 5, y: 0 } });
     encounter.start();
     const caster = encounter.state!.creatures.find(creature => creature.team === 'red')!;
@@ -477,7 +477,7 @@ describe('Kaggle arena bridge', () => {
   it('binds Bestow Curse to the server-generated combat curse', () => {
     const encounter = new Encounter({ seed: 1 });
     encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [bestowCurse('int', 3, 3)], additionalResources: { 'slot-3': 1 } } });
-    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 2, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
     encounter.start();
     const caster = encounter.state!.creatures.find(creature => creature.team === 'red')!;
     const target = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
@@ -493,7 +493,7 @@ describe('Kaggle arena bridge', () => {
   it('applies Bestow Curse forced Dodge at the start of the target turn', () => {
     const encounter = new Encounter({ seed: 1 });
     encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [bestowCurse('int', 3, 3)], additionalResources: { 'slot-3': 1 } } });
-    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 2, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
     encounter.start();
     const caster = encounter.state!.creatures.find(creature => creature.team === 'red')!;
     const target = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
