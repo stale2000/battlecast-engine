@@ -33,7 +33,7 @@ import {
   magicMissile, burningHands, thunderwave, sleep,
   scorchingRay, web, shatter, moonbeam, holdPerson, spiritualWeapon,
   fireball, lightningBolt, spiritGuardians, callLightning, hypnoticPattern,
-  bless, bane, cureWounds, healingWord, shieldOfFaith, guidingBolt,
+  bless, bane, cureWounds, healingWord, heroism, shieldOfFaith, guidingBolt,
   hex, huntersMark, dissonantWhispers, entangle,
   iceStorm, banishment, blight, fireShield, stoneskin, deathWard,
   coneOfCold, flameStrike, holdMonster, massCureWounds, synapticStatic,
@@ -1719,6 +1719,7 @@ function buildOptionalSpells(
       pool.push(wallOfFire(spellAbility, mod, pb));
       break;
     case 'Bard':
+      pool.push(heroism(spellAbility, mod, pb));
       pool.push(faerieFire(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
       pool.push(command(spellAbility, mod, pb));
       pool.push(blindnessDeafness(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb));
@@ -1726,6 +1727,7 @@ function buildOptionalSpells(
       pool.push(bestowCurse(spellAbility, mod, pb), fear(spellAbility, mod, pb), fly(spellAbility, mod, pb));
       break;
     case 'Paladin':
+      pool.push(heroism(spellAbility, mod, pb));
       pool.push(divineFavor(spellAbility, mod, pb));
       pool.push(command(spellAbility, mod, pb));
       pool.push(holdPerson(spellAbility, mod, pb), moonbeam(spellAbility, mod, pb), spiritualWeapon(spellAbility, mod, pb));
@@ -2608,6 +2610,7 @@ export function getAvailableSpells(
       optional.push(wallOfFire(spellAbility, mod, pb));
       break;
     case 'Bard':
+      optional.push(heroism(spellAbility, mod, pb));
       optional.push(faerieFire(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
       optional.push(command(spellAbility, mod, pb));
       optional.push(blindnessDeafness(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb));
@@ -2615,6 +2618,7 @@ export function getAvailableSpells(
       optional.push(bestowCurse(spellAbility, mod, pb), fear(spellAbility, mod, pb), fly(spellAbility, mod, pb));
       break;
     case 'Paladin':
+      optional.push(heroism(spellAbility, mod, pb));
       optional.push(divineFavor(spellAbility, mod, pb));
       optional.push(command(spellAbility, mod, pb));
       optional.push(holdPerson(spellAbility, mod, pb), moonbeam(spellAbility, mod, pb), spiritualWeapon(spellAbility, mod, pb));

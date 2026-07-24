@@ -437,6 +437,10 @@ export interface BuffTemplate {
   weaponDamageBonus?: number;
   /** This creature's weapon attacks count as magical. */
   weaponAttacksMagical?: boolean;
+  /** Temporary HP granted at the start of each of the target's turns. */
+  temporaryHpAtTurnStart?: number;
+  /** Conditions this buff prevents while it lasts. */
+  conditionImmunities?: Condition[];
   /** Repeat this save at the specified point and remove the buff on success. */
   saveEnds?: { ability: keyof Abilities; dc: number; at: 'targetTurnEnd' };
 }
@@ -819,6 +823,8 @@ export interface ActiveBuff {
   damageRollPenalty?: string;
   weaponDamageBonus?: number;
   weaponAttacksMagical?: boolean;
+  temporaryHpAtTurnStart?: number;
+  conditionImmunities?: Condition[];
   /** Repeat this save at the specified point and remove the buff on success. */
   saveEnds?: { ability: keyof Abilities; dc: number; at: 'targetTurnEnd' };
 }

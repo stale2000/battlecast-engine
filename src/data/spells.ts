@@ -318,6 +318,15 @@ export function entangle(ability: SpellcastingAbility, mod: number, pb: number):
   };
 }
 
+export function heroism(ability: SpellcastingAbility, mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Heroism', type: 'special', spellLevel: 1, spellSchool: 'enchantment', castingAbility: ability, concentration: true, durationRounds: 10,
+    description: `One willing creature within 10 ft gains ${Math.max(1, mod)} temporary HP at the start of each of its turns and is immune to Frightened. Concentration, 1 minute.`,
+    range: { normal: 10, long: 10 }, targetScope: 'one_ally',
+    buff: { name: 'Heroism', key: 'heroism', requiresConcentration: true, temporaryHpAtTurnStart: Math.max(1, mod), conditionImmunities: ['frightened'] },
+  };
+}
+
 export function shield(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
   return {
     name: 'Shield', type: 'special', spellLevel: 1, spellSchool: 'abjuration', castingAbility: ability, reactionOnly: true,
@@ -1507,6 +1516,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Burning Hands', burningHands], ['Thunderwave', thunderwave], ['Sleep', sleep],
   ['Bless', () => bless()], ['Bane', bane], ['Cure Wounds', cureWounds],
   ['Healing Word', healingWord], ['Shield of Faith', () => shieldOfFaith()],
+  ['Heroism', heroism],
   ['Guiding Bolt', guidingBolt], ['Dissonant Whispers', dissonantWhispers],
   ['Entangle', entangle], ['Command', command], ['Chromatic Orb', chromaticOrb],
   ['Inflict Wounds', inflictWounds], ['Witch Bolt', witchBolt],

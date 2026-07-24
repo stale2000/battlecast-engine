@@ -514,6 +514,8 @@ export function applyBuffFromSpell(
     damageRollPenalty: tmpl.damageRollPenalty,
     weaponDamageBonus: tmpl.weaponDamageBonus,
     weaponAttacksMagical: tmpl.weaponAttacksMagical,
+    temporaryHpAtTurnStart: tmpl.temporaryHpAtTurnStart,
+    conditionImmunities: tmpl.conditionImmunities,
     saveEnds: tmpl.saveEnds,
   };
   addBuff(target, buff);

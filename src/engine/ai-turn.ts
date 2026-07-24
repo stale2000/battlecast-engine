@@ -6,7 +6,7 @@ import {
   getEnemies, getAliveCreatures,
   resolveAttack, resolveAoE, resolveSingleTargetSave, getAoETargets, pickRangedSphereCenter,
   executeSpell, applyHealing,
-  processRegeneration, processRecharges, checkBattleComplete, applyDamage, applyCondition, pushLog,
+  processRegeneration, processRecharges, checkBattleComplete, applyDamage, applyCondition, applyTemporaryHp, pushLog,
   type TacticType,
   hasBuff, hasResource, consumeResource, addBuff,
   processConcentrationAuras, checkAuraEntry, expireSourceTurnBuffs, dropConcentratedBuffsFrom,
@@ -368,6 +368,9 @@ export function processTurnStart(state: BattleState, creature: Creature): boolea
   expireSourceTurnBuffs(state, creature);
   if (creature.activeBuffs) {
     creature.activeBuffs = creature.activeBuffs.filter(b => b.endRound > state.round);
+    for (const buff of creature.activeBuffs) {
+      if (buff.temporaryHpAtTurnStart) applyTemporaryHp(state, creature, buff.temporaryHpAtTurnStart, creature, buff.name);
+    }
   }
   creature.turnFlags = {};
   // Heroic Warrior (Fighter L10): gain Heroic Inspiration each turn

@@ -3388,7 +3388,7 @@ function applyCondition(
   if (!target.isAlive) return false;
 
   // Check condition immunity
-  const immunities = target.monsterData.conditionImmunities || [];
+  const immunities = [...(target.monsterData.conditionImmunities || []), ...(target.activeBuffs?.flatMap(buff => buff.conditionImmunities ?? []) ?? [])];
   if (immunities.includes(condition)) {
     pushLog(state, {
       round: state.round, turn: state.turnIndex,
