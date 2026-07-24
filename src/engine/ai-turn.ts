@@ -74,6 +74,20 @@ function targetStillValid(state: BattleState, attacker: Creature, target: Creatu
   return true;
 }
 
+/** Haste grants exactly one weapon attack after the creature's normal action. */
+function tryHasteFollowUp(state: BattleState, creature: Creature, strategy: 'nearest' | 'weakest' | 'strongest' | 'smart'): void {
+  if (!(creature.activeBuffs ?? []).some(buff => buff.hasteAction)) return;
+  const target = selectTarget(state, creature, strategy);
+  if (!targetStillValid(state, creature, target)) return;
+  const action = getActiveActions(creature)
+    .filter(candidate => (candidate.type === 'melee' || candidate.type === 'ranged') && candidate.attackBonus !== undefined)
+    .filter(candidate => creatureDistance(creature, target!) <= (candidate.type === 'melee'
+      ? candidate.reach ?? 5
+      : candidate.range?.long ?? candidate.range?.normal ?? 0))
+    .sort((left, right) => estimateActionDamage(right, target!) - estimateActionDamage(left, target!))[0];
+  if (action) resolveAttack(state, creature, target!, action);
+}
+
 function hasSpellcastingActions(creature: Creature): boolean {
   if (creature.monsterData.isHero || creature.monsterData.isHomebrew) return true;
   return creature.monsterData.actions.some(action =>
@@ -1518,12 +1532,14 @@ export function executeTurn(state: BattleState, creature: Creature): void {
   // (Wild-shaped druids skip spellcasting and fall through to beast attacks.)
   const hasSpells = hasSpellcastingActions(creature);
   if (hasSpells && trySpellcast(state, creature, () => tryStabiliseDyingAlly(state, creature))) {
+    tryHasteFollowUp(state, creature, targetStrategy);
     creature.hasActed = true;
     checkBattleComplete(state);
     return;
   }
 
   if (tryStabiliseDyingAlly(state, creature)) {
+    tryHasteFollowUp(state, creature, targetStrategy);
     creature.hasActed = true;
     checkBattleComplete(state);
     return;
@@ -2143,6 +2159,7 @@ export function executeTurn(state: BattleState, creature: Creature): void {
     }
   }
 
+  tryHasteFollowUp(state, creature, targetStrategy);
   runActionSurge(state, creature, target, targetStrategy, multiattack, meleeActions, rangedActions, bestMeleeReach);
   runFlurryOfBlows(state, creature, target, targetStrategy, meleeActions, bestMeleeReach);
   runMartialArtsBonusStrike(state, creature, target, targetStrategy, meleeActions, bestMeleeReach);

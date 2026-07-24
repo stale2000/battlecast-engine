@@ -2,8 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { monsters } from '../src/data/monsters';
 import { buildHero } from '../src/data/heroes';
 import { runBattle } from '../src/engine/ai';
-import { addBuff, createCreatureWithFixedHp, initBattle } from '../src/engine/combat';
+import { addBuff, createCreatureWithFixedHp, executeSpell, initBattle } from '../src/engine/combat';
 import { trySpellcast } from '../src/engine/ai-spellcasting';
+import { executeTurn } from '../src/engine/ai-turn';
+import { haste } from '../src/data/spells';
 
 function md(name: string) { return monsters.find(x => x.name === name)!; }
 
@@ -143,6 +145,23 @@ describe('Spiritual Weapon bonus action', () => {
 
     expect(cleric.bonusActionUsed).toBe(true);
     expect(state.logs.some(log => log.action === 'Spiritual Weapon')).toBe(true);
+  });
+});
+
+describe('Haste restricted extra action', () => {
+  it('adds one weapon attack after the AI uses its normal multiattack', () => {
+    const fighter = createCreatureWithFixedHp(buildHero('Fighter', 5), 'blue', { x: 8, y: 10 }, 0);
+    const wizard = createCreatureWithFixedHp(buildHero('Wizard', 5), 'blue', { x: 7, y: 10 }, 0);
+    const goblin = createCreatureWithFixedHp(md('Goblin Warrior'), 'red', { x: 9, y: 10 }, 0);
+    goblin.maxHp = 200;
+    goblin.currentHp = 200;
+    fighter.resources['action-surge'] = 0;
+    const state = initBattle([goblin, fighter, wizard], 20);
+    expect(executeSpell(state, wizard, haste('int', 3, 3), fighter)).toBe(true);
+
+    executeTurn(state, fighter);
+
+    expect(fighter.stats.attacksMade).toBe(3);
   });
 });
 
