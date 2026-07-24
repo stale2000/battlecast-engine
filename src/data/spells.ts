@@ -14,6 +14,7 @@
  *
  */
 import type { MonsterAction, MonsterData, Abilities } from '../types/monster.js';
+import { getMonsterByName } from './monsters.js';
 
 export type SpellcastingAbility = keyof Abilities;
 
@@ -802,6 +803,18 @@ export function summonUndead(ability: SpellcastingAbility, mod: number, pb: numb
         key, monsterData: undeadSpirit(key, mod, pb), hpPerSlotLevel: 10, acPerSlotLevel: 1,
         attack: { actionName: 'Deathly Touch', dice: '1d10', baseBonus: 3, baseSpellLevel: 3 },
       })),
+    },
+  };
+}
+
+export function animateDead(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  const skeleton = getMonsterByName('Skeleton');
+  if (!skeleton) throw new Error('Animate Dead requires the Skeleton SRD stat block');
+  return {
+    name: 'Animate Dead', type: 'special', spellLevel: 3, spellSchool: 'necromancy', castingAbility: ability,
+    description: 'Animate a Skeleton in an unoccupied space you can see within 10 feet. It obeys your commands for 24 hours.',
+    targetScope: 'self', summon: {
+      rangeFt: 10, durationRounds: 1440, variants: [{ key: 'skeleton', monsterData: { ...skeleton, actions: skeleton.actions.map(action => ({ ...action })) } }],
     },
   };
 }
@@ -2134,7 +2147,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Enlarge/Reduce', enlargeReduce],
   ['Mage Armor', mageArmor],
   ['Ray of Enfeeblement', rayOfEnfeeblement], ['Ray of Sickness', rayOfSickness], ["Tasha's Hideous Laughter", tashasHideousLaughter],
-  ['Scorching Ray', scorchingRay], ['Summon Beast', summonBeast], ['Summon Fey', summonFey], ['Summon Undead', summonUndead], ['Find Steed', findSteed], ['Conjure Animals', conjureAnimals], ['Web', web], ['Spike Growth', spikeGrowth], ['Hold Person', holdPerson],
+  ['Scorching Ray', scorchingRay], ['Summon Beast', summonBeast], ['Summon Fey', summonFey], ['Summon Undead', summonUndead], ['Animate Dead', animateDead], ['Find Steed', findSteed], ['Conjure Animals', conjureAnimals], ['Web', web], ['Spike Growth', spikeGrowth], ['Hold Person', holdPerson],
   ['Flaming Sphere', flamingSphere], ['Flame Blade', flameBlade], ['Heat Metal', heatMetal], ['Cloud of Daggers', cloudOfDaggers],
   ['Shatter', shatter], ['Moonbeam', moonbeam], ['Spiritual Weapon', spiritualWeapon],
   ['Aid', aid], ['Magic Weapon', magicWeapon], ['Shining Smite', shiningSmite],
