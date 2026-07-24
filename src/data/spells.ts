@@ -122,6 +122,16 @@ export function shillelagh(ability: SpellcastingAbility, _mod: number, _pb: numb
   };
 }
 
+export function sorcerousBurst(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Sorcerous Burst', type: 'ranged', spellLevel: 0, spellSchool: 'evocation', castingAbility: ability,
+    attackBonus: spellAttackBonus(mod, pb), damage: '1d8', damageType: 'force', explodingDamage: true,
+    damageTypeChoice: { choices: ['acid', 'cold', 'fire', 'lightning', 'poison', 'thunder'] },
+    range: { normal: 120, long: 120 }, targetScope: 'one_enemy', magical: true,
+    description: `Ranged spell attack within 120 feet. Hit: 1d8 damage of a chosen type; each 8 rolled adds another d8.`,
+  };
+}
+
 export function flameBlade(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
   return {
     name: 'Flame Blade', type: 'special', spellLevel: 2, spellSchool: 'evocation', castingAbility: ability,
@@ -2056,7 +2066,7 @@ export function wallOfFire(ability: SpellcastingAbility, mod: number, pb: number
 type SpellFactory = (ability: SpellcastingAbility, mod: number, pb: number) => MonsterAction;
 const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Magic Missile', () => magicMissile()],
-  ['Blade Ward', bladeWard], ['Resistance', resistance], ['Shillelagh', shillelagh], ['Poison Spray', poisonSpray], ['Thorn Whip', thornWhip], ['Acid Splash', acidSplash], ['Starry Wisp', starryWisp], ['Thunderclap', thunderclap], ['Toll the Dead', tollTheDead], ['True Strike', trueStrike],
+  ['Blade Ward', bladeWard], ['Resistance', resistance], ['Shillelagh', shillelagh], ['Sorcerous Burst', sorcerousBurst], ['Poison Spray', poisonSpray], ['Thorn Whip', thornWhip], ['Acid Splash', acidSplash], ['Starry Wisp', starryWisp], ['Thunderclap', thunderclap], ['Toll the Dead', tollTheDead], ['True Strike', trueStrike],
   ['Shield', shield],
   ['Hellish Rebuke', hellishRebuke],
   ['Burning Hands', burningHands], ['Thunderwave', thunderwave], ['Sleep', sleep],

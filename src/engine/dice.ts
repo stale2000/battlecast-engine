@@ -149,6 +149,28 @@ export function rollDamage(expression: string, critical: boolean = false, reroll
   return rollDice(critExpression, rerollOnes);
 }
 
+/** Roll a simple exploding damage expression such as 1d8 or 2d8+2. */
+export function rollExplodingDamage(expression: string, critical = false, rerollOnes = false): RollResult {
+  const cleaned = expression.replace(/\s/g, '');
+  const match = cleaned.match(/^([+-]?\d+)?d(\d+)([+-]\d+)?$/i);
+  if (!match) return rollDamage(expression, critical, rerollOnes);
+  const count = (parseInt(match[1] ?? '1', 10) || 1) * (critical ? 2 : 1);
+  const sides = parseInt(match[2], 10);
+  const modifier = parseInt(match[3] ?? '0', 10) || 0;
+  const rolls: number[] = [];
+  let total = modifier;
+  let pending = count;
+  let guard = 0;
+  while (pending-- > 0 && guard++ < 1000) {
+    let roll = Math.floor(engineRandom() * sides) + 1;
+    if (rerollOnes && roll === 1) roll = Math.floor(engineRandom() * sides) + 1;
+    rolls.push(roll);
+    total += roll;
+    if (roll === sides) pending++;
+  }
+  return { total: Math.max(0, total), rolls, modifier, expression };
+}
+
 // Parse a damage string to get average damage
 export function averageDamage(expression: string): number {
   const cleaned = expression.replace(/\s/g, '');

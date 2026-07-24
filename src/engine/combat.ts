@@ -1,7 +1,7 @@
 import { engineRandom } from './rng.js';
 import { ActiveBuff, Creature, Condition, ConditionDuration, DarknessZone, MonsterAction, MonsterData, PersistentZone, RuntimeTraitEffect } from '../types/monster.js';
 import { AnimationEvent, BASE_DURATIONS, OA_ATTACK_DURATIONS } from '../types/animation.js';
-import { rollAttack, rollDamage, rollDice, rollInitiative, abilityModifier, rollSave, rollD20, maxDiceTotal } from './dice.js';
+import { rollAttack, rollDamage, rollExplodingDamage, rollDice, rollInitiative, abilityModifier, rollSave, rollD20, maxDiceTotal } from './dice.js';
 import { lineOfSightBlocked } from '../types/terrain.js';
 import { magicalDarknessBlocksSight } from './visibility.js';
 import {
@@ -3975,6 +3975,12 @@ export function triggerPersistentZones(state: BattleState, target: Creature, tri
   }
 }
 
+function rollActionDamage(action: MonsterAction, expression: string, critical: boolean, rerollOnes = false): number {
+  return action.explodingDamage
+    ? rollExplodingDamage(expression, critical, rerollOnes).total
+    : rollDamage(expression, critical, rerollOnes).total;
+}
+
 function resolveAttack(
   state: BattleState,
   attacker: Creature,
@@ -4258,9 +4264,9 @@ function resolveAttack(
         : undefined;
       const damageExpression = weaponDamageDie ? action.damage.replace(/^\d+d\d+/i, weaponDamageDie) : action.damage;
       const overchannelDamage = tryConsumeWizardOverchannel(state, attacker, action, damageExpression);
-      let totalDmg = applyDamageRollPenalty(attacker, overchannelDamage ?? rollDamage(damageExpression, isCrit, action.rerollDamageOnes).total);
+      let totalDmg = applyDamageRollPenalty(attacker, overchannelDamage ?? rollActionDamage(action, damageExpression, isCrit, action.rerollDamageOnes));
       if (overchannelDamage === null && hasOriginFeat(attacker, 'Savage Attacker') && !attacker.turnFlags.savageAttackerUsed && action.spellLevel === undefined && (action.type === 'melee' || action.type === 'ranged')) {
-        totalDmg = Math.max(totalDmg, applyDamageRollPenalty(attacker, rollDamage(damageExpression, isCrit, action.rerollDamageOnes).total));
+        totalDmg = Math.max(totalDmg, applyDamageRollPenalty(attacker, rollActionDamage(action, damageExpression, isCrit, action.rerollDamageOnes)));
         attacker.turnFlags.savageAttackerUsed = true;
       }
       const mainType = action.damageType || 'bludgeoning';
@@ -4320,8 +4326,7 @@ function resolveAttack(
       }
 
       if (autoCrit && !isCrit) {
-        const critDmg = rollDamage(damageExpression, true, action.rerollDamageOnes);
-        totalDmg = applyDamageRollPenalty(attacker, critDmg.total);
+        totalDmg = applyDamageRollPenalty(attacker, rollActionDamage(action, damageExpression, true, action.rerollDamageOnes));
         pushLog(state, {
           round: state.round, turn: state.turnIndex,
           actor: attacker.displayName, action: 'Auto-Critical!',

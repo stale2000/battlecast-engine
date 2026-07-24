@@ -411,6 +411,8 @@ export interface MonsterAction {
   damageResistanceChoice?: { choices: string[]; selected?: string };
   /** Chooses one server-validated damage type for a spell effect. */
   damageTypeChoice?: { choices: string[]; selected?: string };
+  /** Each maximum die on a hit rolls one additional die of the same size. */
+  explodingDamage?: true;
   /** Chooses a server-validated combat effect for Bestow Curse. */
   curseChoice?: { choices: Array<'ability_str' | 'ability_dex' | 'ability_con' | 'ability_int' | 'ability_wis' | 'ability_cha' | 'attack_disadvantage' | 'forced_dodge' | 'damage_rider'>; selected?: 'ability_str' | 'ability_dex' | 'ability_con' | 'ability_int' | 'ability_wis' | 'ability_cha' | 'attack_disadvantage' | 'forced_dodge' | 'damage_rider' };
   /** Ends one selected spell effect on a target. The selected key is server-owned. */
