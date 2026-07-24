@@ -46,7 +46,7 @@ import {
   aid, magicWeapon, shiningSmite,
   acidArrow, acidSplash, armsOfHadar, barkskin, bestowCurse, bladeWard, blur, colorSpray, darkness, divineFavor, enlargeReduce, expeditiousRetreat, faerieFire, falseLife, fear, flameBlade, fly, fogCloud, grease, gustOfWind, heatMetal, iceKnife, lesserRestoration, mistyStep,
   armorOfAgathys, beaconOfHope, longstrider, mageArmor, massHealingWord, passWithoutTrace, poisonSpray, produceFlame, rayOfEnfeeblement, rayOfSickness, revivify, slow, starryWisp, stinkingCloud, tashasHideousLaughter, thunderclap, thornWhip, tollTheDead, trueStrike, vampiricTouch,
-  protectionFromPoison, resistance, shillelagh, sorcerousBurst, shield, hellishRebuke, sleetStorm, hungerOfHadar, windWall, brandingSmite, ensnaringStrike, hailOfThorns, lightningArrow, searingSmite, thunderousSmite, wrathfulSmite,
+  protectionFromPoison, resistance, shillelagh, sorcerousBurst, shield, hellishRebuke, sleetStorm, hungerOfHadar, windWall, brandingSmite, ensnaringStrike, hailOfThorns, lightningArrow, silence, searingSmite, thunderousSmite, wrathfulSmite,
   circleOfDeath, chainLightning, disintegrate, fingerOfDeath,
   befuddlement, powerWordHeal, powerWordKill, meteorSwarm,
 } from './spells.js';
@@ -1605,7 +1605,7 @@ function buildClassSpells(
       break;
     case 'Cleric':
       repertoire.push(bless(), cureWounds(spellAbility, mod, pb), healingWord(spellAbility, mod, pb), shieldOfFaith(), guidingBolt(spellAbility, mod, pb));
-      repertoire.push(aid(spellAbility, mod, pb), holdPerson(spellAbility, mod, pb), spiritualWeapon(spellAbility, mod, pb));
+      repertoire.push(aid(spellAbility, mod, pb), holdPerson(spellAbility, mod, pb), spiritualWeapon(spellAbility, mod, pb), silence(spellAbility, mod, pb));
       repertoire.push(spiritGuardians(spellAbility, mod, pb));
       repertoire.push(banishment(spellAbility, mod, pb), deathWard(spellAbility, mod, pb));
       repertoire.push(flameStrike(spellAbility, mod, pb), massCureWounds(spellAbility, mod, pb));
@@ -1626,7 +1626,7 @@ function buildClassSpells(
     case 'Bard':
       repertoire.push(dissonantWhispers(spellAbility, mod, pb), healingWord(spellAbility, mod, pb), cureWounds(spellAbility, mod, pb), bane(spellAbility, mod, pb));
       repertoire.push(aid(spellAbility, mod, pb));
-      repertoire.push(holdPerson(spellAbility, mod, pb), shatter(spellAbility, mod, pb));
+      repertoire.push(holdPerson(spellAbility, mod, pb), shatter(spellAbility, mod, pb), silence(spellAbility, mod, pb));
       repertoire.push(hypnoticPattern(spellAbility, mod, pb));
       if (level >= 6) repertoire.push(fireball(spellAbility, mod, pb));
       repertoire.push(banishment(spellAbility, mod, pb));
@@ -1655,7 +1655,7 @@ function buildClassSpells(
         repertoire.push(mark, cureWounds(spellAbility, mod, pb), entangle(spellAbility, mod, pb));
       }
       repertoire.push(aid(spellAbility, mod, pb), conjureBarrage(spellAbility, mod, pb), magicWeapon(spellAbility, mod, pb), protectionFromEnergy(spellAbility, mod, pb), stoneskin(spellAbility, mod, pb));
-      repertoire.push(hailOfThorns(spellAbility, mod, pb));
+      repertoire.push(hailOfThorns(spellAbility, mod, pb), silence(spellAbility, mod, pb));
       repertoire.push(lightningArrow(spellAbility, mod, pb));
       break;
   }
@@ -1717,7 +1717,7 @@ function buildOptionalSpells(
       break;
     case 'Cleric':
       pool.push(bane(spellAbility, mod, pb), inflictWounds(spellAbility, mod, pb), resistance(spellAbility, mod, pb), tollTheDead(spellAbility, mod, pb), command(spellAbility, mod, pb), protectionFromEvilAndGood(spellAbility, mod, pb), sanctuary(spellAbility, mod, pb), wardingBond());
-      pool.push(blindnessDeafness(spellAbility, mod, pb));
+      pool.push(blindnessDeafness(spellAbility, mod, pb), silence(spellAbility, mod, pb));
       pool.push(lesserRestoration(spellAbility, mod, pb), protectionFromPoison(spellAbility, mod, pb));
       pool.push(dispelMagic(spellAbility, mod, pb));
       pool.push(beaconOfHope(spellAbility, mod, pb));
@@ -1740,7 +1740,7 @@ function buildOptionalSpells(
       pool.push(colorSpray(spellAbility, mod, pb), sleep(spellAbility, mod, pb));
       pool.push(heroism(spellAbility, mod, pb), longstrider(spellAbility, mod, pb));
       pool.push(faerieFire(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
-      pool.push(command(spellAbility, mod, pb));
+      pool.push(command(spellAbility, mod, pb), silence(spellAbility, mod, pb));
       pool.push(blindnessDeafness(spellAbility, mod, pb), cloudOfDaggers(spellAbility, mod, pb), heatMetal(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb), stinkingCloud(spellAbility, mod, pb));
       pool.push(dispelMagic(spellAbility, mod, pb), haste(spellAbility, mod, pb));
       pool.push(massHealingWord(spellAbility, mod, pb));
@@ -1755,7 +1755,7 @@ function buildOptionalSpells(
       pool.push(dispelMagic(spellAbility, mod, pb));
       break;
     case 'Ranger':
-      pool.push(summonBeast(spellAbility, mod, pb), ensnaringStrike(spellAbility, mod, pb), hailOfThorns(spellAbility, mod, pb), windWall(spellAbility, mod, pb));
+      pool.push(summonBeast(spellAbility, mod, pb), ensnaringStrike(spellAbility, mod, pb), hailOfThorns(spellAbility, mod, pb), lightningArrow(spellAbility, mod, pb), silence(spellAbility, mod, pb), windWall(spellAbility, mod, pb));
       pool.push(fogCloud(spellAbility, mod, pb), barkskin(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb), lesserRestoration(spellAbility, mod, pb), longstrider(spellAbility, mod, pb), passWithoutTrace(spellAbility, mod, pb), protectionFromPoison(spellAbility, mod, pb));
       pool.push(spikeGrowth(spellAbility, mod, pb));
       pool.push(dispelMagic(spellAbility, mod, pb));
@@ -2568,7 +2568,7 @@ export function getAvailableSpells(
       break;
     case 'Bard':
       repertoire.push(dissonantWhispers(spellAbility, mod, pb), healingWord(spellAbility, mod, pb), cureWounds(spellAbility, mod, pb), bane(spellAbility, mod, pb), aid(spellAbility, mod, pb));
-      repertoire.push(holdPerson(spellAbility, mod, pb), shatter(spellAbility, mod, pb));
+      repertoire.push(holdPerson(spellAbility, mod, pb), shatter(spellAbility, mod, pb), silence(spellAbility, mod, pb));
       repertoire.push(hypnoticPattern(spellAbility, mod, pb));
       repertoire.push(banishment(spellAbility, mod, pb));
       repertoire.push(holdMonster(spellAbility, mod, pb), massCureWounds(spellAbility, mod, pb), synapticStatic(spellAbility, mod, pb));
@@ -2632,7 +2632,7 @@ export function getAvailableSpells(
       break;
     case 'Cleric':
       optional.push(bane(spellAbility, mod, pb), inflictWounds(spellAbility, mod, pb), resistance(spellAbility, mod, pb), tollTheDead(spellAbility, mod, pb), command(spellAbility, mod, pb), protectionFromEvilAndGood(spellAbility, mod, pb), sanctuary(spellAbility, mod, pb), wardingBond());
-      optional.push(blindnessDeafness(spellAbility, mod, pb));
+      optional.push(blindnessDeafness(spellAbility, mod, pb), silence(spellAbility, mod, pb));
       optional.push(lesserRestoration(spellAbility, mod, pb), protectionFromPoison(spellAbility, mod, pb));
       optional.push(dispelMagic(spellAbility, mod, pb));
       optional.push(beaconOfHope(spellAbility, mod, pb));
@@ -2655,7 +2655,7 @@ export function getAvailableSpells(
       optional.push(colorSpray(spellAbility, mod, pb), sleep(spellAbility, mod, pb));
       optional.push(heroism(spellAbility, mod, pb), longstrider(spellAbility, mod, pb));
       optional.push(faerieFire(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
-      optional.push(command(spellAbility, mod, pb));
+      optional.push(command(spellAbility, mod, pb), silence(spellAbility, mod, pb));
       optional.push(stinkingCloud(spellAbility, mod, pb));
       optional.push(blindnessDeafness(spellAbility, mod, pb), cloudOfDaggers(spellAbility, mod, pb), heatMetal(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb));
       optional.push(dispelMagic(spellAbility, mod, pb), haste(spellAbility, mod, pb));
@@ -2672,7 +2672,7 @@ export function getAvailableSpells(
       optional.push(dispelMagic(spellAbility, mod, pb));
       break;
     case 'Ranger':
-      optional.push(summonBeast(spellAbility, mod, pb), ensnaringStrike(spellAbility, mod, pb), hailOfThorns(spellAbility, mod, pb), lightningArrow(spellAbility, mod, pb), windWall(spellAbility, mod, pb));
+      optional.push(summonBeast(spellAbility, mod, pb), ensnaringStrike(spellAbility, mod, pb), hailOfThorns(spellAbility, mod, pb), lightningArrow(spellAbility, mod, pb), silence(spellAbility, mod, pb), windWall(spellAbility, mod, pb));
       optional.push(fogCloud(spellAbility, mod, pb), barkskin(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb), lesserRestoration(spellAbility, mod, pb), longstrider(spellAbility, mod, pb));
       optional.push(passWithoutTrace(spellAbility, mod, pb), protectionFromPoison(spellAbility, mod, pb), spikeGrowth(spellAbility, mod, pb));
       optional.push(dispelMagic(spellAbility, mod, pb));

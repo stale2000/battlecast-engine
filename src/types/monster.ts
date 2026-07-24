@@ -450,6 +450,7 @@ export interface MonsterAction {
     /** A failed zone save consumes the target's Action and Bonus Action for this turn. */
     skipActionsOnFailedSave?: boolean;
     obscuresSight?: boolean;
+    silences?: boolean;
   };
   /** Enables a later no-slot repeat of this concentration spell (Call Lightning). */
   repeatableAreaSpell?: true;
@@ -1147,6 +1148,7 @@ export interface PersistentZone {
   pushOnFailedSave?: number;
   skipActionsOnFailedSave?: boolean;
   obscuresSight?: boolean;
+  silences?: boolean;
   requiresConcentration: boolean;
 }
 

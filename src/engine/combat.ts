@@ -3907,8 +3907,13 @@ export function createPersistentZone(state: BattleState, caster: Creature, actio
     shape: config.shape, origin: config.shape === 'line' ? { ...caster.position } : undefined, direction: config.shape === 'line' ? { ...center } : undefined, pushOnFailedSave: config.pushOnFailedSave,
     skipActionsOnFailedSave: config.skipActionsOnFailedSave,
     obscuresSight: config.obscuresSight,
+    silences: config.silences,
     requiresConcentration: action.concentration === true,
   });
+}
+
+export function isCreatureSilenced(state: BattleState, creature: Creature): boolean {
+  return (state.persistentZones ?? []).some(zone => zone.silences && zone.endRound > state.round && creatureDistance(creature, { ...creature, position: { x: zone.x, y: zone.y } }) <= zone.radius);
 }
 
 function isInPersistentZone(zone: PersistentZone, position: { x: number; y: number }): boolean {

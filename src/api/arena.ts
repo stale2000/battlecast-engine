@@ -24,6 +24,7 @@ import {
   useSpiritualWeaponAttack,
   escapeGrapple,
   escapeBuff,
+  isCreatureSilenced,
 } from '../engine/combat.js';
 import { canSee, getActiveActions } from '../engine/ai-targeting.js';
 import { canDetectWithTremorsense, canSeePoint, revealVisibleHiddenCreatures } from '../engine/visibility.js';
@@ -348,6 +349,7 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
     for (const [actionIndex, action] of getActiveActions(active).entries()) {
       if (action.legendaryOnly || action.reactionOnly || action.type === 'multiattack') continue;
       if (isSpellAction(action)) {
+        if (isCreatureSilenced(state, active)) continue;
         if (action.postHit) continue;
         if (hasteOnly) continue;
         if (action.attackThenArea) {

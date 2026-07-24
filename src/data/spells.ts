@@ -434,6 +434,15 @@ export function hailOfThorns(ability: SpellcastingAbility, mod: number, pb: numb
   };
 }
 
+export function silence(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Silence', type: 'special', spellLevel: 2, spellSchool: 'illusion', castingAbility: ability,
+    description: 'Create a 20-foot-radius sphere of silence for up to 10 minutes. Spells with verbal components cannot be cast inside.',
+    concentration: true, durationRounds: 100, range: { normal: 120, long: 120 },
+    persistentZone: { radiusFt: 20, durationRounds: 100, triggers: [], silences: true },
+  };
+}
+
 export function lightningArrow(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
   const dc = saveDC(mod, pb);
   return {
@@ -2103,7 +2112,7 @@ export function wallOfFire(ability: SpellcastingAbility, mod: number, pb: number
 
 type SpellFactory = (ability: SpellcastingAbility, mod: number, pb: number) => MonsterAction;
 const SPELL_FACTORIES: [string, SpellFactory][] = [
-  ['Magic Missile', () => magicMissile()], ['Lightning Arrow', lightningArrow],
+  ['Magic Missile', () => magicMissile()], ['Lightning Arrow', lightningArrow], ['Silence', silence],
   ['Blade Ward', bladeWard], ['Resistance', resistance], ['Shillelagh', shillelagh], ['Sorcerous Burst', sorcerousBurst], ['Poison Spray', poisonSpray], ['Produce Flame', produceFlame], ['Thorn Whip', thornWhip], ['Acid Splash', acidSplash], ['Starry Wisp', starryWisp], ['Thunderclap', thunderclap], ['Toll the Dead', tollTheDead], ['True Strike', trueStrike],
   ['Shield', shield], ['Hail of Thorns', hailOfThorns],
   ['Hellish Rebuke', hellishRebuke],
