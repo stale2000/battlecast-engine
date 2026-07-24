@@ -12,9 +12,6 @@
  * Every spell names the MonsterAction clearly. The action.description
  * is what shows in the stat block and the battle log.
  *
- * NOT IMPLEMENTED (not added to the spell action list):
- *   - Counterspell (reaction timing requires an interrupt phase)
- *   - Summoning spells (add creatures mid-battle)
  */
 import type { MonsterAction, Abilities } from '../types/monster.js';
 
