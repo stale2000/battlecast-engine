@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Encounter } from '../src/api/encounter.js';
 import { applyLegalAction, getLegalActions, startArena } from '../src/api/arena.js';
 import { buildCustomHero } from '../src/data/heroes.js';
-import { buildSpellAction, summonFey, summonUndead } from '../src/data/spells.js';
+import { buildSpellAction, findSteed, summonFey, summonUndead } from '../src/data/spells.js';
 import { dropConcentratedBuffsFrom } from '../src/engine/combat-buffs.js';
 
 describe('level-three summon spells', () => {
@@ -39,5 +39,25 @@ describe('level-three summon spells', () => {
     // The shared concentration cleanup is authoritative for all summon spells.
     dropConcentratedBuffsFrom(encounter.state!, caster.id);
     expect(encounter.state!.creatures.some(creature => creature.id === spirit.id)).toBe(false);
+  });
+
+  it('exposes and resolves a summoned Fey steed teleport action', () => {
+    const encounter = new Encounter({ seed: 9, gridSize: 12 });
+    const [caster] = encounter.addCreature({ heroClass: 'Paladin', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [findSteed('cha', 3, 3)], additionalResources: { 'slot-2': 1 } } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 10, y: 10 } });
+    encounter.start();
+    encounter.state!.initiativeOrder = [caster.id];
+    startArena(encounter);
+    const summon = getLegalActions(encounter, caster.id).find(action => action.type === 'spell_summon' && action.variantKey === 'fey' && action.destination?.x === 1 && action.destination?.y === 1)!;
+    applyLegalAction(encounter, summon);
+    const steed = encounter.state!.creatures.find(creature => creature.summonedById === caster.id)!;
+    encounter.state!.initiativeOrder = [steed.id];
+    encounter.state!.turnIndex = 0;
+    steed.hasActed = false;
+    const step = getLegalActions(encounter, steed.id).find(action => action.type === 'spell_teleport' && action.actionName === 'Fey Step');
+    expect(step).toBeTruthy();
+    applyLegalAction(encounter, { ...step!, destination: { x: 4, y: 4 } });
+    expect(steed.position).toEqual({ x: 4, y: 4 });
+    expect(steed.resources['fey-step']).toBe(0);
   });
 });

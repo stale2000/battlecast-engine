@@ -62,7 +62,7 @@ function attackInRange(attacker: Creature, target: Creature, action: MonsterActi
 }
 
 function isSpellAction(action: MonsterAction): boolean {
-  return action.spellLevel !== undefined || action.layOnHands !== undefined || action.heal !== undefined || action.temporaryHp !== undefined || action.removesConditions !== undefined || action.grantsFlight !== undefined || action.buff !== undefined || action.savingThrow !== undefined || action.autoDarts !== undefined || action.powerWord !== undefined || action.summon !== undefined;
+  return action.spellLevel !== undefined || action.layOnHands !== undefined || action.heal !== undefined || action.temporaryHp !== undefined || action.removesConditions !== undefined || action.grantsFlight !== undefined || action.buff !== undefined || action.savingThrow !== undefined || action.autoDarts !== undefined || action.powerWord !== undefined || action.summon !== undefined || action.teleport !== undefined;
 }
 
 function canHideFrom(state: NonNullable<Encounter['state']>, active: Creature, observer: Creature): boolean {
