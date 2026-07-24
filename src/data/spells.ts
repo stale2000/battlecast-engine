@@ -12,15 +12,9 @@
  * Every spell names the MonsterAction clearly. The action.description
  * is what shows in the stat block and the battle log.
  *
- * NOT IMPLEMENTED (flagged in each class's trait list, not added to the
- * spell action list):
- *   - Counterspell / Shield (reaction-timed - engine has no reaction step)
- *   - Misty Step (teleport - engine has no teleport primitive)
- *   - Invisibility (obscured-target mechanic not modeled)
+ * NOT IMPLEMENTED (not added to the spell action list):
+ *   - Counterspell (reaction timing requires an interrupt phase)
  *   - Summoning spells (add creatures mid-battle)
- *   - Wild Shape (transformation)
- *   - Concentration spells that require sustained per-turn bookkeeping
- *     beyond simple buffs (e.g., Flaming Sphere moves each turn)
  */
 import type { MonsterAction, Abilities } from '../types/monster.js';
 
