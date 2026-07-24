@@ -2087,6 +2087,7 @@ function attachOngoingEffect(
     tick: effect.tick,
     noHealing: effect.noHealing,
     saveEnds: effect.saveEnds,
+    ticksRemaining: effect.maxTicks,
     appliedRound: state.round,
     expiresRound: effect.expiresAfterRounds ? state.round + effect.expiresAfterRounds : undefined,
   };
@@ -2400,9 +2401,8 @@ function rollOngoingEffectSave(state: BattleState, target: Creature, effect: Non
   return passed;
 }
 
-function applyOngoingDamage(state: BattleState, target: Creature, effect: NonNullable<Creature['ongoingEffects']>[number]): void {
-  if (!target.isAlive) return;
-  if (!effect.damage || !effect.damageType) return;
+function applyOngoingDamage(state: BattleState, target: Creature, effect: NonNullable<Creature['ongoingEffects']>[number]): boolean {
+  if (!target.isAlive || !effect.damage || !effect.damageType) return false;
   const damage = rollDice(effect.damage).total;
   const source = getCreatureById(state, effect.sourceId) ?? null;
   pushLog(state, {
@@ -2416,6 +2416,9 @@ function applyOngoingDamage(state: BattleState, target: Creature, effect: NonNul
   const event = pushHitEvent(state, target.id, damage, effect.damageType, false, beforeHp);
   applyDamage(state, target, damage, effect.damageType, source, false, true);
   event.targetHpAfter = target.currentHp;
+  if (effect.ticksRemaining === undefined) return false;
+  effect.ticksRemaining--;
+  return effect.ticksRemaining <= 0;
 }
 
 export function processTargetTurnStartOngoingEffects(state: BattleState, target: Creature): void {
@@ -2428,7 +2431,7 @@ export function processTargetTurnStartOngoingEffects(state: BattleState, target:
         continue;
       }
       if (effect.tick === 'targetTurnStart') {
-        applyOngoingDamage(state, target, effect);
+        if (applyOngoingDamage(state, target, effect)) removeOngoingEffect(state, target, effect.key, effect.sourceId);
       }
       if (target.isAlive && effect.saveEnds?.at === 'targetTurnStart' && rollOngoingEffectSave(state, target, effect)) {
         removeOngoingEffect(state, target, effect.key, effect.sourceId);
@@ -2463,7 +2466,7 @@ export function processSourceTurnStartOngoingEffects(state: BattleState, source:
     if (!target.isAlive) continue;
     for (const effect of [...(target.ongoingEffects ?? [])]) {
       if (effect.sourceId === source.id && effect.tick === 'sourceTurnStart') {
-        applyOngoingDamage(state, target, effect);
+        if (applyOngoingDamage(state, target, effect)) removeOngoingEffect(state, target, effect.key, effect.sourceId);
       }
     }
     const container = target.containedBy;
@@ -2507,6 +2510,10 @@ export function processTargetTurnEndOngoingEffects(state: BattleState, target: C
   if (!target.ongoingEffects?.length) return;
   for (const effect of [...target.ongoingEffects]) {
     if (effect.expiresRound !== undefined && state.round >= effect.expiresRound) {
+      removeOngoingEffect(state, target, effect.key, effect.sourceId);
+      continue;
+    }
+    if (effect.tick === 'targetTurnEnd' && applyOngoingDamage(state, target, effect)) {
       removeOngoingEffect(state, target, effect.key, effect.sourceId);
       continue;
     }

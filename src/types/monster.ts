@@ -27,7 +27,9 @@ export interface RuntimeOngoingEffect {
   condition?: Condition;
   damage?: string;
   damageType?: string;
-  tick: 'sourceTurnStart' | 'targetTurnStart';
+  tick: 'sourceTurnStart' | 'targetTurnStart' | 'targetTurnEnd';
+  /** Remaining damage applications for one-shot delayed effects. */
+  ticksRemaining?: number;
   noHealing?: boolean;
   saveEnds?: {
     ability: keyof Abilities;
@@ -71,7 +73,7 @@ export type RuntimeActionEffect =
       key: string;
       damage: string;
       damageType: string;
-      tick: 'sourceTurnStart' | 'targetTurnStart';
+      tick: 'sourceTurnStart' | 'targetTurnStart' | 'targetTurnEnd';
       condition?: Condition;
       noHealing?: boolean;
       applySave?: {
@@ -79,13 +81,14 @@ export type RuntimeActionEffect =
         dc: number;
       };
       saveEnds?: RuntimeOngoingEffect['saveEnds'];
+      maxTicks?: number;
       expiresAfterRounds?: number;
     }
   | {
       kind: 'blocksHealing';
       key: string;
       condition?: Condition;
-      tick?: 'sourceTurnStart' | 'targetTurnStart';
+      tick?: 'sourceTurnStart' | 'targetTurnStart' | 'targetTurnEnd';
       expiresAfterRounds?: number;
     }
   | {

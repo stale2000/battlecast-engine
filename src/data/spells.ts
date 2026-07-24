@@ -720,7 +720,7 @@ export function acidArrow(ability: SpellcastingAbility, mod: number, pb: number)
     name: 'Acid Arrow', type: 'ranged', spellLevel: 2, spellSchool: 'evocation', castingAbility: ability,
     description: `Ranged spell attack +${spellAttackBonus(mod, pb)}, range 90 ft. 4d4 acid damage on a hit, then 2d4 acid at the end of the target's next turn.`,
     attackBonus: spellAttackBonus(mod, pb), damage: '4d4', damageType: 'acid', range: { normal: 90, long: 90 }, targetScope: 'one_enemy',
-    effects: [{ kind: 'ongoingDamage', key: 'Acid Arrow', damage: '2d4', damageType: 'acid', tick: 'targetTurnStart', expiresAfterRounds: 1 }],
+    effects: [{ kind: 'ongoingDamage', key: 'Acid Arrow', damage: '2d4', damageType: 'acid', tick: 'targetTurnEnd', maxTicks: 1 }],
   };
 }
 
