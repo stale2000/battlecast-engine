@@ -2,6 +2,15 @@ import { describe, it, expect } from 'vitest';
 import { buildHero, buildCustomHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes';
 
 describe('buildCustomHero', () => {
+  it('keeps default cantrips deterministic while exposing the full supported pool for selection', () => {
+    for (const cls of HERO_CLASS_NAMES) {
+      const available = getAvailableSpells(cls, 5).filter(spell => spell.spellLevel === 0);
+      const defaults = buildHero(cls, 5).actions.filter(action => action.spellLevel === 0);
+      expect(defaults.length).toBe(available.length ? 1 : 0);
+      for (const action of defaults) expect(available.some(spell => spell.name === action.name)).toBe(true);
+    }
+  });
+
   it('produces identical output to buildHero when no overrides given', () => {
     for (const cls of HERO_CLASS_NAMES) {
       const base = buildHero(cls, 5);

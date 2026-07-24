@@ -14,7 +14,9 @@
  *   - Sneak Attack: modeled as `additionalDamage` on rogue finesse weapons,
  *     scaling 1d6 → 2d6 → 3d6 at odd levels. The engine gates it by
  *     Advantage or an adjacent ally and enforces once per turn.
- *   - Cantrips: implemented as ranged attacks / DC saves. Scale to 2 dice at L5.
+ *   - Cantrips: the cached default hero is a single deterministic baseline
+ *     loadout. Use `buildCustomHero({ cantrips })` for a player's selected
+ *     cantrips; `getAvailableSpells` exposes the complete supported pool.
  *   - Leveled spells: modeled for fixed class loadouts with slot resources.
  *   - Class features: key combat resources such as Rage, Bardic Inspiration,
  *     Second Wind, Lay on Hands, Wild Shape, Action Surge, Flurry of Blows,
