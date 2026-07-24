@@ -31,6 +31,7 @@ export interface RuntimeOngoingEffect {
   /** Remaining damage applications for one-shot delayed effects. */
   ticksRemaining?: number;
   noHealing?: boolean;
+  requiresConcentration?: boolean;
   saveEnds?: {
     ability: keyof Abilities;
     dc: number;
@@ -76,6 +77,7 @@ export type RuntimeActionEffect =
       tick: 'sourceTurnStart' | 'targetTurnStart' | 'targetTurnEnd';
       condition?: Condition;
       noHealing?: boolean;
+      requiresConcentration?: boolean;
       applySave?: {
         ability: keyof Abilities;
         dc: number;

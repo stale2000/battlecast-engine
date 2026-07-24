@@ -324,6 +324,13 @@ export function dropConcentratedBuffsFrom(
     && caster?.monsterData.heroClass === 'Ranger'
     && (caster.monsterData.heroLevel ?? 0) >= 13;
   for (const c of state.creatures) {
+    const removedOngoing = (c.ongoingEffects ?? []).filter(effect => effect.requiresConcentration && effect.sourceId === casterId);
+    c.ongoingEffects = (c.ongoingEffects ?? []).filter(effect => !removedOngoing.includes(effect));
+    for (const effect of removedOngoing) {
+      if (!effect.condition) continue;
+      c.conditionTimers = c.conditionTimers.filter(timer => !(timer.condition === effect.condition && timer.sourceId === casterId));
+      if (!c.conditionTimers.some(timer => timer.condition === effect.condition)) c.conditions = c.conditions.filter(condition => condition !== effect.condition);
+    }
     for (const zone of removedZones) {
       const removedCondition = zone.conditionOnFail && c.conditionTimers.some(timer => timer.sourceId === casterId && timer.condition === zone.conditionOnFail);
       c.conditionTimers = c.conditionTimers.filter(timer => !(timer.sourceId === casterId && timer.condition === zone.conditionOnFail));
@@ -359,6 +366,7 @@ function clearConcentrationIfNoEffect(state: BattleState, casterId: string): voi
     creature.activeBuffs?.some(buff => buff.requiresConcentration && buff.casterId === casterId)
   ) || state.darknessZones?.some(zone => zone.requiresConcentration && zone.sourceId === casterId)
     || state.persistentZones?.some(zone => zone.requiresConcentration && zone.sourceId === casterId)
+    || state.creatures.some(creature => creature.ongoingEffects?.some(effect => effect.requiresConcentration && effect.sourceId === casterId))
     || caster?.repeatableAreaSpell !== undefined || caster?.repeatableActionSpell !== undefined;
   if (caster?.concentratingOn && !stillConcentrating) caster.concentratingOn = undefined;
 }

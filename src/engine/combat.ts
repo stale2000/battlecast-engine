@@ -2164,6 +2164,7 @@ function attachOngoingEffect(
     damageType: effect.damageType,
     tick: effect.tick,
     noHealing: effect.noHealing,
+    requiresConcentration: effect.requiresConcentration,
     saveEnds: effect.saveEnds,
     ticksRemaining: effect.maxTicks,
     appliedRound: state.round,

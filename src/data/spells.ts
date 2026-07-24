@@ -842,7 +842,7 @@ export function ensnaringStrike(ability: SpellcastingAbility, mod: number, pb: n
     description: `Bonus action immediately after a weapon hit. The target makes a Strength save (DC ${saveDC(mod, pb)}) or is Restrained; while restrained it takes 1d6 piercing damage at the start of each of its turns. Concentration.`,
     isBonusAction: true, concentration: true, postHit: { trigger: 'weapon_hit' }, targetScope: 'one_enemy',
     savingThrow: { ability: 'str', dc: saveDC(mod, pb), conditionOnFail: 'restrained', conditionDuration: '1_minute' },
-    effects: [{ kind: 'ongoingDamage', key: 'Ensnaring Strike', damage: '1d6', damageType: 'piercing', tick: 'targetTurnStart', condition: 'restrained' }],
+    effects: [{ kind: 'ongoingDamage', key: 'Ensnaring Strike', damage: '1d6', damageType: 'piercing', tick: 'targetTurnStart', condition: 'restrained', requiresConcentration: true }],
   };
 }
 
@@ -851,7 +851,7 @@ export function searingSmite(ability: SpellcastingAbility, mod: number, pb: numb
     name: 'Searing Smite', type: 'special', spellLevel: 1, spellSchool: 'evocation', castingAbility: ability,
     description: `Bonus action immediately after a melee or unarmed hit. The hit deals 1d6 extra fire damage; the target takes 1d6 fire damage at the start of each turn until it succeeds on a Constitution save (DC ${saveDC(mod, pb)}). Concentration.`,
     isBonusAction: true, concentration: true, postHit: { trigger: 'melee_hit' }, targetScope: 'one_enemy', damage: '1d6', damageType: 'fire',
-    effects: [{ kind: 'ongoingDamage', key: 'Searing Smite', damage: '1d6', damageType: 'fire', tick: 'targetTurnStart', saveEnds: { ability: 'con', dc: saveDC(mod, pb), at: 'targetTurnStart' }, maxTicks: 10 }],
+    effects: [{ kind: 'ongoingDamage', key: 'Searing Smite', damage: '1d6', damageType: 'fire', tick: 'targetTurnStart', saveEnds: { ability: 'con', dc: saveDC(mod, pb), at: 'targetTurnStart' }, maxTicks: 10, requiresConcentration: true }],
   };
 }
 
