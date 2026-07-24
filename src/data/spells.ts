@@ -644,6 +644,16 @@ export function spiritualWeapon(ability: SpellcastingAbility, mod: number, pb: n
   };
 }
 
+export function flamingSphere(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Flaming Sphere', type: 'special', spellLevel: 2, spellSchool: 'conjuration', castingAbility: ability,
+    concentration: true, durationRounds: 10, persistentAura: { moveFt: 30 },
+    description: `A 5-foot sphere of fire within 60 feet. Creatures it enters or starts beside make a DC ${saveDC(mod, pb)} DEX save, taking 2d6 fire damage on a failure and half on a success. You can move it 30 feet as an action.`,
+    damageType: 'fire', savingThrow: { ability: 'dex', dc: saveDC(mod, pb), damageOnFail: '2d6', damageOnSuccess: 'half', area: '5-foot sphere' },
+    range: { normal: 60, long: 60 }, targetScope: 'area_enemies',
+  };
+}
+
 export function lesserRestoration(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
   return {
     name: 'Lesser Restoration', type: 'special', spellLevel: 2, spellSchool: 'abjuration', castingAbility: ability,
@@ -1591,6 +1601,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Faerie Fire', faerieFire], ['False Life', falseLife], ['Fog Cloud', fogCloud], ['Grease', grease], ['Longstrider', longstrider],
   ['Ray of Sickness', rayOfSickness], ["Tasha's Hideous Laughter", tashasHideousLaughter],
   ['Scorching Ray', scorchingRay], ['Web', web], ['Hold Person', holdPerson],
+  ['Flaming Sphere', flamingSphere],
   ['Shatter', shatter], ['Moonbeam', moonbeam], ['Spiritual Weapon', spiritualWeapon],
   ['Aid', aid], ['Magic Weapon', magicWeapon], ['Shining Smite', shiningSmite],
   ['Blindness/Deafness', blindnessDeafness], ['Mirror Image', mirrorImage],
