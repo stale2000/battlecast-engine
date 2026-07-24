@@ -1366,6 +1366,7 @@ export function chromaticOrb(ability: SpellcastingAbility, mod: number, pb: numb
     castingAbility: ability,
     attackBonus: spellAttackBonus(mod, pb),
     damage: '3d8', damageType: 'fire',
+    damageTypeChoice: { choices: ['acid', 'cold', 'fire', 'lightning', 'poison', 'thunder'] },
     range: { normal: 90, long: 90 },
     targetScope: 'one_enemy',
   };

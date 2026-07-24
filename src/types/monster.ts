@@ -358,6 +358,8 @@ export interface MonsterAction {
   revive?: { maxDeathRounds: number; hp: number };
   /** Chooses one server-validated damage resistance for a spell effect. */
   damageResistanceChoice?: { choices: string[]; selected?: string };
+  /** Chooses one server-validated damage type for a spell effect. */
+  damageTypeChoice?: { choices: string[]; selected?: string };
   /** Ends one selected spell effect on a target. The selected key is server-owned. */
   dispelMagic?: { maxSpellLevel: number; selectedKey?: string };
   /** Failed targets use their Reaction to flee directly away, provoking opportunity attacks. */
