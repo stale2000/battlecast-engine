@@ -24,7 +24,7 @@
 import { ActiveBuff, Condition, Creature, MonsterAction } from '../types/monster.js';
 import { BASE_DURATIONS } from '../types/animation.js';
 import { rollDice, abilityModifier, maxDiceTotal } from './dice.js';
-import { creatureDistance } from './combat-geometry.js';
+import { creatureDistance, getFootprintSize, isPositionBlocked } from './combat-geometry.js';
 import { canSeePoint } from './visibility.js';
 import {
   addBuff, dropConcentratedBuffsFrom,
@@ -98,6 +98,24 @@ function clearHealingSpellConditions(
       action: action.name,
       details: `${target.displayName} is no longer ${condition}.`,
       type: 'condition',
+    });
+  }
+}
+
+function removeSpellConditions(
+  state: BattleState,
+  caster: Creature,
+  target: Creature,
+  action: MonsterAction,
+): void {
+  for (const condition of action.removesConditions ?? []) {
+    if (!target.conditions.includes(condition)) continue;
+    target.conditions = target.conditions.filter(candidate => candidate !== condition);
+    target.conditionTimers = target.conditionTimers.filter(timer => timer.condition !== condition);
+    state.events.push({ kind: 'condition', creatureId: target.id, condition, applied: false, durationMs: BASE_DURATIONS.condition });
+    pushLog(state, {
+      round: state.round, turn: state.turnIndex, actor: caster.displayName, action: action.name,
+      details: `${caster.displayName} ends ${condition} on ${target.displayName}.`, type: 'condition',
     });
   }
 }
@@ -465,6 +483,7 @@ export function applyBuffFromSpell(
     attackBonusDice: tmpl.attackBonusDice,
     saveBonusDice: tmpl.saveBonusDice,
     acBonus: tmpl.acBonus,
+    acMinimum: tmpl.acMinimum,
     maxHpBonus: tmpl.maxHpBonus,
     damageRider: tmpl.damageRider,
     bonusActionDamage: tmpl.bonusActionDamage,
@@ -481,6 +500,7 @@ export function applyBuffFromSpell(
     advantageForAttackerId: tmpl.advantageForAttackerId,
     advantageForAllAttackers: tmpl.advantageForAllAttackers,
     attackDisadvantage: tmpl.attackDisadvantage,
+    attackersHaveDisadvantage: tmpl.attackersHaveDisadvantage,
     saveDisadvantage: tmpl.saveDisadvantage,
     speedPenalty: tmpl.speedPenalty,
     speedBonus: tmpl.speedBonus,
@@ -492,6 +512,8 @@ export function applyBuffFromSpell(
     expiresOnSourceTurnStart: tmpl.expiresOnSourceTurnStart,
     strengthTestDisadvantage: tmpl.strengthTestDisadvantage,
     damageRollPenalty: tmpl.damageRollPenalty,
+    weaponDamageBonus: tmpl.weaponDamageBonus,
+    weaponAttacksMagical: tmpl.weaponAttacksMagical,
     saveEnds: tmpl.saveEnds,
   };
   addBuff(target, buff);
@@ -591,12 +613,13 @@ function canReceiveAreaBuff(creature: Creature, action: MonsterAction): boolean 
  * Witch Bolt. This is not a new spell cast, so it does not set the
  * bonusActionSpellCast flag.
  */
-export function tryUseBonusActionDamageBuff(state: BattleState, caster: Creature): boolean {
+export function tryUseBonusActionDamageBuff(state: BattleState, caster: Creature, targetId?: string): boolean {
   clearDeadBonusActionDamageLinks(state, caster);
   if (caster.bonusActionUsed) return false;
 
   const linked = getAliveCreatures(state)
     .filter(target => target.team !== caster.team)
+    .filter(target => targetId === undefined || target.id === targetId)
     .flatMap(target => (target.activeBuffs ?? [])
       .filter(b =>
         b.casterId === caster.id &&
@@ -698,10 +721,21 @@ export function executeSpell(
    */
   aoeCenter?: { x: number; y: number },
 ): boolean {
+  if (action.requiresNoHeavyArmor && primaryTarget?.monsterData.wearingHeavyArmor) return false;
   if (action.darkness) {
     const range = action.range?.normal ?? action.range?.long ?? 0;
     if (!aoeCenter || !Number.isInteger(aoeCenter.x) || !Number.isInteger(aoeCenter.y)
       || creatureDistance(caster, { ...caster, position: aoeCenter, monsterData: { ...caster.monsterData, size: 'Medium' } }) > range
+      || !canSeePoint(state, caster, aoeCenter)) return false;
+  }
+  if (action.teleport) {
+    const size = caster.wildShape?.size ?? caster.temporarySize ?? caster.monsterData.size;
+    const footprint = getFootprintSize(size);
+    const gridSize = state.gridSize ?? 20;
+    if (!aoeCenter || !Number.isInteger(aoeCenter.x) || !Number.isInteger(aoeCenter.y)
+      || Math.max(Math.abs(aoeCenter.x - caster.position.x), Math.abs(aoeCenter.y - caster.position.y)) * 5 > action.teleport.distanceFt
+      || aoeCenter.x < 0 || aoeCenter.y < 0 || aoeCenter.x + footprint > gridSize || aoeCenter.y + footprint > gridSize
+      || isPositionBlocked(aoeCenter, size, state.creatures, caster.id, state.terrainBlocked)
       || !canSeePoint(state, caster, aoeCenter)) return false;
   }
   const level = action.spellLevel ?? 0;
@@ -778,8 +812,24 @@ export function executeSpell(
     pushLog(state, {
       round: state.round, turn: state.turnIndex, actor: caster.displayName,
       action: castAction.name,
-      details: `${caster.displayName} creates magical darkness.`, type: 'special',
+      details: `${caster.displayName} creates ${castAction.name}.`, type: 'special',
     });
+    return true;
+  }
+
+  if (castAction.teleport && aoeCenter) {
+    const size = caster.wildShape?.size ?? caster.temporarySize ?? caster.monsterData.size;
+    const footprint = getFootprintSize(size);
+    const gridSize = state.gridSize ?? 20;
+    if (!Number.isInteger(aoeCenter.x) || !Number.isInteger(aoeCenter.y)
+      || Math.max(Math.abs(aoeCenter.x - caster.position.x), Math.abs(aoeCenter.y - caster.position.y)) * 5 > castAction.teleport.distanceFt
+      || aoeCenter.x < 0 || aoeCenter.y < 0 || aoeCenter.x + footprint > gridSize || aoeCenter.y + footprint > gridSize
+      || isPositionBlocked(aoeCenter, size, state.creatures, caster.id, state.terrainBlocked)
+      || !canSeePoint(state, caster, aoeCenter)) return false;
+    const from = { ...caster.position };
+    caster.position = { ...aoeCenter };
+    state.events.push({ kind: 'move', creatureId: caster.id, from, to: { ...aoeCenter }, durationMs: 0 });
+    pushLog(state, { round: state.round, turn: state.turnIndex, actor: caster.displayName, action: castAction.name, details: `${caster.displayName} teleports to (${aoeCenter.x}, ${aoeCenter.y}).`, type: 'move' });
     return true;
   }
 
@@ -838,6 +888,21 @@ export function executeSpell(
   if (castAction.temporaryHp && primaryTarget) {
     const amount = rollDice(castAction.temporaryHp.dice).total;
     applyTemporaryHp(state, primaryTarget, amount, caster, castAction.name);
+    return true;
+  }
+
+  if (castAction.removesConditions && primaryTarget) {
+    removeSpellConditions(state, caster, primaryTarget, castAction);
+    if (!castAction.buff) return true;
+  }
+
+  if (castAction.grantsFlight && primaryTarget) {
+    primaryTarget.temporaryFlightSpeed = castAction.grantsFlight.speed;
+    primaryTarget.temporaryFlightExpiresRound = state.round + castAction.grantsFlight.durationRounds;
+    pushLog(state, {
+      round: state.round, turn: state.turnIndex, actor: caster.displayName, action: castAction.name,
+      details: `${primaryTarget.displayName} gains a ${castAction.grantsFlight.speed}-foot Fly Speed.`, type: 'special',
+    });
     return true;
   }
 

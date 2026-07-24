@@ -38,6 +38,22 @@ function spellAttackBonus(spellcastingMod: number, pb: number): number {
 // Level-1 spells
 // ─────────────────────────────────────────────────────────────────────────────
 
+export function bladeWard(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Blade Ward', type: 'special', spellLevel: 0, spellSchool: 'abjuration', castingAbility: ability,
+    description: 'Until the end of your next turn, you have Resistance to bludgeoning, piercing, and slashing damage.',
+    durationRounds: 1, targetScope: 'self', buff: { name: 'Blade Ward', key: 'blade-ward', resistPhysical: true },
+  };
+}
+
+export function resistance(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Resistance', type: 'special', spellLevel: 0, spellSchool: 'abjuration', castingAbility: ability,
+    description: 'One willing creature within 10 ft adds 1d4 to a saving throw before the end of its next turn.',
+    durationRounds: 1, range: { normal: 10, long: 10 }, targetScope: 'one_ally', buff: { name: 'Resistance', key: 'resistance', saveBonusDice: '1d4' },
+  };
+}
+
 export function magicMissile(): MonsterAction {
   return {
     name: 'Magic Missile',
@@ -302,6 +318,106 @@ export function entangle(ability: SpellcastingAbility, mod: number, pb: number):
   };
 }
 
+export function shield(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Shield', type: 'special', spellLevel: 1, spellSchool: 'abjuration', castingAbility: ability, reactionOnly: true,
+    description: 'Reaction when hit by an attack: gain +5 AC until the start of your next turn, potentially turning the hit into a miss.',
+    buff: { name: 'Shield', key: 'shield', acBonus: 5 }, targetScope: 'self',
+  };
+}
+
+export function hellishRebuke(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Hellish Rebuke', type: 'special', spellLevel: 1, spellSchool: 'evocation', castingAbility: ability, reactionOnly: true,
+    description: `Reaction when damaged by a creature within 60 ft: DEX save DC ${saveDC(mod, pb)}, taking 2d10 fire damage on a failure and half on a success.`,
+    damageType: 'fire', savingThrow: { ability: 'dex', dc: saveDC(mod, pb), damageOnFail: '2d10', damageOnSuccess: 'half' }, range: { normal: 60, long: 60 }, targetScope: 'one_enemy',
+  };
+}
+
+/** 2024 SRD - prone battlefield control with no persistent terrain state. */
+export function grease(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Grease', type: 'special', spellLevel: 1, spellSchool: 'conjuration', castingAbility: ability,
+    description: `10-foot square within 60 ft. DEX save DC ${saveDC(mod, pb)} or Prone.`,
+    savingThrow: { ability: 'dex', dc: saveDC(mod, pb), conditionOnFail: 'prone', conditionDuration: 'end_of_next_turn', area: '10-foot square' },
+    range: { normal: 60, long: 60 }, targetScope: 'area_enemies',
+  };
+}
+
+export function faerieFire(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Faerie Fire', type: 'special', spellLevel: 1, spellSchool: 'evocation', castingAbility: ability, concentration: true, durationRounds: 10,
+    description: `20-foot cube within 60 ft. DEX save DC ${saveDC(mod, pb)}; failed targets grant Advantage on attacks against them.`,
+    savingThrow: { ability: 'dex', dc: saveDC(mod, pb), area: '20-foot cube' }, range: { normal: 60, long: 60 }, targetScope: 'area_enemies',
+    buffOnFailedSave: { name: 'Faerie Fire', key: 'faerie-fire', requiresConcentration: true, advantageForAllAttackers: true },
+  };
+}
+
+export function fogCloud(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Fog Cloud', type: 'special', spellLevel: 1, spellSchool: 'conjuration', castingAbility: ability, concentration: true,
+    description: 'A 20-foot-radius heavily obscured sphere within 120 feet for 1 hour. The arena visibility resolver owns the obscured zone.',
+    range: { normal: 120, long: 120 }, targetScope: 'self', darkness: { radius: 20, durationRounds: 600, requiresConcentration: true },
+  };
+}
+
+export function falseLife(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'False Life', type: 'special', spellLevel: 1, spellSchool: 'necromancy', castingAbility: ability,
+    description: 'Gain 2d4 plus your spellcasting ability modifier temporary HP.', temporaryHp: { dice: '2d4', addCastingMod: true }, targetScope: 'self',
+  };
+}
+
+export function longstrider(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Longstrider', type: 'special', spellLevel: 1, spellSchool: 'transmutation', castingAbility: ability, durationRounds: 600,
+    description: 'One creature gains 10 feet of Speed for 1 hour.', range: { normal: 5, long: 5 }, targetScope: 'one_ally',
+    buff: { name: 'Longstrider', key: 'longstrider', speedBonus: 10 },
+  };
+}
+
+export function rayOfSickness(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Ray of Sickness', type: 'ranged', spellLevel: 1, spellSchool: 'necromancy', castingAbility: ability,
+    description: `Ranged spell attack +${spellAttackBonus(mod, pb)}, range 60 ft. 2d8 poison damage; CON save DC ${saveDC(mod, pb)} or Poisoned until your next turn.`,
+    attackBonus: spellAttackBonus(mod, pb), damage: '2d8', damageType: 'poison', range: { normal: 60, long: 60 }, targetScope: 'one_enemy',
+    conditionOnHit: { condition: 'poisoned', save: { ability: 'con', dc: saveDC(mod, pb) }, duration: 'end_of_next_turn' },
+  };
+}
+
+export function tashasHideousLaughter(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: "Tasha's Hideous Laughter", type: 'special', spellLevel: 1, spellSchool: 'enchantment', castingAbility: ability, concentration: true, durationRounds: 10,
+    description: `One creature within 30 ft. WIS save DC ${saveDC(mod, pb)} or Prone and Incapacitated; repeat the save at end of each turn.`,
+    savingThrow: { ability: 'wis', dc: saveDC(mod, pb), conditionOnFail: 'incapacitated', conditionDuration: '1_minute' }, range: { normal: 30, long: 30 }, targetScope: 'one_enemy',
+  };
+}
+
+export function armsOfHadar(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Arms of Hadar', type: 'special', spellLevel: 1, spellSchool: 'conjuration', castingAbility: ability,
+    description: `10-foot emanation. STR save DC ${saveDC(mod, pb)}; 2d6 necrotic damage on a failed save and no Reactions until your next turn.`,
+    damageType: 'necrotic', savingThrow: { ability: 'str', dc: saveDC(mod, pb), damageOnFail: '2d6', area: '10-foot emanation' }, targetScope: 'area_enemies',
+    buffOnFailedSave: { name: 'Arms of Hadar', key: 'arms-of-hadar', preventsReactions: true, expiresOnSourceTurnStart: true },
+  };
+}
+
+export function colorSpray(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Color Spray', type: 'special', spellLevel: 1, spellSchool: 'illusion', castingAbility: ability,
+    description: '15-foot cone. Roll 6d10; creatures in ascending current HP become Blinded until the end of your next turn.',
+    savingThrow: { ability: 'con', dc: 0, hpPoolDice: '6d10', conditionOnFail: 'blinded', conditionDuration: 'end_of_next_turn', area: '15-foot cone' }, targetScope: 'area_enemies',
+  };
+}
+
+export function divineFavor(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Divine Favor', type: 'special', spellLevel: 1, spellSchool: 'transmutation', castingAbility: ability, isBonusAction: true, durationRounds: 10,
+    description: 'Your weapon attacks deal an extra 1d4 radiant damage for 1 minute.', targetScope: 'self',
+    buff: { name: 'Divine Favor', key: 'divine-favor', damageRider: '1d4 radiant' },
+  };
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Level-2 spells
 // ─────────────────────────────────────────────────────────────────────────────
@@ -430,15 +546,17 @@ export function magicWeapon(ability: SpellcastingAbility, _mod: number, _pb: num
   return {
     name: 'Magic Weapon',
     type: 'special',
-    description: 'One ally within 30 ft gains +1 to weapon attack rolls for 1 hour. Concentration. (+1 damage/magical bypass not yet modeled.)',
+    description: 'One ally within 30 ft gains +1 to weapon attack and damage rolls for 1 hour. Its weapon attacks count as magical. Concentration.',
     spellLevel: 2,
     concentration: true,
-    durationRounds: 10,
+    durationRounds: 600,
     castingAbility: ability,
     buff: {
       name: 'Magic Weapon', key: 'magic-weapon',
       requiresConcentration: true,
       attackBonusDice: '1',
+      weaponDamageBonus: 1,
+      weaponAttacksMagical: true,
     },
     range: { normal: 30, long: 30 },
     targetScope: 'one_ally',
@@ -486,6 +604,88 @@ export function spiritualWeapon(ability: SpellcastingAbility, mod: number, pb: n
   };
 }
 
+export function lesserRestoration(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Lesser Restoration', type: 'special', spellLevel: 2, spellSchool: 'abjuration', castingAbility: ability,
+    description: 'End Blinded, Deafened, Paralyzed, or Poisoned on one creature within 30 feet.',
+    removesConditions: ['blinded', 'deafened', 'paralyzed', 'poisoned'], range: { normal: 30, long: 30 }, targetScope: 'one_ally',
+  };
+}
+
+export function mistyStep(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Misty Step', type: 'special', spellLevel: 2, spellSchool: 'conjuration', castingAbility: ability, isBonusAction: true,
+    description: 'Bonus action: teleport up to 30 feet to an unoccupied space you can see.', teleport: { distanceFt: 30 }, targetScope: 'self',
+  };
+}
+
+export function blur(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return { name: 'Blur', type: 'special', spellLevel: 2, spellSchool: 'illusion', castingAbility: ability, concentration: true, durationRounds: 10, description: 'For 1 minute, attack rolls against you have Disadvantage.', targetScope: 'self', buff: { name: 'Blur', key: 'blur', requiresConcentration: true, attackersHaveDisadvantage: true } };
+}
+
+export function barkskin(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return { name: 'Barkskin', type: 'special', spellLevel: 2, spellSchool: 'transmutation', castingAbility: ability, durationRounds: 100, description: 'One willing creature has AC 17 for 1 hour while it is not wearing Heavy armor.', range: { normal: 30, long: 30 }, targetScope: 'one_ally', requiresNoHeavyArmor: true, buff: { name: 'Barkskin', key: 'barkskin', acMinimum: 17 } };
+}
+
+export function protectionFromPoison(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Protection from Poison', type: 'special', spellLevel: 2, spellSchool: 'abjuration', castingAbility: ability, durationRounds: 600,
+    description: 'End Poisoned on one creature within 30 feet; it has resistance to poison damage for 1 hour.',
+    removesConditions: ['poisoned'], range: { normal: 30, long: 30 }, targetScope: 'one_ally',
+    buff: { name: 'Protection from Poison', key: 'protection-from-poison', resistDamageTypes: ['poison'] },
+  };
+}
+
+export function gustOfWind(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Gust of Wind', type: 'special', spellLevel: 2, spellSchool: 'evocation', castingAbility: ability, concentration: true, durationRounds: 10,
+    description: `60-foot line. STR save DC ${saveDC(mod, pb)}; failed creatures take 2d8 thunder damage and are pushed 15 feet.`,
+    damageType: 'thunder', savingThrow: { ability: 'str', dc: saveDC(mod, pb), damageOnFail: '2d8', area: '60-foot line' }, pushOnFailedSave: 15, targetScope: 'area_enemies',
+  };
+}
+
+export function acidArrow(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Acid Arrow', type: 'ranged', spellLevel: 2, spellSchool: 'evocation', castingAbility: ability,
+    description: `Ranged spell attack +${spellAttackBonus(mod, pb)}, range 90 ft. 4d4 acid damage on a hit, then 2d4 acid at the end of the target's next turn.`,
+    attackBonus: spellAttackBonus(mod, pb), damage: '4d4', damageType: 'acid', range: { normal: 90, long: 90 }, targetScope: 'one_enemy',
+    effects: [{ kind: 'ongoingDamage', key: 'Acid Arrow', damage: '2d4', damageType: 'acid', tick: 'targetTurnStart', expiresAfterRounds: 1 }],
+  };
+}
+
+export function fly(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Fly', type: 'special', spellLevel: 3, spellSchool: 'transmutation', castingAbility: ability, concentration: true, durationRounds: 100,
+    description: 'One willing creature within 30 feet gains a 60-foot Fly Speed for 10 minutes.', range: { normal: 30, long: 30 }, targetScope: 'one_ally',
+    grantsFlight: { speed: 60, durationRounds: 100 },
+  };
+}
+
+export function fear(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Fear', type: 'special', spellLevel: 3, spellSchool: 'illusion', castingAbility: ability, concentration: true, durationRounds: 10,
+    description: `30-foot cone. WIS save DC ${saveDC(mod, pb)} or Frightened for 1 minute; repeat the save at the end of each turn.`,
+    savingThrow: { ability: 'wis', dc: saveDC(mod, pb), conditionOnFail: 'frightened', conditionDuration: '1_minute', area: '30-foot cone' }, targetScope: 'area_enemies',
+  };
+}
+
+export function revivify(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Revivify', type: 'special', spellLevel: 3, spellSchool: 'necromancy', castingAbility: ability,
+    description: 'A creature that died within the last minute returns to life with 1 HP. Arena supports downed allies.',
+    heal: { dice: '1' }, range: { normal: 5, long: 5 }, targetScope: 'one_ally',
+  };
+}
+
+export function bestowCurse(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Bestow Curse', type: 'special', spellLevel: 3, spellSchool: 'necromancy', castingAbility: ability, concentration: true, durationRounds: 10,
+    description: `One creature within 30 ft. WIS save DC ${saveDC(mod, pb)} or has Disadvantage on attack rolls; repeats the save at the end of each turn.`,
+    savingThrow: { ability: 'wis', dc: saveDC(mod, pb) }, range: { normal: 30, long: 30 }, targetScope: 'one_enemy',
+    buffOnFailedSave: { name: 'Bestow Curse', key: 'bestow-curse', requiresConcentration: true, attackDisadvantage: true, saveEnds: { ability: 'wis', dc: saveDC(mod, pb), at: 'targetTurnEnd' } },
+  };
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Level-3 spells
 // ─────────────────────────────────────────────────────────────────────────────
@@ -527,11 +727,10 @@ export function lightningBolt(ability: SpellcastingAbility, mod: number, pb: num
 }
 
 export function spiritGuardians(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
-  // Aura damage per turn. We approximate with a one-shot AoE centered on caster.
   return {
     name: 'Spirit Guardians',
     type: 'special',
-    description: `15-foot emanation centered on you. WIS save DC ${saveDC(mod, pb)}; 3d8 radiant/necrotic damage on fail, half on success. Concentration; ongoing per-turn aura damage not yet simulated.`,
+    description: `15-foot emanation centered on you. WIS save DC ${saveDC(mod, pb)}; 3d8 radiant/necrotic damage on fail, half on success. Concentration for 10 minutes; damage repeats when enemies enter or start their turns in the aura.`,
     spellLevel: 3,
     concentration: true,
     durationRounds: 10,
@@ -1302,19 +1501,31 @@ export function wallOfFire(ability: SpellcastingAbility, mod: number, pb: number
 type SpellFactory = (ability: SpellcastingAbility, mod: number, pb: number) => MonsterAction;
 const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Magic Missile', () => magicMissile()],
+  ['Blade Ward', bladeWard], ['Resistance', resistance],
+  ['Shield', shield],
+  ['Hellish Rebuke', hellishRebuke],
   ['Burning Hands', burningHands], ['Thunderwave', thunderwave], ['Sleep', sleep],
   ['Bless', () => bless()], ['Bane', bane], ['Cure Wounds', cureWounds],
   ['Healing Word', healingWord], ['Shield of Faith', () => shieldOfFaith()],
   ['Guiding Bolt', guidingBolt], ['Dissonant Whispers', dissonantWhispers],
   ['Entangle', entangle], ['Command', command], ['Chromatic Orb', chromaticOrb],
   ['Inflict Wounds', inflictWounds], ['Witch Bolt', witchBolt],
+  ['Arms of Hadar', armsOfHadar], ['Color Spray', colorSpray], ['Divine Favor', divineFavor],
+  ['Faerie Fire', faerieFire], ['False Life', falseLife], ['Fog Cloud', fogCloud], ['Grease', grease], ['Longstrider', longstrider],
+  ['Ray of Sickness', rayOfSickness], ["Tasha's Hideous Laughter", tashasHideousLaughter],
   ['Scorching Ray', scorchingRay], ['Web', web], ['Hold Person', holdPerson],
   ['Shatter', shatter], ['Moonbeam', moonbeam], ['Spiritual Weapon', spiritualWeapon],
   ['Aid', aid], ['Magic Weapon', magicWeapon], ['Shining Smite', shiningSmite],
   ['Blindness/Deafness', blindnessDeafness], ['Mirror Image', mirrorImage],
+  ['Gust of Wind', gustOfWind], ['Lesser Restoration', lesserRestoration], ['Protection from Poison', protectionFromPoison],
+  ['Misty Step', mistyStep],
+  ['Blur', blur], ['Barkskin', barkskin],
+  ['Acid Arrow', acidArrow],
   ['Fireball', fireball], ['Lightning Bolt', lightningBolt],
   ['Spirit Guardians', spiritGuardians], ['Call Lightning', callLightning],
   ['Hypnotic Pattern', hypnoticPattern], ['Dispel Magic', dispelMagic], ['Haste', haste],
+  ['Fear', fear], ['Fly', fly], ['Revivify', revivify],
+  ['Bestow Curse', bestowCurse],
   ['Ice Storm', iceStorm], ['Banishment', banishment], ['Blight', blight],
   ['Fire Shield', fireShield], ['Stoneskin', stoneskin], ['Death Ward', deathWard],
   ['Wall of Fire', wallOfFire],

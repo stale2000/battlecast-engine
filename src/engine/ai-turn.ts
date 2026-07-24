@@ -9,7 +9,7 @@ import {
   processRegeneration, processRecharges, checkBattleComplete, applyDamage, applyCondition, pushLog,
   type TacticType,
   hasBuff, hasResource, consumeResource, addBuff,
-  processConcentrationAuras, checkAuraEntry, expireSourceTurnBuffs,
+  processConcentrationAuras, checkAuraEntry, expireSourceTurnBuffs, dropConcentratedBuffsFrom,
   runDeathSave, stabiliseDyingAlly,
   getActiveSize, getActiveSpeed, getActiveTraits, hasActiveTrait,
   getEffectiveMoveSpeed, getEffectiveSaveModifier, getHydraHeadCount, canTakeReactions,
@@ -346,6 +346,9 @@ function processTurnStartTraits(state: BattleState, creature: Creature): void {
 /** Turn start: expire buffs, process conditions, recharge, reset movement.
  *  Returns false if the creature can't act (incapacitated/dead). */
 export function processTurnStart(state: BattleState, creature: Creature): boolean {
+  if (creature.concentrationAura && creature.concentrationAura.endRound <= state.round) {
+    dropConcentratedBuffsFrom(state, creature.id);
+  }
   state.events.push({ kind: 'turnStart', creatureId: creature.id, durationMs: BASE_DURATIONS.turnStart });
   state.darknessZones = state.darknessZones?.filter(zone => zone.endRound > state.round);
   revealVisibleHiddenCreatures(state);

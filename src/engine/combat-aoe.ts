@@ -529,7 +529,8 @@ export function resolveAoE(
         break;
       }
       pool -= target.currentHp;
-      applyCondition(state, target, 'unconscious', attacker, '1_minute', 0, ability);
+      applyCondition(state, target, action.savingThrow.conditionOnFail ?? 'unconscious', attacker,
+        action.savingThrow.conditionDuration ?? '1_minute', 0, ability);
     }
     return;
   }

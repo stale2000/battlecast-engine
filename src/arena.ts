@@ -91,6 +91,10 @@ function parseAction(value: unknown): ArenaAction {
     if (!Number.isInteger(action.x) || !Number.isInteger(action.y)) throw new EncounterError("Cloud's Jaunt requires integer x and y.");
     return { id: 'species:cloud_jaunt', type: 'species_teleport', destination: { x: action.x as number, y: action.y as number } };
   }
+  if ((action.id as string).endsWith(':teleport')) {
+    if (!Number.isInteger(action.x) || !Number.isInteger(action.y)) throw new EncounterError('Teleport requires integer x and y.');
+    return { id: action.id, type: 'spell_teleport', actionName: '', actionIndex: -1, destination: { x: action.x as number, y: action.y as number } };
+  }
   return action as ArenaAction;
 }
 

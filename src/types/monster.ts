@@ -189,6 +189,8 @@ export interface MonsterAction {
    *  Bonus actions can be used alongside a main action on the same turn
    *  (e.g., Rage + Greataxe, Hex + Eldritch Blast, Healing Word + Rapier). */
   isBonusAction?: boolean;
+  /** A reaction-timed spell resolved automatically by the authoritative engine. */
+  reactionOnly?: boolean;
   /** Uses one attack from an Attack action instead of consuming the whole action. */
   replacesAttack?: boolean;
   /**
@@ -266,6 +268,10 @@ export interface MonsterAction {
     /** Preserve Life-style cap: the heal can restore only up to this HP fraction. */
     maxTargetHpFraction?: number;
   };
+  /** Conditions ended by a restorative spell such as Lesser Restoration. */
+  removesConditions?: Array<'blinded' | 'deafened' | 'paralyzed' | 'poisoned'>;
+  /** Temporary flight granted by a spell such as Fly. */
+  grantsFlight?: { speed: number; durationRounds: number };
   /** Paladin Lay on Hands spends a variable amount from its HP pool. */
   layOnHands?: {
     resourceKey: string;
@@ -343,6 +349,10 @@ export interface MonsterAction {
    * caller can only choose one of the server-generated legal centers.
    */
   darkness?: { radius: number; durationRounds: number; requiresConcentration?: boolean };
+  /** Server-validated teleport destination, used by spells such as Misty Step. */
+  teleport?: { distanceFt: number };
+  /** The spell cannot affect a target wearing Heavy armor (Barkskin). */
+  requiresNoHeavyArmor?: boolean;
   /**
    * Action exists only as the mechanical payload for a legendary action.
    * Normal turn planning ignores it; executeLegendaryAction can still
@@ -368,6 +378,7 @@ export interface BuffTemplate {
   attackBonusDice?: string;
   saveBonusDice?: string;
   acBonus?: number;
+  acMinimum?: number;
   /** Aid-style increase to current and maximum HP for the encounter. */
   maxHpBonus?: number;
   damageRider?: string;
@@ -396,6 +407,8 @@ export interface BuffTemplate {
   advantageForAllAttackers?: boolean;
   /** Weapon Mastery: Sap gives this creature Disadvantage on attack rolls while active. */
   attackDisadvantage?: boolean;
+  /** Attackers have Disadvantage against this creature, e.g. Blur. */
+  attackersHaveDisadvantage?: boolean;
   /** One-shot rider such as Barbarian Staggering Blow: next save has Disadvantage. */
   saveDisadvantage?: boolean;
   /** Weapon Mastery: Slow reduces this creature's speed while active. */
@@ -420,6 +433,10 @@ export interface BuffTemplate {
   strengthTestDisadvantage?: boolean;
   /** Dice subtracted from each damage roll this creature makes. */
   damageRollPenalty?: string;
+  /** Flat bonus to this creature's weapon damage, e.g. Magic Weapon. */
+  weaponDamageBonus?: number;
+  /** This creature's weapon attacks count as magical. */
+  weaponAttacksMagical?: boolean;
   /** Repeat this save at the specified point and remove the buff on success. */
   saveEnds?: { ability: keyof Abilities; dc: number; at: 'targetTurnEnd' };
 }
@@ -455,6 +472,8 @@ export interface MonsterData {
   type: string;
   alignment: string;
   ac: number;
+  /** Construction metadata needed by effects such as Barkskin. */
+  wearingHeavyArmor?: boolean;
   hp: number;
   hpFormula: string;
   speed: Speed;
@@ -624,6 +643,7 @@ export interface Creature {
     saveAbility: keyof Abilities;
     saveDC: number;
     radiusFt: number;
+    endRound: number;
     origin: 'caster' | 'point';
     point?: { x: number; y: number };
   };
@@ -726,6 +746,7 @@ export interface ActiveBuff {
   saveBonusDice?: string;
   /** Flat AC modifier while active. Shield of Faith: +2. */
   acBonus?: number;
+  acMinimum?: number;
   /** Aid-style increase to current and maximum HP for the encounter. */
   maxHpBonus?: number;
   /**
@@ -769,6 +790,7 @@ export interface ActiveBuff {
   advantageForAllAttackers?: boolean;
   /** Weapon Mastery: Sap gives this creature Disadvantage on attack rolls while active. */
   attackDisadvantage?: boolean;
+  attackersHaveDisadvantage?: boolean;
   /** One-shot rider such as Barbarian Staggering Blow: next save has Disadvantage. */
   saveDisadvantage?: boolean;
   /** Weapon Mastery: Slow reduces this creature's speed while active. */
@@ -795,6 +817,8 @@ export interface ActiveBuff {
   strengthTestDisadvantage?: boolean;
   /** Dice subtracted from each damage roll this creature makes. */
   damageRollPenalty?: string;
+  weaponDamageBonus?: number;
+  weaponAttacksMagical?: boolean;
   /** Repeat this save at the specified point and remove the buff on success. */
   saveEnds?: { ability: keyof Abilities; dc: number; at: 'targetTurnEnd' };
 }

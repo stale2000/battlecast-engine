@@ -980,7 +980,7 @@ function hasDisadvantage(attacker: Creature, target: Creature, action: MonsterAc
   if (target.turnFlags?.dodge) dis = true;
 
   // Weapon Mastery: Sap gives the target Disadvantage on its next attack roll.
-  if (attacker.activeBuffs?.some(b => b.attackDisadvantage)) dis = true;
+  if (attacker.activeBuffs?.some(b => b.attackDisadvantage) || target.activeBuffs?.some(b => b.attackersHaveDisadvantage)) dis = true;
   if ((action.attackAbility === 'str' || (!action.attackAbility && action.type === 'melee'))
       && attacker.activeBuffs?.some(b => b.strengthTestDisadvantage)) dis = true;
 
@@ -1769,9 +1769,24 @@ function getEffectiveAC(target: Creature): number {
   // not applied dynamically since it's baked into hero starting AC), etc.
   for (const b of target.activeBuffs ?? []) {
     if (b.acBonus) ac += b.acBonus;
+    if (b.acMinimum) ac = Math.max(ac, b.acMinimum);
   }
   // Displacement trait gives effective AC boost (modeled as disadvantage on attacks, handled elsewhere)
   return ac;
+}
+
+/** Resolve Shield at the only moment it is legal: after a noncritical hit is known. */
+function tryAutomaticShield(state: BattleState, target: Creature, rollTotal: number, naturalRoll: number, ac: number): boolean {
+  if (naturalRoll === 20 || rollTotal < ac || rollTotal >= ac + 5 || !canTakeReactions(target)) return false;
+  const shield = target.monsterData.actions.find(action => action.name === 'Shield' && action.reactionOnly);
+  const slot = lowestAvailableSlot(target);
+  if (!shield || slot === null) return false;
+  consumeResource(target, `slot-${slot}`);
+  target.reactionUsed = true;
+  addBuff(target, { name: 'Shield', key: `shield:${target.id}`, casterId: target.id, appliedRound: state.round, endRound: state.round + 1, acBonus: 5 });
+  target.stats.actionUsage.Shield = (target.stats.actionUsage.Shield || 0) + 1;
+  pushLog(state, { round: state.round, turn: state.turnIndex, actor: target.displayName, action: 'Shield', details: `${target.displayName} casts Shield and turns the hit into a miss.`, type: 'special' });
+  return true;
 }
 
 function getDeathBurstRuntime(creature: Creature): Extract<RuntimeTraitEffect, { kind: 'deathBurst' }> | null {
@@ -3217,6 +3232,28 @@ function applyDamage(state: BattleState, target: Creature, damage: number, damag
     target.stats.actionUsage['Hellish Rebuke'] = (target.stats.actionUsage['Hellish Rebuke'] || 0) + 1;
   }
 
+  const hellishRebuke = target.monsterData.actions.find(action => action.name === 'Hellish Rebuke' && action.reactionOnly);
+  if (damage > 0 && target.isAlive && target.currentHp > 0 && attacker && attacker.isAlive && hellishRebuke
+      && canTakeReactions(target) && creatureDistance(target, attacker) <= (hellishRebuke.range?.normal ?? 60)) {
+    const resourceKey = hellishRebuke.resourceCost?.key;
+    const slot = resourceKey ? null : lowestAvailableSlot(target);
+    const canPay = resourceKey
+      ? consumeResource(target, resourceKey, hellishRebuke.resourceCost!.amount)
+      : slot !== null && consumeResource(target, `slot-${slot}`);
+    if (canPay && hellishRebuke.savingThrow?.damageOnFail) {
+      target.reactionUsed = true;
+      const save = rollSaveWithBuffs(attacker, getEffectiveSaveModifier(attacker, hellishRebuke.savingThrow.ability, state), false, hellishRebuke.savingThrow.dc, hellishRebuke.savingThrow.ability);
+      const amount = save.total >= hellishRebuke.savingThrow.dc
+        ? Math.floor(rollDice(hellishRebuke.savingThrow.damageOnFail).total / 2)
+        : rollDice(hellishRebuke.savingThrow.damageOnFail).total;
+      const event = pushHitEvent(state, attacker.id, amount, hellishRebuke.damageType ?? 'fire', false, attacker.currentHp);
+      applyDamage(state, attacker, amount, hellishRebuke.damageType ?? 'fire', target, false, true);
+      event.targetHpAfter = attacker.currentHp;
+      target.stats.actionUsage['Hellish Rebuke'] = (target.stats.actionUsage['Hellish Rebuke'] || 0) + 1;
+      pushLog(state, { round: state.round, turn: state.turnIndex, actor: target.displayName, action: 'Hellish Rebuke', details: `${target.displayName} rebukes ${attacker.displayName}.`, damage: amount, type: 'damage' });
+    }
+  }
+
   // Retaliation (Barbarian L10): reaction melee attack when damaged by adjacent creature
   if (damage > 0 && target.isAlive && target.currentHp > 0 && attacker && attacker.isAlive
       && target.monsterData.heroClass === 'Barbarian' && (target.monsterData.heroLevel ?? 0) >= 10
@@ -3879,6 +3916,7 @@ function resolveAttack(
 
   const isCrit = naturalRoll >= critThreshold;
   const isFumble = naturalRoll === 1 && !combatProwessHit;
+  const shielded = !isFumble && !isCrit && tryAutomaticShield(state, target, roll.total, naturalRoll, ac);
 
   // OA-tagged swings stretch attack/hit/miss durations and carry a
   // `cause: 'opportunity'` flag through to the replay layer so the grid
@@ -3925,7 +3963,7 @@ function resolveAttack(
     return;
   }
 
-  if (isCrit || combatProwessHit || roll.total >= ac) {
+  if (!shielded && (isCrit || combatProwessHit || roll.total >= ac)) {
     attacker.stats.attacksHit++;
     let dealtActionDamage = false;
     const actionDamageSummary = emptyDamageSummary();
@@ -4010,6 +4048,11 @@ function resolveAttack(
       }
 
       totalDmg = applyCuttingWordsToDamageRoll(state, attacker, target, totalDmg);
+      const weaponMagic = action.spellLevel === undefined && attacker.activeBuffs?.some(buff => buff.weaponAttacksMagical) === true;
+      const weaponDamageBonus = action.spellLevel === undefined
+        ? attacker.activeBuffs?.reduce((sum, buff) => sum + (buff.weaponDamageBonus ?? 0), 0) ?? 0
+        : 0;
+      totalDmg += weaponDamageBonus;
 
       pushLog(state, {
         round: state.round, turn: state.turnIndex,
@@ -4024,7 +4067,7 @@ function resolveAttack(
       const hitEvt = pushHitEvent(state, target.id, totalDmg, mainType, isCrit || autoCrit, hpBefore,
         { durationMs: hitDur, ...(isOa ? { cause: 'opportunity' as const } : {}) });
 
-      const appliedMainDamage = applyDamage(state, target, totalDmg, mainType, attacker, true, action.magical ?? false, isCrit || autoCrit);
+      const appliedMainDamage = applyDamage(state, target, totalDmg, mainType, attacker, true, (action.magical ?? false) || weaponMagic, isCrit || autoCrit);
       addDamageToSummary(actionDamageSummary, appliedMainDamage, mainType);
       dealtActionDamage = appliedMainDamage > 0;
       if (!target.isAlive) target.stats.killedByAction = action.name;

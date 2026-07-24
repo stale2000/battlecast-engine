@@ -4,7 +4,7 @@ import { Encounter } from '../src/api/encounter.js';
 import { getActiveCreature, getLegalActions, applyLegalAction, startArena } from '../src/api/arena.js';
 import { reachableMovementDestinations } from '../src/engine/ai-movement.js';
 import { processTurnStart } from '../src/engine/ai-turn.js';
-import { applyDamage, applyDamageRollPenalty, getEffectiveMoveSpeed, hasDisadvantage, processTargetTurnEndOngoingEffects, resolveAttack, rollAllInitiatives, runDeathSave } from '../src/engine/combat.js';
+import { applyDamage, applyDamageRollPenalty, executeSpell, getEffectiveMoveSpeed, hasDisadvantage, processTargetTurnEndOngoingEffects, resolveAttack, rollAllInitiatives, runDeathSave } from '../src/engine/combat.js';
 import { dropConcentratedBuffsFrom } from '../src/engine/combat-buffs.js';
 import { canSee } from '../src/engine/ai-targeting.js';
 import { rollSaveWithBuffs } from '../src/engine/combat-buffs.js';
@@ -13,6 +13,7 @@ import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
+import { barkskin, bladeWard, fly, hellishRebuke, lesserRestoration, magicWeapon, mistyStep, moonbeam, resistance, shield, witchBolt } from '../src/data/spells.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
@@ -59,6 +60,146 @@ describe('Kaggle arena bridge', () => {
       expect(JSON.stringify(initial.state)).toBe(before);
     }
     expect(active).toBeTruthy();
+  });
+
+  it('resolves restorative and flight spell actions through the authoritative arena path', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({
+      heroClass: 'Cleric', heroLevel: 5, team: 'red', position: { x: 0, y: 0 },
+      heroOverrides: {
+        additionalActions: [lesserRestoration('wis', 3, 3), fly('wis', 3, 3)],
+        additionalResources: { 'slot-2': 1, 'slot-3': 1 },
+      },
+    });
+    encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'red', position: { x: 1, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 10, y: 0 } });
+    encounter.start();
+    const cleric = encounter.state!.creatures.find(creature => creature.team === 'red' && creature.monsterData.heroClass === 'Cleric')!;
+    encounter.state!.initiativeOrder = [cleric.id];
+    startArena(encounter);
+    const ally = encounter.state!.creatures.find(creature => creature.team === 'red' && creature.id !== cleric.id)!;
+    ally.conditions.push('poisoned');
+    const restoration = getLegalActions(encounter, cleric.id).find(action => action.type === 'spell' && action.actionName === 'Lesser Restoration')!;
+    applyLegalAction(encounter, restoration);
+    expect(ally.conditions).not.toContain('poisoned');
+
+    cleric.hasActed = false;
+    const flight = getLegalActions(encounter, cleric.id).find(action => action.type === 'spell' && action.actionName === 'Fly' && action.targetId === ally.id)!;
+    applyLegalAction(encounter, flight);
+    expect(ally.temporaryFlightSpeed).toBe(60);
+  });
+
+  it('automatically resolves Shield only when its +5 AC changes a noncritical hit to a miss', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [{ name: 'Test Strike', type: 'melee', description: 'test', attackBonus: 1, damage: '1d8', damageType: 'slashing', reach: 5 }] } });
+    encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'blue', position: { x: 1, y: 0 }, heroOverrides: { acOverride: 10, additionalActions: [shield('int', 3, 3)], additionalResources: { 'slot-1': 1 } } });
+    encounter.start();
+    const attacker = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    const target = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
+    const hp = target.currentHp;
+    withRng({ next: () => 0.5 }, () => resolveAttack(encounter.state!, attacker, target, attacker.monsterData.actions.find(action => action.name === 'Test Strike')!));
+    expect(target.currentHp).toBe(hp);
+    expect(target.resources['slot-1']).toBe(0);
+    expect(target.stats.actionUsage.Shield).toBe(1);
+  });
+
+  it('resolves Hellish Rebuke as an authoritative reaction rather than a turn action', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [{ name: 'Test Strike', type: 'melee', description: 'test', attackBonus: 100, damage: '1d4', damageType: 'slashing', reach: 5 }] } });
+    encounter.addCreature({ heroClass: 'Warlock', heroLevel: 5, team: 'blue', position: { x: 1, y: 0 }, heroOverrides: { additionalActions: [hellishRebuke('cha', 3, 3)], additionalResources: { 'slot-1': 1 } } });
+    encounter.start();
+    const attacker = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    const target = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
+    encounter.runWithRng(() => resolveAttack(encounter.state!, attacker, target, attacker.monsterData.actions.find(action => action.name === 'Test Strike')!));
+    expect(target.stats.actionUsage['Hellish Rebuke']).toBe(1);
+    expect(target.resources['slot-1']).toBe(0);
+  });
+
+  it('validates Misty Step destinations before consuming a slot or moving', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [mistyStep('int', 3, 3)], additionalResources: { 'slot-2': 1 } } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 10, y: 0 } });
+    encounter.start();
+    const wizard = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    encounter.state!.initiativeOrder = [wizard.id];
+    startArena(encounter);
+    const teleport = getLegalActions(encounter, wizard.id).find(action => action.type === 'spell_teleport')!;
+    const before = JSON.stringify(encounter.toJSON());
+    expect(() => applyLegalAction(encounter, { ...teleport, destination: { x: 7, y: 0 } })).toThrow(/Illegal or stale/);
+    expect(JSON.stringify(encounter.toJSON())).toBe(before);
+    applyLegalAction(encounter, { ...teleport, destination: { x: 4, y: 0 } });
+    expect(wizard.position).toEqual({ x: 4, y: 0 });
+    expect(wizard.resources['slot-2']).toBe(0);
+  });
+
+  it('does not offer or apply Barkskin to a heavy-armored target', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Druid', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [barkskin('wis', 3, 3)], additionalResources: { 'slot-2': 1 } } });
+    encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'red', position: { x: 1, y: 0 }, heroOverrides: { wearingHeavyArmor: true } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 10, y: 0 } });
+    encounter.start();
+    const druid = encounter.state!.creatures.find(creature => creature.monsterData.heroClass === 'Druid')!;
+    encounter.state!.initiativeOrder = [druid.id];
+    startArena(encounter);
+    expect(getLegalActions(encounter, druid.id).some(action => action.actionName === 'Barkskin' && action.targetId !== druid.id)).toBe(false);
+    expect(executeSpell(encounter.state!, druid, barkskin('wis', 3, 3), encounter.state!.creatures.find(creature => creature.monsterData.heroClass === 'Fighter')!)).toBe(false);
+  });
+
+  it('expires concentration auras with their spell duration', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Druid', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [moonbeam('wis', 3, 3)], additionalResources: { 'slot-2': 1 } } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    const target = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
+    expect(executeSpell(encounter.state!, caster, moonbeam('wis', 3, 3), target, [target], target.position)).toBe(true);
+    expect(caster.concentrationAura).toBeTruthy();
+    encounter.state!.round += 10;
+    processTurnStart(encounter.state!, caster);
+    expect(caster.concentrationAura).toBeUndefined();
+  });
+
+  it('resolves defensive cantrip buffs through the legal-action path', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [bladeWard('int', 3, 3), resistance('int', 3, 3)] } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 10, y: 0 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    encounter.state!.initiativeOrder = [caster.id];
+    startArena(encounter);
+    const action = getLegalActions(encounter, caster.id).find(candidate => candidate.actionName === 'Blade Ward')!;
+    applyLegalAction(encounter, action);
+    expect(caster.activeBuffs.some(buff => buff.key === 'blade-ward')).toBe(true);
+  });
+
+  it("offers Witch Bolt's later-turn damage as a validated target choice", () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [witchBolt('int', 3, 3)], additionalResources: { 'slot-1': 1 } } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    const target = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
+    expect(executeSpell(encounter.state!, caster, witchBolt('int', 3, 3), target)).toBe(true);
+    encounter.state!.round++;
+    encounter.state!.initiativeOrder = [caster.id];
+    startArena(encounter);
+    const repeat = getLegalActions(encounter, caster.id).find(action => action.type === 'repeat_spell')!;
+    const hp = target.currentHp;
+    applyLegalAction(encounter, repeat);
+    expect(target.currentHp).toBeLessThan(hp);
+    expect(caster.bonusActionUsed).toBe(true);
+  });
+
+  it('applies Magic Weapon damage and magical-weapon flags through the shared attack state', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Paladin', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [magicWeapon('cha', 3, 3)], additionalResources: { 'slot-2': 1 } } });
+    encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'red', position: { x: 1, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 2, y: 0 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.monsterData.heroClass === 'Paladin')!;
+    const fighter = encounter.state!.creatures.find(creature => creature.monsterData.heroClass === 'Fighter')!;
+    expect(executeSpell(encounter.state!, caster, magicWeapon('cha', 3, 3), fighter)).toBe(true);
+    expect(fighter.activeBuffs.find(buff => buff.key === 'magic-weapon')).toMatchObject({ weaponDamageBonus: 1, weaponAttacksMagical: true });
   });
 
   it('rejects a restored arena state with a changed round cap', () => {

@@ -15,6 +15,7 @@ import {
   processTargetTurnEndOngoingEffects,
   pushLog,
   resolveAttack,
+  tryUseBonusActionDamageBuff,
   escapeGrapple,
 } from '../engine/combat.js';
 import { canSee, getActiveActions } from '../engine/ai-targeting.js';
@@ -47,7 +48,7 @@ function attackInRange(attacker: Creature, target: Creature, action: MonsterActi
 }
 
 function isSpellAction(action: MonsterAction): boolean {
-  return action.spellLevel !== undefined || action.layOnHands !== undefined || action.heal !== undefined || action.temporaryHp !== undefined || action.buff !== undefined || action.savingThrow !== undefined || action.autoDarts !== undefined || action.powerWord !== undefined;
+  return action.spellLevel !== undefined || action.layOnHands !== undefined || action.heal !== undefined || action.temporaryHp !== undefined || action.removesConditions !== undefined || action.grantsFlight !== undefined || action.buff !== undefined || action.savingThrow !== undefined || action.autoDarts !== undefined || action.powerWord !== undefined;
 }
 
 function canHideFrom(state: NonNullable<Encounter['state']>, active: Creature, observer: Creature): boolean {
@@ -92,14 +93,14 @@ function canCastArenaSpell(active: Creature, action: MonsterAction): boolean {
 
 function spellTargets(active: Creature, state: NonNullable<Encounter['state']>, action: MonsterAction): Creature[] {
   if (action.autoDarts || action.savingThrow?.area || action.targetScope === 'all_allies_in_area') return [];
-  const living = state.creatures.filter(c => c.isAlive && !c.dying);
+  const living = state.creatures.filter(c => c.isAlive && (!c.dying || action.heal !== undefined));
   if (action.targetScope === 'self') return [active];
   const inRange = (target: Creature) => {
     const range = action.range?.normal;
     return range === undefined || creatureDistance(active, target) <= range;
   };
-  if (action.targetScope === 'one_ally' || action.heal || action.layOnHands) {
-    return living.filter(c => c.team === active.team && inRange(c) && (action.heal || action.layOnHands ? c.currentHp < c.maxHp || c.dying : true));
+  if (action.targetScope === 'one_ally' || action.heal || action.layOnHands || action.removesConditions || action.grantsFlight) {
+    return living.filter(c => c.team === active.team && inRange(c) && !((action.requiresNoHeavyArmor ?? false) && c.monsterData.wearingHeavyArmor) && (action.heal || action.layOnHands ? c.currentHp < c.maxHp || c.dying : action.removesConditions && !action.buff ? action.removesConditions.some(condition => c.conditions.includes(condition)) : true));
   }
   return living.filter(c => c.team !== active.team && attackInRange(active, c, action) && (!action.range || canSee(state, active, c)));
 }
@@ -199,11 +200,15 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
   const attackInProgress = attacksUsed(active) > 0;
   if (!active.hasActed) {
     for (const [actionIndex, action] of getActiveActions(active).entries()) {
-      if (action.legendaryOnly || action.type === 'multiattack') continue;
+      if (action.legendaryOnly || action.reactionOnly || action.type === 'multiattack') continue;
       if (isSpellAction(action)) {
         if ((!action.replacesAttack && attackInProgress) || (action.replacesAttack && attacksUsed(active) >= attackRollBudget(active)) || !canCastArenaSpell(active, action)) continue;
         if (action.autoDarts) {
           actions.push(...autoDartSpellActions(active, state, action, actionIndex));
+          continue;
+        }
+        if (action.teleport) {
+          actions.push({ id: `spell:${actionIndex}:${slug(action.name)}:teleport`, type: 'spell_teleport', actionName: action.name, actionIndex });
           continue;
         }
         if (action.darkness) {
@@ -231,6 +236,14 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
         for (const feature of getGoliathAttackFeatures(active, target)) {
           actions.push({ id: `attack:${actionIndex}:${slug(action.name)}:${target.id}:goliath-${feature}`, type: 'attack', actionName: action.name, actionIndex, targetId: target.id, goliathFeature: feature });
         }
+      }
+    }
+  }
+  if (!active.bonusActionUsed) {
+    for (const target of enemies) {
+      for (const buff of target.activeBuffs ?? []) {
+        if (buff.casterId !== active.id || !buff.bonusActionDamage || buff.appliedRound >= state.round || creatureDistance(active, target) > (buff.bonusActionDamageRange ?? Infinity)) continue;
+        actions.push({ id: `repeat_spell:${slug(buff.key)}:${target.id}`, type: 'repeat_spell', buffKey: buff.key, targetId: target.id });
       }
     }
   }
@@ -339,7 +352,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
   const active = getActiveCreature(encounter);
   if (!state || !active) throw new EncounterError('No active creature.');
   const legal = getLegalActions(encounter, active.id).find(candidate => candidate.id === action.id);
-  if (!legal || (legal.type !== 'move_to' && legal.type !== 'species_teleport' && !sameArenaAction(legal, action))) {
+  if (!legal || (legal.type !== 'move_to' && legal.type !== 'species_teleport' && legal.type !== 'spell_teleport' && !sameArenaAction(legal, action))) {
     throw new EncounterError(`Illegal or stale arena action "${action.id}".`);
   }
   encounter.runWithRng(() => {
@@ -374,6 +387,18 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
         active.turnFlags[`arena-attack-${attacksUsed(active)}`] = true;
         active.hasActed = attacksUsed(active) >= attackRollBudget(active);
       } else active.hasActed = true;
+      checkBattleComplete(state);
+    } else if (legal.type === 'spell_teleport') {
+      const destination = action.type === 'spell_teleport' ? action.destination : undefined;
+      const spell = getActiveActions(active)[legal.actionIndex];
+      if (!destination || !Number.isInteger(destination.x) || !Number.isInteger(destination.y) || !spell || spell.name !== legal.actionName || !spell.teleport || !executeSpell(state, active, spell, active, undefined, destination)) {
+        throw new EncounterError(`Illegal or stale arena spell "${legal.id}".`);
+      }
+      if (spell.isBonusAction) active.bonusActionUsed = true;
+      else active.hasActed = true;
+      checkBattleComplete(state);
+    } else if (legal.type === 'repeat_spell') {
+      if (!tryUseBonusActionDamageBuff(state, active, legal.targetId)) throw new EncounterError(`Illegal or stale repeated spell "${legal.id}".`);
       checkBattleComplete(state);
     } else if (legal.type === 'move_to') {
       const destination = action.type === 'move_to' ? action.destination : undefined;

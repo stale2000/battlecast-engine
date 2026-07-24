@@ -197,7 +197,7 @@ export function applyBuffDamageResistance(target: Creature, damage: number, dama
 // ─────────────────────────────────────────────────────────────────────
 
 export function hasResource(creature: Creature, key: string, amount: number = 1): boolean {
-  return (creature.resources[key] ?? 0) >= amount;
+  return (creature.resources?.[key] ?? 0) >= amount;
 }
 
 /**
@@ -355,7 +355,7 @@ export function attachConcentrationAura(state: BattleState, caster: Creature, ac
     damageType: action.damageType || 'untyped',
     saveAbility: action.savingThrow.ability,
     saveDC: action.savingThrow.dc + getSpellSaveDcBonus(caster, action),
-    radiusFt, origin, point,
+    radiusFt, endRound: state.round + action.durationRounds, origin, point,
   };
   state.events.push({
     kind: 'concentrationAura', creatureId: caster.id, active: true,
