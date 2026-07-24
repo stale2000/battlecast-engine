@@ -1742,8 +1742,8 @@ function buildOptionalSpells(
       pool.push(protectionFromEvilAndGood(spellAbility, mod, pb));
       pool.push(divineFavor(spellAbility, mod, pb));
       pool.push(command(spellAbility, mod, pb));
-      pool.push(holdPerson(spellAbility, mod, pb), moonbeam(spellAbility, mod, pb), spiritualWeapon(spellAbility, mod, pb));
-      pool.push(lesserRestoration(spellAbility, mod, pb));
+      pool.push(holdPerson(spellAbility, mod, pb));
+      pool.push(lesserRestoration(spellAbility, mod, pb), protectionFromPoison(spellAbility, mod, pb));
       pool.push(dispelMagic(spellAbility, mod, pb));
       break;
     case 'Ranger':
@@ -2649,10 +2649,11 @@ export function getAvailableSpells(
       break;
     case 'Paladin':
       optional.push(heroism(spellAbility, mod, pb));
+      optional.push(protectionFromEvilAndGood(spellAbility, mod, pb));
       optional.push(divineFavor(spellAbility, mod, pb));
       optional.push(command(spellAbility, mod, pb));
-      optional.push(holdPerson(spellAbility, mod, pb), moonbeam(spellAbility, mod, pb), spiritualWeapon(spellAbility, mod, pb));
-      optional.push(lesserRestoration(spellAbility, mod, pb));
+      optional.push(holdPerson(spellAbility, mod, pb));
+      optional.push(lesserRestoration(spellAbility, mod, pb), protectionFromPoison(spellAbility, mod, pb));
       optional.push(dispelMagic(spellAbility, mod, pb));
       break;
     case 'Ranger':

@@ -1882,6 +1882,12 @@ describe('Kaggle arena bridge', () => {
     expect(cleric.actions.map(action => action.name)).toEqual(expect.arrayContaining(['Bane', 'Protection from Evil and Good', 'Protection from Poison', 'Sanctuary']));
   });
 
+  it('keeps the level-five Paladin picker on its SRD spell list', () => {
+    const spells = getAvailableSpells('Paladin', 5).map(action => action.name);
+    expect(spells).toEqual(expect.arrayContaining(['Find Steed', 'Protection from Evil and Good', 'Protection from Poison']));
+    expect(spells).not.toEqual(expect.arrayContaining(['Moonbeam', 'Spiritual Weapon']));
+  });
+
   it('offers and resolves supported resource actions without trusting client parameters', () => {
     const encounter = new Encounter({ seed: 1 });
     const [fighter] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'red', position: { x: 0, y: 0 } });
