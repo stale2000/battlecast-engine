@@ -557,6 +557,8 @@ export interface BuffTemplate {
   weaponAttacksMagical?: boolean;
   /** Extra magical damage on this creature's next weapon hit. */
   weaponDamageRider?: string;
+  /** Ability used for weapon attack rolls while this buff is active (True Strike). */
+  weaponAttackAbility?: keyof Abilities;
   /** Optional save-gated condition delivered by weaponDamageRider. */
   weaponConditionOnHit?: MonsterAction['conditionOnHit'];
   /** Removes this buff when its damage rider lands. */
@@ -1056,6 +1058,8 @@ export interface ActiveBuff {
   weaponDamagePenaltyDice?: string;
   weaponAttacksMagical?: boolean;
   weaponDamageRider?: string;
+  /** Ability used for weapon attack rolls while this buff is active (True Strike). */
+  weaponAttackAbility?: keyof Abilities;
   weaponConditionOnHit?: MonsterAction['conditionOnHit'];
   endsOnWeaponHit?: boolean;
   appliedCondition?: Condition;

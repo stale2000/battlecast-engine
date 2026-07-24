@@ -14,7 +14,7 @@ import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildCustomHero, buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
-import { acidArrow, armorOfAgathys, bane, barkskin, beaconOfHope, bestowCurse, bladeWard, bless, blindingSmite, buildSpellAction, callLightning, chromaticOrb, cloudOfDaggers, command, conjureAnimals, counterspell, cureWounds, dissonantWhispers, dispelMagic, enlargeReduce, entangle, ensnaringStrike, expeditiousRetreat, findSteed, fireball, flamingSphere, fly, grease, gustOfWind, haste, hellishRebuke, heroism, hungerOfHadar, inflictWounds, invisibility, lesserRestoration, mageArmor, magicWeapon, massHealingWord, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, searingSmite, seeInvisibility, shield, shiningSmite, slow, spikeGrowth, spiritualWeapon, summonBeast, tashasHideousLaughter, thunderousSmite, web, witchBolt, wrathfulSmite } from '../src/data/spells.js';
+import { acidArrow, armorOfAgathys, bane, barkskin, beaconOfHope, bestowCurse, bladeWard, bless, blindingSmite, brandingSmite, buildSpellAction, callLightning, chromaticOrb, cloudOfDaggers, command, conjureAnimals, counterspell, cureWounds, dissonantWhispers, dispelMagic, enlargeReduce, entangle, ensnaringStrike, expeditiousRetreat, findSteed, fireball, flamingSphere, fly, grease, gustOfWind, haste, hellishRebuke, heroism, hungerOfHadar, inflictWounds, invisibility, lesserRestoration, mageArmor, magicWeapon, massHealingWord, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, searingSmite, seeInvisibility, shield, shiningSmite, slow, spikeGrowth, spiritualWeapon, summonBeast, tashasHideousLaughter, thunderousSmite, web, witchBolt, wrathfulSmite } from '../src/data/spells.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
@@ -815,6 +815,19 @@ describe('Kaggle arena bridge', () => {
     expect(action.center).toEqual({ x: 3, y: 0 });
     applyLegalAction(encounter, action);
     expect(encounter.state!.persistentZones?.[0]).toMatchObject({ name: 'Gust of Wind', shape: 'line', direction: { x: 3, y: 0 } });
+  });
+
+  it('does not treat a full cell outside Gust of Wind as inside its 10-foot line', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Druid', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [gustOfWind('wis', 3, 3)], additionalResources: { 'slot-2': 1 } } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 3, y: 1 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    const target = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
+    withRng({ next: () => 0 }, () => expect(executeSpell(encounter.state!, caster, gustOfWind('wis', 3, 3), target, [target], { x: 3, y: 0 })).toBe(true));
+    const before = { ...target.position };
+    withRng({ next: () => 0 }, () => processTargetTurnEndOngoingEffects(encounter.state!, target));
+    expect(target.position).toEqual(before);
   });
 
   it('protects a target from attacks by the listed creature types', () => {
@@ -1950,6 +1963,7 @@ describe('Kaggle arena bridge', () => {
   it('offers resolver-backed SRD mobility and weapon buffs to their caster classes', () => {
     for (const heroClass of ['Bard', 'Druid', 'Ranger', 'Wizard'] as const) expect(getAvailableSpells(heroClass, 5).some(action => action.name === 'Longstrider')).toBe(true);
     for (const heroClass of ['Paladin', 'Ranger', 'Sorcerer', 'Wizard'] as const) expect(getAvailableSpells(heroClass, 5).some(action => action.name === 'Magic Weapon')).toBe(true);
+    expect(buildSpellAction('True Strike', 'int', 3, 3)?.buff).toMatchObject({ weaponAttackAbility: 'int', weaponDamageRider: '1d6 radiant', endsOnWeaponHit: true });
   });
 
   it('offers Protection from Evil and Good to every SRD caster class', () => {
@@ -2396,5 +2410,32 @@ describe('arena immediate-after-hit spell phase', () => {
       expect(attacker.resources['slot-1']).toBe(0);
       if (rider.effects) expect(encounter.state!.creatures.some(creature => creature.ongoingEffects?.some(effect => effect.key === rider.name))).toBe(true);
     }
+  });
+
+  it('Branding Smite outlines invisible targets until concentration ends', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: {
+      additionalActions: [
+        { name: 'Test Strike', type: 'melee', description: 'test', attackBonus: 100, damage: '1d4', damageType: 'slashing', reach: 5 },
+        brandingSmite('cha', 3, 3),
+      ],
+      additionalResources: { 'slot-2': 1 },
+    } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
+    encounter.start();
+    const attacker = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    const target = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
+    encounter.state!.initiativeOrder = [attacker.id];
+    startArena(encounter);
+    applyLegalAction(encounter, getLegalActions(encounter, attacker.id).find(action => action.actionName === 'Test Strike')!);
+    target.conditions.push('invisible');
+    expect(canSee(encounter.state!, attacker, target)).toBe(false);
+    const choice = getLegalActions(encounter, attacker.id).find(action => action.type === 'post_hit' && !action.decline && action.actionName === 'Branding Smite')!;
+    applyLegalAction(encounter, choice);
+    expect(target.activeBuffs.some(buff => buff.key === 'branding-smite' && buff.suppressesInvisibility)).toBe(true);
+    expect(canSee(encounter.state!, attacker, target)).toBe(true);
+    dropConcentratedBuffsFrom(encounter.state!, attacker.id);
+    expect(target.activeBuffs.some(buff => buff.key === 'branding-smite')).toBe(false);
+    expect(canSee(encounter.state!, attacker, target)).toBe(false);
   });
 });

@@ -135,6 +135,10 @@ function executePostHitSpell(state: BattleState, caster: Creature, action: Monst
     }
     pushLog(state, { round: state.round, turn: state.turnIndex, actor: caster.displayName, action: action.name, details: success ? `${target.displayName} succeeds on the ${action.name} save.` : `${target.displayName} fails the ${action.name} save.`, type: 'save' });
   }
+  // Post-hit spells may attach a target buff (Branding Smite outlines an
+  // invisible target). Concentration was established above, so do not drop
+  // the newly-created concentration a second time.
+  if (action.buff && target.isAlive) applyBuffFromSpell(state, caster, target, action, { skipConcentrationDrop: true });
   applyActionRuntimeEffects(state, caster, target, action);
   void slotLevelUsed;
   return true;
@@ -588,6 +592,7 @@ export function applyBuffFromSpell(
     weaponDamagePenaltyDice: tmpl.weaponDamagePenaltyDice,
     weaponAttacksMagical: tmpl.weaponAttacksMagical,
     weaponDamageRider: tmpl.weaponDamageRider,
+    weaponAttackAbility: tmpl.weaponAttackAbility,
     weaponConditionOnHit: tmpl.weaponConditionOnHit,
     endsOnWeaponHit: tmpl.endsOnWeaponHit,
     appliedCondition: tmpl.appliedCondition,

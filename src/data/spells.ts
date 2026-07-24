@@ -109,7 +109,7 @@ export function trueStrike(ability: SpellcastingAbility, _mod: number, _pb: numb
   return {
     name: 'True Strike', type: 'special', spellLevel: 0, spellSchool: 'divination', castingAbility: ability,
     description: 'Guide a weapon attack with magical precision. The next time you hit with a weapon before the end of this turn, it deals 1d6 extra radiant damage.',
-    targetScope: 'self', buff: { name: 'True Strike', key: 'true-strike', weaponDamageRider: '1d6 radiant', endsOnWeaponHit: true },
+    targetScope: 'self', buff: { name: 'True Strike', key: 'true-strike', weaponDamageRider: '1d6 radiant', weaponAttackAbility: ability, endsOnWeaponHit: true },
   };
 }
 
@@ -902,6 +902,10 @@ export function brandingSmite(ability: SpellcastingAbility, _mod: number, _pb: n
     name: 'Branding Smite', type: 'special', spellLevel: 2, spellSchool: 'evocation', castingAbility: ability,
     description: 'Bonus action immediately after a melee or unarmed hit. The hit deals 2d6 radiant damage, and the target is outlined in light and cannot benefit from the Invisible condition while you maintain Concentration.',
     isBonusAction: true, concentration: true, postHit: { trigger: 'melee_hit' }, targetScope: 'one_enemy', damage: '2d6', damageType: 'radiant',
+    buff: {
+      name: 'Branding Smite', key: 'branding-smite', requiresConcentration: true,
+      suppressesInvisibility: true,
+    },
   };
 }
 

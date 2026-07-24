@@ -3913,14 +3913,10 @@ export function createPersistentZone(state: BattleState, caster: Creature, actio
 
 function isInPersistentZone(zone: PersistentZone, position: { x: number; y: number }): boolean {
   if (zone.shape === 'line' && zone.origin && zone.direction) {
-    const dx = position.x - zone.origin.x;
-    const dy = position.y - zone.origin.y;
-    const ddx = zone.direction.x - zone.origin.x;
-    const ddy = zone.direction.y - zone.origin.y;
-    const directionLength = Math.hypot(ddx, ddy);
-    const targetDistance = Math.hypot(dx, dy) * 5;
-    if (targetDistance <= 0 || targetDistance > zone.radius || directionLength === 0 || (dx * ddx + dy * ddy) < 0) return false;
-    return Math.abs(dx * ddy - dy * ddx) / directionLength <= 1.2;
+    // Keep persistent line zones on the same 5-foot grid geometry used by
+    // one-shot line actions. This prevents the old, wider 12-foot test from
+    // catching creatures one full cell off a 10-foot-wide Gust of Wind.
+    return isInLine(zone.origin, zone.direction, position, zone.radius);
   }
   return distance(position, { x: zone.x, y: zone.y }) <= zone.radius;
 }
@@ -3989,6 +3985,15 @@ function resolveAttack(
   if (!action.attackBonus && action.attackBonus !== 0) return;
   if (!target.isAlive) return;
   if (action.type === 'multiattack') return;
+  // True Strike and similar effects can replace the ability used for a
+  // weapon attack while preserving proficiency and weapon-style bonuses.
+  const abilityOverride = action.attackAbility
+    ? attacker.activeBuffs.find(buff => buff.weaponAttackAbility)?.weaponAttackAbility
+    : undefined;
+  const effectiveAttackBonus = abilityOverride && action.attackAbility
+    ? action.attackBonus - abilityModifier(attacker.monsterData.abilities[action.attackAbility])
+      + abilityModifier(attacker.monsterData.abilities[abilityOverride])
+    : action.attackBonus;
   if (!passesSanctuary(state, attacker, target)) return;
   for (const buff of [...attacker.activeBuffs].filter(candidate => candidate.endsOnAttackOrCast)) {
     removeActiveBuff(state, attacker, buff);
@@ -4077,7 +4082,7 @@ function resolveAttack(
   const attackHasDisadvantage = effectiveDis && (!adv || advantageBlocked);
 
   // Base d20 roll. Bless etc. dice bonuses are added on top of the total.
-  let { roll, naturalRoll } = rollAttackForCreature(attacker, action.attackBonus!, effectiveAdv, attackHasDisadvantage);
+  let { roll, naturalRoll } = rollAttackForCreature(attacker, effectiveAttackBonus!, effectiveAdv, attackHasDisadvantage);
   if (consumesSteadyAim) attacker.turnFlags.steadyAimConsumed = true;
   const buffBonus = rollAttackBuffBonus(attacker);
   if (buffBonus !== 0) {
@@ -4094,7 +4099,7 @@ function resolveAttack(
   // Heroic Warrior (Fighter L10) and Human Resourceful inspiration reroll a missed attack.
   const humanInspiration = (attacker.resources?.['heroic-inspiration'] ?? 0) > 0;
   if (naturalRoll !== 20 && roll.total < ac && (attacker.turnFlags?.heroicInspiration || humanInspiration)) {
-    const reroll = rollAttackForCreature(attacker, action.attackBonus!, effectiveAdv, attackHasDisadvantage);
+    const reroll = rollAttackForCreature(attacker, effectiveAttackBonus!, effectiveAdv, attackHasDisadvantage);
     const rerollBuff = rollAttackBuffBonus(attacker);
     reroll.roll.total += rerollBuff + targetAttackBonus;
     if (reroll.roll.total > roll.total) {
@@ -4133,8 +4138,8 @@ function resolveAttack(
   if (naturalRoll !== 20 && (naturalRoll === 1 || roll.total < ac) && canUseStrokeOfLuck(attacker)) {
     consumeResource(attacker, 'stroke-of-luck');
     naturalRoll = 20;
-    roll.total = 20 + action.attackBonus! + buffBonus + targetAttackBonus;
-    roll.modifier = action.attackBonus! + buffBonus + targetAttackBonus;
+    roll.total = 20 + effectiveAttackBonus! + buffBonus + targetAttackBonus;
+    roll.modifier = effectiveAttackBonus! + buffBonus + targetAttackBonus;
     attacker.stats.actionUsage['Stroke of Luck'] = (attacker.stats.actionUsage['Stroke of Luck'] || 0) + 1;
     pushLog(state, {
       round: state.round,
