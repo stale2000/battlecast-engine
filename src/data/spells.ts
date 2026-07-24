@@ -65,6 +65,16 @@ export function thornWhip(ability: SpellcastingAbility, mod: number, pb: number)
   };
 }
 
+export function acidSplash(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  const dice = pb >= 6 ? '4d6' : pb >= 4 ? '3d6' : pb >= 3 ? '2d6' : '1d6';
+  return {
+    name: 'Acid Splash', type: 'special', spellLevel: 0, spellSchool: 'evocation', castingAbility: ability,
+    description: `A 5-foot-radius sphere within 60 feet. DEX save DC ${saveDC(mod, pb)} or ${dice} acid damage.`,
+    damageType: 'acid', range: { normal: 60, long: 60 }, targetScope: 'area_enemies',
+    savingThrow: { ability: 'dex', dc: saveDC(mod, pb), damageOnFail: dice, area: '5-foot sphere' },
+  };
+}
+
 export function magicMissile(): MonsterAction {
   return {
     name: 'Magic Missile',
@@ -1776,7 +1786,7 @@ export function wallOfFire(ability: SpellcastingAbility, mod: number, pb: number
 type SpellFactory = (ability: SpellcastingAbility, mod: number, pb: number) => MonsterAction;
 const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Magic Missile', () => magicMissile()],
-  ['Blade Ward', bladeWard], ['Resistance', resistance], ['Poison Spray', poisonSpray], ['Thorn Whip', thornWhip],
+  ['Blade Ward', bladeWard], ['Resistance', resistance], ['Poison Spray', poisonSpray], ['Thorn Whip', thornWhip], ['Acid Splash', acidSplash],
   ['Shield', shield],
   ['Hellish Rebuke', hellishRebuke],
   ['Burning Hands', burningHands], ['Thunderwave', thunderwave], ['Sleep', sleep],

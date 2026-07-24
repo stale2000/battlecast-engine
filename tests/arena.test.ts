@@ -2048,6 +2048,17 @@ describe('Kaggle arena bridge', () => {
     activePulled.monsterData.ac = 1;
     applyLegalAction(pullEncounter, getLegalActions(pullEncounter, puller.id).find(candidate => candidate.actionName === 'Thorn Whip')!);
     expect(activePulled.position).toEqual({ x: 2, y: 0 });
+
+    for (const heroClass of ['Sorcerer', 'Wizard'] as const) {
+      expect(getAvailableSpells(heroClass, 5).some(spell => spell.name === 'Acid Splash')).toBe(true);
+    }
+    expect(buildSpellAction('Acid Splash', 'int', 3, 3)).toMatchObject({ spellLevel: 0, damageType: 'acid', savingThrow: { damageOnFail: '2d6', area: '5-foot sphere' } });
+    const splashEncounter = new Encounter({ seed: 1 });
+    const [wizard] = splashEncounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { spells: ['Acid Splash'] } });
+    splashEncounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 2, y: 0 } });
+    splashEncounter.start(); splashEncounter.state!.initiativeOrder = [wizard.id]; startArena(splashEncounter);
+    const splash = getLegalActions(splashEncounter, wizard.id).find(candidate => candidate.actionName === 'Acid Splash')!;
+    expect(() => applyLegalAction(splashEncounter, splash)).not.toThrow();
   });
 
   it('summons a controlled Bestial Spirit with validated placement and removes it on concentration loss or expiry', () => {
