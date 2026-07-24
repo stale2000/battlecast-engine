@@ -3936,6 +3936,30 @@ function resolveAttack(
 
   const isCrit = naturalRoll >= critThreshold;
   const isFumble = naturalRoll === 1 && !combatProwessHit;
+  const mirrorImage = target.activeBuffs?.find(buff => (buff.mirrorImages ?? 0) > 0);
+  if (!isFumble && mirrorImage && !attacker.conditions.includes('blinded')) {
+    const redirectThreshold = mirrorImage.mirrorImages === 3 ? 6 : mirrorImage.mirrorImages === 2 ? 8 : 11;
+    if (rollD20().total >= redirectThreshold) {
+      const duplicateAc = 10 + abilityModifier(target.monsterData.abilities.dex);
+      const hitsDuplicate = isCrit || roll.total >= duplicateAc;
+      if (hitsDuplicate) {
+        mirrorImage.mirrorImages!--;
+        if (mirrorImage.mirrorImages === 0) target.activeBuffs = target.activeBuffs.filter(buff => buff !== mirrorImage);
+      }
+      state.events.push({
+        kind: 'attack', attackerId: attacker.id, targetId: target.id,
+        actionName: action.name, attackType: action.type === 'ranged' ? 'ranged' : 'melee', durationMs: BASE_DURATIONS.attack,
+      });
+      pushLog(state, {
+        round: state.round, turn: state.turnIndex, actor: attacker.displayName, action: action.name,
+        details: hitsDuplicate
+          ? `${attacker.displayName}'s ${action.name} destroys one of ${target.displayName}'s Mirror Image duplicates.`
+          : `${attacker.displayName}'s ${action.name} misses one of ${target.displayName}'s Mirror Image duplicates.`,
+        type: hitsDuplicate ? 'special' : 'miss',
+      });
+      return;
+    }
+  }
   const shielded = !isFumble && !isCrit && tryAutomaticShield(state, target, roll.total, naturalRoll, ac);
 
   // OA-tagged swings stretch attack/hit/miss durations and carry a

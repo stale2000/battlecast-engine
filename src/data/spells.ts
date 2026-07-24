@@ -1455,13 +1455,13 @@ export function mirrorImage(ability: SpellcastingAbility, _mod: number, _pb: num
   return {
     name: 'Mirror Image',
     type: 'special',
-    description: 'Self. Three illusory duplicates protect you for 1 minute. No concentration. (Simplified as +3 AC.)',
+    description: 'Self. Three illusory duplicates can intercept attacks for 1 minute. No concentration.',
     spellLevel: 2,
     castingAbility: ability,
     buff: {
       name: 'Mirror Image', key: 'mirror-image',
       requiresConcentration: false,
-      acBonus: 3,
+      mirrorImages: 3,
     },
     durationRounds: 10,
     targetScope: 'self',

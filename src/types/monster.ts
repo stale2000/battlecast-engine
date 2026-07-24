@@ -477,6 +477,8 @@ export interface BuffTemplate {
   conditionImmunities?: Condition[];
   /** Ends when this creature attacks or casts a spell, as with Invisibility. */
   endsOnAttackOrCast?: boolean;
+  /** Remaining illusory duplicates that can intercept attacks. */
+  mirrorImages?: number;
   /** Grants the restricted one-attack/Dash/Disengage/Hide action from Haste. */
   hasteAction?: boolean;
   /** Ability-specific saving throw Advantage, such as Haste's Dexterity saves. */
@@ -896,6 +898,7 @@ export interface ActiveBuff {
   temporaryHpAtTurnStart?: number;
   conditionImmunities?: Condition[];
   endsOnAttackOrCast?: boolean;
+  mirrorImages?: number;
   hasteAction?: boolean;
   saveAdvantageAbilities?: Array<keyof Abilities>;
   /** Repeat this save at the specified point and remove the buff on success. */

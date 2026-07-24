@@ -13,7 +13,7 @@ import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
-import { bane, barkskin, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, dissonantWhispers, dispelMagic, fly, haste, hellishRebuke, heroism, invisibility, lesserRestoration, magicWeapon, mistyStep, moonbeam, protectionFromEnergy, resistance, revivify, scorchingRay, shield, shiningSmite, spiritualWeapon, web, witchBolt } from '../src/data/spells.js';
+import { bane, barkskin, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, dissonantWhispers, dispelMagic, fly, haste, hellishRebuke, heroism, invisibility, lesserRestoration, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, resistance, revivify, scorchingRay, shield, shiningSmite, spiritualWeapon, web, witchBolt } from '../src/data/spells.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
@@ -419,6 +419,21 @@ describe('Kaggle arena bridge', () => {
     const action = getLegalActions(encounter, caster.id).find(choice => choice.type === 'spell' && choice.actionName === 'Bless' && choice.targetIds?.length === 2)!;
     applyLegalAction(encounter, action);
     for (const ally of allies) expect(ally.activeBuffs.some(buff => buff.key === 'bless')).toBe(action.targetIds!.includes(ally.id));
+  });
+
+  it('lets Mirror Image duplicates intercept attacks without adding AC', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [mirrorImage('int', 3, 3)], additionalResources: { 'slot-2': 1 } } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
+    encounter.start();
+    const target = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    const attacker = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
+    const attack = attacker.monsterData.actions.find(action => action.type === 'melee' && action.attackBonus !== undefined)!;
+    expect(executeSpell(encounter.state!, target, mirrorImage('int', 3, 3), target)).toBe(true);
+    const hp = target.currentHp;
+    withRng({ next: () => 0.5 }, () => resolveAttack(encounter.state!, attacker, target, attack));
+    expect(target.currentHp).toBe(hp);
+    expect(target.activeBuffs.find(buff => buff.key === 'mirror-image')?.mirrorImages).toBe(2);
   });
 
   it('repeats Call Lightning from authoritative concentration state without another slot', () => {
