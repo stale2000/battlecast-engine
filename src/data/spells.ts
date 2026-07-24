@@ -413,6 +413,14 @@ export function passWithoutTrace(ability: SpellcastingAbility, _mod: number, _pb
   };
 }
 
+export function enlargeReduce(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Enlarge/Reduce', type: 'special', spellLevel: 2, spellSchool: 'transmutation', castingAbility: ability, concentration: true, durationRounds: 10,
+    description: 'Change one creature’s size by one category for 1 minute. Enlarge grants Strength advantage and +1d4 weapon damage; Reduce imposes Strength disadvantage and -1d4 weapon damage. Concentration.',
+    range: { normal: 30, long: 30 }, targetScope: 'any_one', sizeChangeChoice: { choices: ['enlarge', 'reduce'] },
+  };
+}
+
 export function falseLife(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
   return {
     name: 'False Life', type: 'special', spellLevel: 1, spellSchool: 'necromancy', castingAbility: ability,
@@ -1687,6 +1695,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Expeditious Retreat', expeditiousRetreat],
   ['Darkness', darkness],
   ['Pass without Trace', passWithoutTrace],
+  ['Enlarge/Reduce', enlargeReduce],
   ['Mage Armor', mageArmor],
   ['Ray of Enfeeblement', rayOfEnfeeblement], ['Ray of Sickness', rayOfSickness], ["Tasha's Hideous Laughter", tashasHideousLaughter],
   ['Scorching Ray', scorchingRay], ['Web', web], ['Spike Growth', spikeGrowth], ['Hold Person', holdPerson],

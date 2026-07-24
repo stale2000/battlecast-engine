@@ -38,6 +38,8 @@ import {
   type BattleState,
 } from './combat.js';
 
+const SIZE_STEPS = ['Tiny', 'Small', 'Medium', 'Large', 'Huge', 'Gargantuan'] as const;
+
 function hasBoonOfSpellRecall(caster: Creature): boolean {
   const heroLevel = caster.monsterData.heroLevel ?? 0;
   return heroLevel >= 19 && (caster.monsterData.heroClass === 'Bard' || caster.monsterData.heroClass === 'Wizard');
@@ -534,8 +536,11 @@ export function applyBuffFromSpell(
     spellSaveDcBonus: tmpl.spellSaveDcBonus,
     expiresOnSourceTurnStart: tmpl.expiresOnSourceTurnStart,
     strengthTestDisadvantage: tmpl.strengthTestDisadvantage,
+    strengthTestAdvantage: tmpl.strengthTestAdvantage,
     damageRollPenalty: tmpl.damageRollPenalty,
     weaponDamageBonus: tmpl.weaponDamageBonus,
+    weaponDamageBonusDice: tmpl.weaponDamageBonusDice,
+    weaponDamagePenaltyDice: tmpl.weaponDamagePenaltyDice,
     weaponAttacksMagical: tmpl.weaponAttacksMagical,
     weaponDamageRider: tmpl.weaponDamageRider,
     weaponConditionOnHit: tmpl.weaponConditionOnHit,
@@ -802,6 +807,13 @@ export function executeSpell(
    */
   aoeCenter?: { x: number; y: number },
 ): boolean {
+  if (action.sizeChangeChoice) {
+    const direction = action.sizeChangeChoice.selected;
+    const current = primaryTarget?.temporarySize ?? primaryTarget?.monsterData.size;
+    const index = current ? SIZE_STEPS.indexOf(current) : -1;
+    const next = direction === 'enlarge' ? SIZE_STEPS[index + 1] : direction === 'reduce' ? SIZE_STEPS[index - 1] : undefined;
+    if (!primaryTarget || !next || (direction === 'enlarge' && isPositionBlocked(primaryTarget.position, next, state.creatures, primaryTarget.id, state.terrainBlocked))) return false;
+  }
   if (action.spiritualWeapon && caster.spiritualWeapon && caster.spiritualWeapon.endRound > state.round) return false;
   if (action.requiresNoHeavyArmor && primaryTarget?.monsterData.wearingHeavyArmor) return false;
   if (action.darkness) {
@@ -1099,6 +1111,12 @@ export function executeSpell(
       return true;
     }
     applyBuffFromSpell(state, caster, primaryTarget, castAction);
+    if (castAction.sizeChangeChoice?.selected) {
+      const index = SIZE_STEPS.indexOf(primaryTarget.temporarySize ?? primaryTarget.monsterData.size);
+      primaryTarget.temporarySize = SIZE_STEPS[index + (castAction.sizeChangeChoice.selected === 'enlarge' ? 1 : -1)]!;
+      primaryTarget.temporarySizeExpiresRound = state.round + (castAction.durationRounds ?? 10);
+      primaryTarget.temporarySizeSourceId = caster.id;
+    }
     return true;
   }
 

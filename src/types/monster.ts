@@ -195,6 +195,8 @@ export interface MonsterAction {
   isBonusAction?: boolean;
   /** The spell takes the Dash action as part of its casting. */
   dashOnCast?: boolean;
+  /** Server-selected size change for Enlarge/Reduce. */
+  sizeChangeChoice?: { choices: Array<'enlarge' | 'reduce'>; selected?: 'enlarge' | 'reduce' };
   /** A reaction-timed spell resolved automatically by the authoritative engine. */
   reactionOnly?: boolean;
   /** Uses one attack from an Attack action instead of consuming the whole action. */
@@ -483,10 +485,16 @@ export interface BuffTemplate {
   expiresOnSourceTurnStart?: boolean;
   /** Disadvantage on Strength attack rolls and saving throws. */
   strengthTestDisadvantage?: boolean;
+  /** Advantage on Strength attack rolls and saving throws. */
+  strengthTestAdvantage?: boolean;
   /** Dice subtracted from each damage roll this creature makes. */
   damageRollPenalty?: string;
   /** Flat bonus to this creature's weapon damage, e.g. Magic Weapon. */
   weaponDamageBonus?: number;
+  /** Dice added to weapon and Unarmed Strike damage, such as Enlarge. */
+  weaponDamageBonusDice?: string;
+  /** Dice subtracted from weapon and Unarmed Strike damage, such as Reduce. */
+  weaponDamagePenaltyDice?: string;
   /** This creature's weapon attacks count as magical. */
   weaponAttacksMagical?: boolean;
   /** Extra magical damage on this creature's next weapon hit. */
@@ -656,6 +664,7 @@ export interface Creature {
   /** A temporary size change, such as a Goliath's Large Form. */
   temporarySize?: MonsterData['size'];
   temporarySizeExpiresRound?: number;
+  temporarySizeSourceId?: string;
   legendaryActionsRemaining?: number;
   superiorHunterDefense?: { damageType: string; round: number; turnIndex: number };
   recharges: Record<string, boolean>; // track recharge abilities
@@ -938,9 +947,15 @@ export interface ActiveBuff {
   expiresOnSourceTurnStart?: boolean;
   /** Disadvantage on Strength attack rolls and saving throws. */
   strengthTestDisadvantage?: boolean;
+  /** Advantage on Strength attack rolls and saving throws. */
+  strengthTestAdvantage?: boolean;
   /** Dice subtracted from each damage roll this creature makes. */
   damageRollPenalty?: string;
   weaponDamageBonus?: number;
+  /** Dice added to weapon and Unarmed Strike damage, such as Enlarge. */
+  weaponDamageBonusDice?: string;
+  /** Dice subtracted from weapon and Unarmed Strike damage, such as Reduce. */
+  weaponDamagePenaltyDice?: string;
   weaponAttacksMagical?: boolean;
   weaponDamageRider?: string;
   weaponConditionOnHit?: MonsterAction['conditionOnHit'];

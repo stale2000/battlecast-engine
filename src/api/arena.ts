@@ -319,6 +319,14 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
           }
           continue;
         }
+        if (action.sizeChangeChoice) {
+          for (const target of spellTargets(active, state, action)) {
+            for (const sizeChange of action.sizeChangeChoice.choices) {
+              actions.push({ id: `spell:${actionIndex}:${slug(action.name)}:${target.id}:${sizeChange}`, type: 'spell', actionName: action.name, actionIndex, targetId: target.id, sizeChange });
+            }
+          }
+          continue;
+        }
         if (action.curseChoice) {
           for (const target of spellTargets(active, state, action)) {
             for (const curseChoice of action.curseChoice.choices) {
@@ -512,6 +520,14 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
             ? { ...baseSpell, damageResistanceChoice: { ...baseSpell.damageResistanceChoice, selected: legal.damageResistance }, buff: { ...baseSpell.buff, resistDamageTypes: [legal.damageResistance] } }
             : baseSpell && legal.damageType && baseSpell.damageTypeChoice
               ? { ...baseSpell, damageTypeChoice: { ...baseSpell.damageTypeChoice, selected: legal.damageType }, damageType: legal.damageType }
+              : baseSpell && legal.sizeChange && baseSpell.sizeChangeChoice
+                ? {
+                    ...baseSpell,
+                    sizeChangeChoice: { ...baseSpell.sizeChangeChoice, selected: legal.sizeChange },
+                    buff: legal.sizeChange === 'enlarge'
+                      ? { name: 'Enlarge', key: 'enlarge-reduce', requiresConcentration: true, strengthTestAdvantage: true, weaponDamageBonusDice: '1d4' }
+                      : { name: 'Reduce', key: 'enlarge-reduce', requiresConcentration: true, strengthTestDisadvantage: true, weaponDamagePenaltyDice: '1d4' },
+                  }
               : baseSpell && legal.curseChoice ? withCurseChoice(baseSpell, legal.curseChoice)
           : baseSpell;
       if (!spell || spell.name !== legal.actionName || !isSpellAction(spell)) throw new EncounterError(`Stale arena spell "${legal.id}".`);

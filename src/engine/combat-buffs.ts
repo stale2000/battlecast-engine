@@ -304,6 +304,12 @@ export function dropConcentratedBuffsFrom(
     creature.temporaryFlightExpiresRound = undefined;
     creature.temporaryFlightSourceId = undefined;
   }
+  for (const creature of state.creatures) {
+    if (creature.temporarySizeSourceId !== casterId) continue;
+    creature.temporarySize = undefined;
+    creature.temporarySizeExpiresRound = undefined;
+    creature.temporarySizeSourceId = undefined;
+  }
   const preserveHuntersMark = options.preserveRelentlessHunter
     && caster?.monsterData.heroClass === 'Ranger'
     && (caster.monsterData.heroLevel ?? 0) >= 13;

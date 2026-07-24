@@ -587,6 +587,7 @@ function hasAdvantage(state: BattleState, attacker: Creature, target: Creature, 
 
   // Reckless Attack (Barbarian): advantage on STR-based melee attacks this turn
   if (attacker.turnFlags?.reckless && action.type === 'melee') adv = true;
+  if (action.attackAbility === 'str' && attacker.activeBuffs?.some(b => b.strengthTestAdvantage)) adv = true;
 
   // Target used Reckless Attack: attackers have advantage against them
   if (target.turnFlags?.reckless) adv = true;
@@ -4235,6 +4236,11 @@ function resolveAttack(
         ? attacker.activeBuffs?.reduce((sum, buff) => sum + (buff.weaponDamageBonus ?? 0), 0) ?? 0
         : 0;
       totalDmg += weaponDamageBonus;
+      if (action.spellLevel === undefined) {
+        const bonusDice = attacker.activeBuffs?.map(buff => buff.weaponDamageBonusDice).filter((dice): dice is string => Boolean(dice)) ?? [];
+        const penaltyDice = attacker.activeBuffs?.map(buff => buff.weaponDamagePenaltyDice).filter((dice): dice is string => Boolean(dice)) ?? [];
+        totalDmg = Math.max(1, totalDmg + bonusDice.reduce((sum, dice) => sum + rollDamage(dice, isCrit).total, 0) - penaltyDice.reduce((sum, dice) => sum + rollDamage(dice, false).total, 0));
+      }
 
       pushLog(state, {
         round: state.round, turn: state.turnIndex,
