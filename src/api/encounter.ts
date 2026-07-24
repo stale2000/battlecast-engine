@@ -59,6 +59,10 @@ export interface AddCreatureOptions {
   /** Explicit origin cell. Omit to auto-place in the team's zone. */
   position?: { x: number; y: number };
   count?: number;
+  /** Internal setup flag for a Find Familiar creature. Its copied stat block has no attacks. */
+  familiar?: boolean;
+  /** Arena-only pre-battle familiar form, resolved into a separate creature by the host. */
+  familiarForm?: string;
 }
 
 export interface AddedCreature {
@@ -196,7 +200,11 @@ export class Encounter {
     if (this.battleState) {
       throw new EncounterError('Battle already started - creatures can only be added during setup.');
     }
-    const data = this.resolveMonsterData(options);
+    const resolvedData = this.resolveMonsterData(options);
+    // Find Familiar explicitly prevents its spirit from taking the Attack
+    // action. Keep that invariant in its creature data, rather than relying
+    // on a caller to filter the familiar's action catalogue.
+    const data = options.familiar ? { ...resolvedData, actions: [] } : resolvedData;
     const count = options.count ?? 1;
     if (!Number.isInteger(count) || count < 1 || count > 50) {
       throw new EncounterError(`count must be an integer between 1 and 50, got ${count}`);

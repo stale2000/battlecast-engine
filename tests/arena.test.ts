@@ -1785,6 +1785,25 @@ describe('Kaggle arena bridge', () => {
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...wizard, spells: ['Wish'] })) }, blueParty: casterParty })).toThrow(/spells/);
   });
 
+  it('sets up a Find Familiar companion without exposing an attack action', () => {
+    const wizard = {
+      heroClass: 'Wizard', abilities: { str: 8, dex: 14, con: 13, int: 15, wis: 12, cha: 10 },
+      spells: ['Magic Missile', 'Burning Hands', 'Thunderwave', 'Sleep', 'Scorching Ray', 'Web', 'Fireball', 'Lightning Bolt'], familiar: 'Owl',
+    };
+    const result = kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => wizard) }, blueParty: party });
+    const familiar = result.state.battleState!.creatures.find(creature => creature.team === 'red' && creature.monsterData.name === 'Owl')!;
+    const owner = result.state.battleState!.creatures.find(creature => creature.id === familiar.familiarForId)!;
+    expect(familiar).toMatchObject({ summonedById: owner.id, familiarForId: owner.id });
+    expect(familiar.monsterData.actions).toEqual([]);
+    expect(result.observations.red.publicCombatState.teams.red.total).toBe(8);
+    const restored = Encounter.fromJSON(result.state);
+    const restoredOwner = restored.state!.creatures.find(creature => creature.id === owner.id)!;
+    const enemy = restored.state!.creatures.find(creature => creature.team === 'blue')!;
+    restored.runWithRng(() => applyDamage(restored.state!, restoredOwner, restoredOwner.currentHp + restoredOwner.maxHp, 'force', enemy, true));
+    expect(restored.state!.creatures.some(creature => creature.id === familiar.id)).toBe(false);
+    expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...wizard, familiar: 'Ogre' })) }, blueParty: party })).toThrow(/familiar/);
+  });
+
   it('constructs every engine-supported level-5 spell selection', () => {
     for (const heroClass of HERO_CLASS_NAMES) {
       const expected = buildHero(heroClass, 5).actions.filter(action => (action.spellLevel ?? 0) > 0).length;

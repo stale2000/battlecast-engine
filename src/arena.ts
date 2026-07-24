@@ -113,9 +113,21 @@ export function kaggleStep(value: unknown) {
     const red = parseArenaParty(request.redParty, 'red');
     const blue = parseArenaParty(request.blueParty, 'blue');
     const encounter = new Encounter({ seed: request.seed, gridSize: 20 });
-    for (const character of [...red, ...blue]) encounter.addCreature(character);
+    const familiars: Array<{ familiarId: string; casterId: string }> = [];
+    for (const character of [...red, ...blue]) {
+      const [caster] = encounter.addCreature(character);
+      if (character.familiarForm) {
+        const [familiar] = encounter.addCreature({ monster: character.familiarForm, team: character.team, familiar: true });
+        familiars.push({ familiarId: familiar.id, casterId: caster.id });
+      }
+    }
     encounter.setArenaRoundCap(request.roundCap);
     encounter.start();
+    for (const { familiarId, casterId } of familiars) {
+      const familiar = encounter.state!.creatures.find(creature => creature.id === familiarId)!;
+      familiar.summonedById = casterId;
+      familiar.familiarForId = casterId;
+    }
     startArena(encounter);
     return response(encounter);
   }

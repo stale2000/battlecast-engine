@@ -713,6 +713,8 @@ export interface Creature {
   concentratingOn?: string;
   /** Source-owned creature created by a summon spell. */
   summonedById?: string;
+  /** A pre-battle Find Familiar creature. Familiars cannot take the Attack action. */
+  familiarForId?: string;
   summonExpiresRound?: number;
   summonRequiresConcentration?: boolean;
   /** A controlled mount carries this rider. Positions are kept in sync. */

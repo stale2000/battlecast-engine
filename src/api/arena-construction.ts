@@ -21,6 +21,7 @@ type TieflingLegacy = 'Abyssal' | 'Chthonic' | 'Infernal';
 type ElfLineage = 'Drow' | 'High Elf' | 'Wood Elf';
 type GnomeLineage = 'Forest Gnome' | 'Rock Gnome';
 type GoliathAncestry = 'Cloud' | 'Fire' | 'Frost' | 'Hill' | 'Stone' | 'Storm';
+const FAMILIAR_FORMS = ['Bat', 'Cat', 'Frog', 'Hawk', 'Lizard', 'Owl', 'Rat', 'Raven', 'Spider', 'Weasel'] as const;
 const SRD_SUBCLASSES: Record<typeof HERO_CLASS_NAMES[number], readonly string[]> = {
   Barbarian: ['Path of the Berserker'], Bard: ['College of Lore'], Cleric: ['Life Domain'], Druid: ['Circle of the Land', 'Circle of the Moon'], Fighter: ['Champion'], Monk: ['Warrior of the Open Hand'], Paladin: ['Oath of Devotion'], Ranger: ['Hunter'], Rogue: ['Thief'], Sorcerer: ['Draconic Sorcery'], Warlock: ['Fiend Patron'], Wizard: ['Evoker'],
 };
@@ -216,7 +217,7 @@ function magicInitiateActions(
     ? ['Bless', 'Cure Wounds', 'Healing Word', 'Shield of Faith', 'Guiding Bolt']
     : list === 'Druid'
       ? ['Cure Wounds', 'Healing Word', 'Entangle', 'Thunderwave']
-    : ['Magic Missile', 'Burning Hands', 'Thunderwave', 'Sleep'];
+    : ['Magic Missile', 'Burning Hands', 'Thunderwave', 'Sleep', 'Find Familiar'];
   if (!Array.isArray(cantrips) || cantrips.length !== 2 || cantrips.some(value => typeof value !== 'string') || new Set(cantrips).size !== 2 || cantrips.some(value => !allowedCantrips.includes(value))) {
     throw new EncounterError(`${label}.originCantrips must select the two engine-supported ${list} cantrips.`);
   }
@@ -229,8 +230,8 @@ function magicInitiateActions(
     : name === 'Toll the Dead'
       ? { name, type: 'special', description: `WIS save DC ${8 + mod + pb}; 2d8 necrotic damage.`, spellLevel: 0, castingAbility: castingAbility as CastingAbility, damageType: 'necrotic', savingThrow: { ability: 'wis', dc: 8 + mod + pb, damageOnFail: '2d8' }, range: { normal: 60, long: 60 }, targetScope: 'one_enemy' }
     : damagingCantrip(name as SupportedDamageCantrip, castingAbility as CastingAbility, abilities);
-  const levelOne = spell === 'Bless' ? bless() : spell === 'Cure Wounds' ? cureWounds(castingAbility as CastingAbility, mod, pb) : spell === 'Healing Word' ? healingWord(castingAbility as CastingAbility, mod, pb) : spell === 'Shield of Faith' ? shieldOfFaith() : spell === 'Guiding Bolt' ? guidingBolt(castingAbility as CastingAbility, mod, pb) : spell === 'Entangle' ? entangle(castingAbility as CastingAbility, mod, pb) : spell === 'Magic Missile' ? magicMissile() : spell === 'Burning Hands' ? burningHands(castingAbility as CastingAbility, mod, pb) : spell === 'Thunderwave' ? thunderwave(castingAbility as CastingAbility, mod, pb) : sleep(castingAbility as CastingAbility, mod, pb);
-  return { actions: [...cantrips.map(makeCantrip), ...lineageSpellActions({ ...levelOne, resourceCost: { key: resourceKey, amount: 1 } })], resources: { [resourceKey]: 1 } };
+  const levelOne = spell === 'Find Familiar' ? undefined : spell === 'Bless' ? bless() : spell === 'Cure Wounds' ? cureWounds(castingAbility as CastingAbility, mod, pb) : spell === 'Healing Word' ? healingWord(castingAbility as CastingAbility, mod, pb) : spell === 'Shield of Faith' ? shieldOfFaith() : spell === 'Guiding Bolt' ? guidingBolt(castingAbility as CastingAbility, mod, pb) : spell === 'Entangle' ? entangle(castingAbility as CastingAbility, mod, pb) : spell === 'Magic Missile' ? magicMissile() : spell === 'Burning Hands' ? burningHands(castingAbility as CastingAbility, mod, pb) : spell === 'Thunderwave' ? thunderwave(castingAbility as CastingAbility, mod, pb) : sleep(castingAbility as CastingAbility, mod, pb);
+  return { actions: [...cantrips.map(makeCantrip), ...(levelOne ? lineageSpellActions({ ...levelOne, resourceCost: { key: resourceKey, amount: 1 } }) : [])], resources: levelOne ? { [resourceKey]: 1 } : {} };
 }
 
 /** Validates a public arena party and converts it into trusted encounter options. */
@@ -253,7 +254,7 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     if (typeof character.heroClass !== 'string' || !HERO_CLASS_NAMES.includes(character.heroClass as typeof HERO_CLASS_NAMES[number])) {
       throw new EncounterError(`${label}.heroClass must be a supported hero class.`);
     }
-    if (!Object.keys(character).every(key => ['heroClass', 'abilities', 'subclass', 'spells', 'weapons', 'armor', 'shield', 'species', 'background', 'abilityIncreases', 'alignment', 'dragonAncestry', 'elfLineage', 'highElfCantrip', 'gnomeLineage', 'goliathAncestry', 'tieflingLegacy', 'speciesCastingAbility', 'size', 'languages', 'elfKeenSense', 'humanSkill', 'originCantrips', 'originSpell', 'originCastingAbility', 'humanOriginFeat', 'humanOriginSkills', 'humanOriginTools', 'humanOriginCantrips', 'humanOriginSpell', 'humanOriginCastingAbility'].includes(key))) {
+    if (!Object.keys(character).every(key => ['heroClass', 'abilities', 'subclass', 'spells', 'weapons', 'armor', 'shield', 'species', 'background', 'abilityIncreases', 'alignment', 'dragonAncestry', 'elfLineage', 'highElfCantrip', 'gnomeLineage', 'goliathAncestry', 'tieflingLegacy', 'speciesCastingAbility', 'size', 'languages', 'elfKeenSense', 'humanSkill', 'originCantrips', 'originSpell', 'originCastingAbility', 'humanOriginFeat', 'humanOriginSkills', 'humanOriginTools', 'humanOriginCantrips', 'humanOriginSpell', 'humanOriginCastingAbility', 'familiar'].includes(key))) {
       throw new EncounterError(`${label} contains unsupported build choices.`);
     }
     const baseAbilities = parseAbilities(character.abilities, `${label}.abilities`);
@@ -356,8 +357,15 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     const origin = species && background ? magicInitiateActions(BACKGROUNDS[background].originFeat, character.originCantrips, character.originSpell, character.originCastingAbility, abilities, label, 'magic-initiate:background') : undefined;
     if (species === 'Human' && humanOriginFeat === BACKGROUNDS[background!]?.originFeat) throw new EncounterError(`${label}.humanOriginFeat must differ from the background Origin Feat.`);
     const humanOrigin = species === 'Human' ? magicInitiateActions(humanOriginFeat, character.humanOriginCantrips, character.humanOriginSpell, character.humanOriginCastingAbility, abilities, label, 'magic-initiate:human') : undefined;
+    const familiar = character.familiar as string | undefined;
+    if (familiar !== undefined && (!FAMILIAR_FORMS.includes(familiar as typeof FAMILIAR_FORMS[number])
+      || !(heroClass === 'Wizard'
+        || (BACKGROUNDS[background!]?.originFeat === 'Magic Initiate (Wizard)' && character.originSpell === 'Find Familiar')
+        || (humanOriginFeat === 'Magic Initiate (Wizard)' && character.humanOriginSpell === 'Find Familiar')))) {
+      throw new EncounterError(`${label}.familiar must be an engine-supported Find Familiar form available to this character.`);
+    }
     return {
-      heroClass, heroLevel: 5, team,
+      heroClass, heroLevel: 5, team, ...(familiar ? { familiarForm: familiar as typeof FAMILIAR_FORMS[number] } : {}),
       heroOverrides: {
         abilities, subclass: character.subclass as HeroSubclassName | undefined, spells, weapons: toWeaponOverrides(weapons, character.shield === false), ...(armor ? { armorBaseOverride: ARENA_ARMOR[armor].armorBase, armorDexCapOverride: ARENA_ARMOR[armor].dexCap, wearingHeavyArmor: ARENA_ARMOR[armor].category === 'heavy', ...(ARENA_ARMOR[armor].minimumStrength && abilities.str < ARENA_ARMOR[armor].minimumStrength ? { speedPenaltyOverride: 10 } : {}) } : {}), ...(character.shield !== undefined ? { shieldOverride: character.shield as boolean } : {}),
         ...(species && background ? {
