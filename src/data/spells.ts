@@ -55,6 +55,16 @@ export function poisonSpray(ability: SpellcastingAbility, mod: number, pb: numbe
   };
 }
 
+export function thornWhip(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  const dice = pb >= 6 ? '4d6' : pb >= 4 ? '3d6' : pb >= 3 ? '2d6' : '1d6';
+  return {
+    name: 'Thorn Whip', type: 'ranged', spellLevel: 0, spellSchool: 'transmutation', castingAbility: ability,
+    description: `Ranged spell attack within 30 feet. Hit: ${dice} piercing damage. If the target is Large or smaller, pull it up to 10 feet toward you.`,
+    attackBonus: spellAttackBonus(mod, pb), damage: dice, damageType: 'piercing', magical: true,
+    range: { normal: 30, long: 30 }, targetScope: 'one_enemy', pullTowardAttackerOnHit: 10,
+  };
+}
+
 export function magicMissile(): MonsterAction {
   return {
     name: 'Magic Missile',
@@ -1766,7 +1776,7 @@ export function wallOfFire(ability: SpellcastingAbility, mod: number, pb: number
 type SpellFactory = (ability: SpellcastingAbility, mod: number, pb: number) => MonsterAction;
 const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Magic Missile', () => magicMissile()],
-  ['Blade Ward', bladeWard], ['Resistance', resistance], ['Poison Spray', poisonSpray],
+  ['Blade Ward', bladeWard], ['Resistance', resistance], ['Poison Spray', poisonSpray], ['Thorn Whip', thornWhip],
   ['Shield', shield],
   ['Hellish Rebuke', hellishRebuke],
   ['Burning Hands', burningHands], ['Thunderwave', thunderwave], ['Sleep', sleep],

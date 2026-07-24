@@ -2038,6 +2038,16 @@ describe('Kaggle arena bridge', () => {
     expect(() => applyLegalAction(encounter, action)).not.toThrow();
     expect(activeTarget.currentHp).toBeLessThanOrEqual(hp);
     expect(encounter.state!.logs.some(log => log.action === 'Poison Spray')).toBe(true);
+
+    expect(buildSpellAction('Thorn Whip', 'wis', 3, 3)).toMatchObject({ spellLevel: 0, damage: '2d6', pullTowardAttackerOnHit: 10 });
+    const pullEncounter = new Encounter({ seed: 1 });
+    const [puller] = pullEncounter.addCreature({ heroClass: 'Druid', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { spells: ['Thorn Whip'] } });
+    const [pulled] = pullEncounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 4, y: 0 } });
+    pullEncounter.start(); pullEncounter.state!.initiativeOrder = [puller.id]; startArena(pullEncounter);
+    const activePulled = pullEncounter.state!.creatures.find(creature => creature.id === pulled.id)!;
+    activePulled.monsterData.ac = 1;
+    applyLegalAction(pullEncounter, getLegalActions(pullEncounter, puller.id).find(candidate => candidate.actionName === 'Thorn Whip')!);
+    expect(activePulled.position).toEqual({ x: 2, y: 0 });
   });
 
   it('summons a controlled Bestial Spirit with validated placement and removes it on concentration loss or expiry', () => {

@@ -43,7 +43,7 @@ import {
   blindnessDeafness, invisibility, mirrorImage, seeInvisibility, dispelMagic, haste, wallOfFire,
   aid, magicWeapon, shiningSmite,
   acidArrow, armsOfHadar, barkskin, bestowCurse, blur, colorSpray, darkness, divineFavor, enlargeReduce, expeditiousRetreat, faerieFire, falseLife, fear, fly, fogCloud, grease, gustOfWind, lesserRestoration, mistyStep,
-  armorOfAgathys, beaconOfHope, longstrider, mageArmor, passWithoutTrace, poisonSpray, rayOfEnfeeblement, rayOfSickness, revivify, slow, stinkingCloud, tashasHideousLaughter, vampiricTouch,
+  armorOfAgathys, beaconOfHope, longstrider, mageArmor, passWithoutTrace, poisonSpray, rayOfEnfeeblement, rayOfSickness, revivify, slow, stinkingCloud, tashasHideousLaughter, thornWhip, vampiricTouch,
   protectionFromPoison, shield, hellishRebuke,
   circleOfDeath, chainLightning, disintegrate, fingerOfDeath,
   befuddlement, powerWordHeal, powerWordKill, meteorSwarm,
@@ -1565,7 +1565,6 @@ function buildClassSpells(
   const repertoire: MonsterAction[] = [];
   switch (className) {
     case 'Wizard':
-      repertoire.push(poisonSpray(spellAbility, mod, pb));
       repertoire.push(magicMissile(), burningHands(spellAbility, mod, pb), thunderwave(spellAbility, mod, pb), sleep(spellAbility, mod, pb));
       repertoire.push(scorchingRay(spellAbility, mod, pb), web(spellAbility, mod, pb));
       repertoire.push(fireball(spellAbility, mod, pb), lightningBolt(spellAbility, mod, pb));
@@ -1577,7 +1576,6 @@ function buildClassSpells(
       repertoire.push(powerWordKill(spellAbility), meteorSwarm(spellAbility, mod, pb));
       break;
     case 'Sorcerer':
-      repertoire.push(poisonSpray(spellAbility, mod, pb));
       repertoire.push(magicMissile(), burningHands(spellAbility, mod, pb));
       if (level >= 3) repertoire.push(chromaticOrb(spellAbility, mod, pb), command(spellAbility, mod, pb));
       if (level >= 2) repertoire.push(thunderwave(spellAbility, mod, pb));
@@ -1588,7 +1586,6 @@ function buildClassSpells(
       repertoire.push(fireStorm(spellAbility, mod, pb), sunburst(spellAbility, mod, pb), meteorSwarm(spellAbility, mod, pb), powerWordKill(spellAbility));
       break;
     case 'Warlock':
-      repertoire.push(poisonSpray(spellAbility, mod, pb));
       repertoire.push(hex(spellAbility, mod, pb), witchBolt(spellAbility, mod, pb));
       if (level >= 3) repertoire.push(burningHands(spellAbility, mod, pb), command(spellAbility, mod, pb), scorchingRay(spellAbility, mod, pb));
       repertoire.push(holdPerson(spellAbility, mod, pb));
@@ -1614,7 +1611,6 @@ function buildClassSpells(
       repertoire.push(massHeal(spellAbility), powerWordHeal(spellAbility));
       break;
     case 'Druid':
-      repertoire.push(poisonSpray(spellAbility, mod, pb));
       repertoire.push(cureWounds(spellAbility, mod, pb), healingWord(spellAbility, mod, pb), entangle(spellAbility, mod, pb), thunderwave(spellAbility, mod, pb));
       repertoire.push(aid(spellAbility, mod, pb), holdPerson(spellAbility, mod, pb), moonbeam(spellAbility, mod, pb));
       repertoire.push(callLightning(spellAbility, mod, pb));
@@ -1723,7 +1719,7 @@ function buildOptionalSpells(
       pool.push(revivify(spellAbility, mod, pb));
       break;
     case 'Druid':
-      pool.push(poisonSpray(spellAbility, mod, pb));
+      pool.push(poisonSpray(spellAbility, mod, pb), thornWhip(spellAbility, mod, pb));
       pool.push(summonBeast(spellAbility, mod, pb));
       pool.push(barkskin(spellAbility, mod, pb), faerieFire(spellAbility, mod, pb), fogCloud(spellAbility, mod, pb), longstrider(spellAbility, mod, pb));
       pool.push(lesserRestoration(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb), passWithoutTrace(spellAbility, mod, pb), spikeGrowth(spellAbility, mod, pb));
@@ -2631,7 +2627,7 @@ export function getAvailableSpells(
       optional.push(revivify(spellAbility, mod, pb));
       break;
     case 'Druid':
-      optional.push(poisonSpray(spellAbility, mod, pb));
+      optional.push(poisonSpray(spellAbility, mod, pb), thornWhip(spellAbility, mod, pb));
       optional.push(summonBeast(spellAbility, mod, pb));
       optional.push(barkskin(spellAbility, mod, pb), faerieFire(spellAbility, mod, pb), fogCloud(spellAbility, mod, pb), longstrider(spellAbility, mod, pb));
       optional.push(lesserRestoration(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb), passWithoutTrace(spellAbility, mod, pb), spikeGrowth(spellAbility, mod, pb));
