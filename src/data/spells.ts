@@ -1981,6 +1981,15 @@ export function mirrorImage(ability: SpellcastingAbility, _mod: number, _pb: num
   };
 }
 
+export function charmPerson(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Charm Person', type: 'special', spellLevel: 1, spellSchool: 'enchantment', castingAbility: ability,
+    description: `One Humanoid within 30 feet makes a WIS save (DC ${saveDC(mod, pb)}). On a failure, it is Charmed by you for 1 minute.`,
+    range: { normal: 30, long: 30 }, targetScope: 'one_enemy', targetTypeRestriction: 'Humanoid',
+    savingThrow: { ability: 'wis', dc: saveDC(mod, pb), conditionOnFail: 'charmed', conditionDuration: '1_minute' },
+  };
+}
+
 export function invisibility(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
   return {
     name: 'Invisibility', type: 'special', spellLevel: 2, spellSchool: 'illusion', castingAbility: ability,
@@ -2157,7 +2166,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Guiding Bolt', guidingBolt], ['Dissonant Whispers', dissonantWhispers],
   ['Entangle', entangle], ['Command', command], ['Chromatic Orb', chromaticOrb],
   ['Inflict Wounds', inflictWounds], ['Witch Bolt', witchBolt],
-  ['Ice Knife', iceKnife],
+  ['Ice Knife', iceKnife], ['Charm Person', charmPerson],
   ['Arms of Hadar', armsOfHadar], ['Color Spray', colorSpray], ['Divine Favor', divineFavor],
   ['Armor of Agathys', armorOfAgathys], ['Faerie Fire', faerieFire], ['False Life', falseLife], ['Fog Cloud', fogCloud], ['Grease', grease], ['Longstrider', longstrider],
   ['Expeditious Retreat', expeditiousRetreat],
