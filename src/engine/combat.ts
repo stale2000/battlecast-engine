@@ -225,6 +225,23 @@ export function getActiveSize(creature: Creature): MonsterData['size'] {
   return creature.wildShape?.size ?? creature.temporarySize ?? creature.monsterData.size;
 }
 
+/** Adds a source-owned summon to an active encounter. Callers must supply a validated cell. */
+export function createSummonedCreature(state: BattleState, source: Creature, monsterData: MonsterData, position: { x: number; y: number }, durationRounds: number): Creature | null {
+  const gridSize = state.gridSize ?? 20;
+  if (position.x < 0 || position.y < 0 || position.x + getFootprintSize(monsterData.size) > gridSize || position.y + getFootprintSize(monsterData.size) > gridSize
+    || isPositionBlocked(position, monsterData.size, state.creatures, undefined, state.terrainBlocked)) return null;
+  const summon = createCreature(monsterData, source.team, position, state.creatures.length);
+  summon.id = `summon-${source.id}-${state.round}-${state.creatures.filter(creature => creature.summonedById === source.id).length + 1}`;
+  summon.displayName = `${source.displayName}'s ${monsterData.name}`;
+  summon.summonedById = source.id;
+  summon.summonExpiresRound = state.round + durationRounds;
+  summon.initiative = source.initiative;
+  state.creatures.push(summon);
+  const sourceIndex = state.initiativeOrder.indexOf(source.id);
+  state.initiativeOrder.splice(Math.max(0, sourceIndex + 1), 0, summon.id);
+  return summon;
+}
+
 export function getActiveSpeed(creature: Creature): MonsterData['speed'] {
   const speed = creature.wildShape?.speed ?? creature.monsterData.speed;
   return creature.temporaryFlightSpeed ? { ...speed, fly: Math.max(speed.fly ?? 0, creature.temporaryFlightSpeed) } : speed;

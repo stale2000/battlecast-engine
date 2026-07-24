@@ -360,6 +360,13 @@ function processTurnStartTraits(state: BattleState, creature: Creature): void {
 /** Turn start: expire buffs, process conditions, recharge, reset movement.
  *  Returns false if the creature can't act (incapacitated/dead). */
 export function processTurnStart(state: BattleState, creature: Creature): boolean {
+  const expiredSummons = state.creatures.filter(candidate => candidate.summonExpiresRound !== undefined && candidate.summonExpiresRound <= state.round);
+  if (expiredSummons.length) {
+    const expired = new Set(expiredSummons.map(candidate => candidate.id));
+    state.creatures = state.creatures.filter(candidate => !expired.has(candidate.id));
+    state.initiativeOrder = state.initiativeOrder.filter(id => !expired.has(id));
+    if (expired.has(creature.id)) return false;
+  }
   if (creature.spiritualWeapon && creature.spiritualWeapon.endRound <= state.round) creature.spiritualWeapon = undefined;
   if ((creature.repeatableAreaSpell && creature.repeatableAreaSpell.endRound <= state.round)
     || (creature.repeatableActionSpell && creature.repeatableActionSpell.endRound <= state.round)) dropConcentratedBuffsFrom(state, creature.id);

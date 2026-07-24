@@ -680,6 +680,9 @@ export interface Creature {
   superiorHunterDefense?: { damageType: string; round: number; turnIndex: number };
   recharges: Record<string, boolean>; // track recharge abilities
   concentratingOn?: string;
+  /** Source-owned creature created by a concentration summon spell. */
+  summonedById?: string;
+  summonExpiresRound?: number;
   stats: CreatureStats;
   /**
    * Generic counter store for consumable resources: spell slots
