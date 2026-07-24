@@ -703,7 +703,7 @@ export function protectionFromPoison(ability: SpellcastingAbility, _mod: number,
     name: 'Protection from Poison', type: 'special', spellLevel: 2, spellSchool: 'abjuration', castingAbility: ability, durationRounds: 600,
     description: 'End Poisoned on one creature within 30 feet; it has resistance to poison damage for 1 hour.',
     removesConditions: ['poisoned'], range: { normal: 30, long: 30 }, targetScope: 'one_ally',
-    buff: { name: 'Protection from Poison', key: 'protection-from-poison', resistDamageTypes: ['poison'] },
+    buff: { name: 'Protection from Poison', key: 'protection-from-poison', resistDamageTypes: ['poison'], saveAdvantageConditions: ['poisoned'] },
   };
 }
 

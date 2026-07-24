@@ -530,6 +530,7 @@ export function applyBuffFromSpell(
     canSeeInvisible: tmpl.canSeeInvisible,
     hasteAction: tmpl.hasteAction,
     saveAdvantageAbilities: tmpl.saveAdvantageAbilities,
+    saveAdvantageConditions: tmpl.saveAdvantageConditions,
     saveEnds: tmpl.saveEnds,
   };
   addBuff(target, buff);

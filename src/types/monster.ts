@@ -491,6 +491,8 @@ export interface BuffTemplate {
   hasteAction?: boolean;
   /** Ability-specific saving throw Advantage, such as Haste's Dexterity saves. */
   saveAdvantageAbilities?: Array<keyof Abilities>;
+  /** Condition-specific saving throw Advantage, such as Protection from Poison. */
+  saveAdvantageConditions?: Condition[];
   /** Repeat this save at the specified point and remove the buff on success. */
   saveEnds?: { ability: keyof Abilities; dc: number; at: 'targetTurnEnd' };
 }
@@ -916,6 +918,7 @@ export interface ActiveBuff {
   canSeeInvisible?: boolean;
   hasteAction?: boolean;
   saveAdvantageAbilities?: Array<keyof Abilities>;
+  saveAdvantageConditions?: Condition[];
   /** Repeat this save at the specified point and remove the buff on success. */
   saveEnds?: { ability: keyof Abilities; dc: number; at: 'targetTurnEnd' };
 }
