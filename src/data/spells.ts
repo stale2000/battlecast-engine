@@ -1430,13 +1430,14 @@ export function chromaticOrb(ability: SpellcastingAbility, mod: number, pb: numb
 export function inflictWounds(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
   return {
     name: 'Inflict Wounds',
-    type: 'melee',
-    description: `Melee spell attack +${spellAttackBonus(mod, pb)}, reach 5 ft. 3d10 necrotic damage.`,
+    type: 'special',
+    description: `One creature within 15 ft. CON save DC ${saveDC(mod, pb)}; 2d10 necrotic damage on a failed save, half on a successful one.`,
     spellLevel: 1,
+    spellSchool: 'necromancy',
     castingAbility: ability,
-    attackBonus: spellAttackBonus(mod, pb),
-    damage: '3d10', damageType: 'necrotic',
-    reach: 5,
+    damageType: 'necrotic',
+    savingThrow: { ability: 'con', dc: saveDC(mod, pb), damageOnFail: '2d10', damageOnSuccess: 'half' },
+    range: { normal: 15, long: 15 },
     targetScope: 'one_enemy',
   };
 }
