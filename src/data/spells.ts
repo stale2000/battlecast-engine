@@ -382,6 +382,22 @@ export function entangle(ability: SpellcastingAbility, mod: number, pb: number):
   };
 }
 
+export function wardingBond(): MonsterAction {
+  return {
+    name: 'Warding Bond',
+    type: 'special',
+    description: 'Touch a willing creature: it gains +1 AC, +1 to saving throws, and Resistance to all damage. When it takes damage, you take the same amount.',
+    spellLevel: 2,
+    durationRounds: 600,
+    range: { normal: 5, long: 5 },
+    targetScope: 'one_ally',
+    buff: {
+      name: 'Warding Bond', key: 'warding-bond',
+      acBonus: 1, saveBonus: 1, resistAllDamageExcept: [], wardingBond: true,
+    },
+  };
+}
+
 export function sanctuary(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
   return {
     name: 'Sanctuary', type: 'special', spellLevel: 1, spellSchool: 'abjuration', castingAbility: ability,
@@ -1913,7 +1929,7 @@ export function stinkingCloud(ability: SpellcastingAbility, _mod: number, _pb: n
     name: 'Stinking Cloud', type: 'special', spellLevel: 3, spellSchool: 'conjuration', castingAbility: ability, concentration: true, durationRounds: 10,
     description: 'A 20-foot-radius cloud is heavily obscured. A creature that starts its turn there makes a Constitution save or is Poisoned and cannot take Actions or Bonus Actions until the end of that turn.',
     range: { normal: 90, long: 90 }, targetScope: 'area_enemies',
-    savingThrow: { ability: 'con', dc: 8, conditionOnFail: 'poisoned', conditionDuration: 'end_of_current_turn' },
+    savingThrow: { ability: 'con', dc: saveDC(_mod, _pb), conditionOnFail: 'poisoned', conditionDuration: 'end_of_current_turn', area: '20-foot sphere' },
     persistentZone: { radiusFt: 20, durationRounds: 10, triggers: ['turnStart'], skipActionsOnFailedSave: true, obscuresSight: true },
   };
 }
@@ -1957,7 +1973,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Bless', () => bless()], ['Bane', bane], ['Cure Wounds', cureWounds],
   ['Sanctuary', sanctuary],
   ['Protection from Evil and Good', protectionFromEvilAndGood],
-  ['Healing Word', healingWord], ['Shield of Faith', () => shieldOfFaith()],
+  ['Healing Word', healingWord], ['Shield of Faith', () => shieldOfFaith()], ['Warding Bond', () => wardingBond()],
   ['Heroism', heroism],
   ['Guiding Bolt', guidingBolt], ['Dissonant Whispers', dissonantWhispers],
   ['Entangle', entangle], ['Command', command], ['Chromatic Orb', chromaticOrb],

@@ -473,6 +473,8 @@ export interface BuffTemplate {
   /** Flat bonus added to attack rolls. Sacred Weapon uses this. */
   attackBonus?: number;
   attackBonusDice?: string;
+  /** Flat bonus added to saving throws (Warding Bond). */
+  saveBonus?: number;
   saveBonusDice?: string;
   acBonus?: number;
   acMinimum?: number;
@@ -495,6 +497,8 @@ export interface BuffTemplate {
   resistDamageTypes?: string[];
   /** Resistance to all damage except the listed damage types (Monk Superior Defense). */
   resistAllDamageExcept?: string[];
+  /** Redirects damage dealt to this target to the bond caster. */
+  wardingBond?: boolean;
   rageDamageBonus?: number;
   conditionalRider?: 'targetNotFullHp';
   /** Damage dealt to melee attackers that hit this creature (e.g. Fire Shield "2d8 fire"). */
@@ -954,6 +958,8 @@ export interface ActiveBuff {
   attackBonusDice?: string;
   /** Flat bonus added to attack rolls. Sacred Weapon uses this. */
   attackBonus?: number;
+  /** Flat bonus to saving throws THIS creature makes. */
+  saveBonus?: number;
   /** Bonus to saving throws THIS creature makes. Same format as attackBonusDice. */
   saveBonusDice?: string;
   /** Flat AC modifier while active. Shield of Faith: +2. */
@@ -986,6 +992,8 @@ export interface ActiveBuff {
   resistDamageTypes?: string[];
   /** Resistance to all damage except the listed damage types (Monk Superior Defense). */
   resistAllDamageExcept?: string[];
+  /** Redirects damage dealt to this target to the bond caster. */
+  wardingBond?: boolean;
   /**
    * True if this buff adds a flat melee STR damage bonus (Rage at L1-8 = +2).
    */

@@ -17,4 +17,10 @@ describe('Sleet Storm spell data', () => {
       name: 'Sleet Storm', spellLevel: 3, savingThrow: { dc: 15 },
     });
   });
+
+  it('keeps Stinking Cloud save DC tied to the caster', () => {
+    expect(buildSpellAction('Stinking Cloud', 'cha', 4, 3)).toMatchObject({
+      savingThrow: { ability: 'con', dc: 15, area: '20-foot sphere' },
+    });
+  });
 });

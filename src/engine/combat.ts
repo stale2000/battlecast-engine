@@ -1456,6 +1456,7 @@ function applyAttackHitBuff(state: BattleState, attacker: Creature, target: Crea
     requiresConcentration: tmpl.requiresConcentration,
     attackBonus: tmpl.attackBonus,
     attackBonusDice: tmpl.attackBonusDice,
+    saveBonus: tmpl.saveBonus,
     saveBonusDice: tmpl.saveBonusDice,
     acBonus: tmpl.acBonus,
     damageRider: tmpl.damageRider,
@@ -1466,6 +1467,7 @@ function applyAttackHitBuff(state: BattleState, attacker: Creature, target: Crea
     resistPhysical: tmpl.resistPhysical,
     resistDamageTypes: tmpl.resistDamageTypes,
     resistAllDamageExcept: tmpl.resistAllDamageExcept,
+    wardingBond: tmpl.wardingBond,
     rageDamageBonus: tmpl.rageDamageBonus,
     conditionalRider: tmpl.conditionalRider,
     reactiveDamage: tmpl.reactiveDamage,
@@ -3088,7 +3090,7 @@ function applyMonkDeflectDamage(
   return reduced;
 }
 
-function applyDamage(state: BattleState, target: Creature, damage: number, damageType: string, attacker: Creature | null, isAttack: boolean = false, isMagical: boolean = false, isCritical: boolean = false): number {
+function applyDamage(state: BattleState, target: Creature, damage: number, damageType: string, attacker: Creature | null, isAttack: boolean = false, isMagical: boolean = false, isCritical: boolean = false, skipWardingBond: boolean = false): number {
   const resisted = resolveDamageResistance(state, target, damage, damageType, isMagical, attacker);
   if (resisted.immune) return 0;
   damage = resisted.damage;
@@ -3111,6 +3113,22 @@ function applyDamage(state: BattleState, target: Creature, damage: number, damag
       type: 'info'
     });
     damage = postBuff;
+  }
+
+  // Warding Bond transfers the damage that reaches the warded creature after
+  // resistance to its caster. The private recursion guard prevents a bond
+  // loop when the caster is also warded by another effect.
+  if (!skipWardingBond && damage > 0) {
+    const bond = (target.activeBuffs ?? []).find(buff => buff.wardingBond);
+    if (bond) {
+      const caster = state.creatures.find(creature => creature.id === bond.casterId);
+      if (!caster || !caster.isAlive || !target.isAlive || creatureDistance(caster, target) > 60) {
+        target.activeBuffs = (target.activeBuffs ?? []).filter(buff => buff !== bond);
+        if (caster) caster.activeBuffs = (caster.activeBuffs ?? []).filter(buff => !buff.wardingBond || buff.casterId !== target.id);
+      } else {
+        applyDamage(state, caster, damage, damageType, target, false, isMagical, isCritical, true);
+      }
+    }
   }
 
   // Dying creatures (heroes at 0 HP, unconscious, rolling death saves) do

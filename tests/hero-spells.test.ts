@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { Creature, MonsterData, MonsterAction } from '../src/types/monster';
 import {
   BattleState, DEFAULT_TACTICS, createCreature,
-  executeSpell, applyHealing, applyAutoDarts, applyBuffFromSpell,
+  executeSpell, applyHealing, applyAutoDarts, applyBuffFromSpell, applyDamage,
   hasBuff, tryUseBonusActionDamageBuff,
 } from '../src/engine/combat';
 
@@ -169,6 +169,23 @@ describe('applyBuffFromSpell', () => {
       expect(ally.currentHp).toBe(25);
     }
     expect(allies.filter(a => a.maxHp === 20)).toHaveLength(4);
+  });
+
+  it('Warding Bond grants defenses and transfers post-resistance damage', () => {
+    const caster = createCreature(makeMonsterData(), 'red', { x: 0, y: 0 }, 0);
+    const ally = createCreature(makeMonsterData(), 'red', { x: 1, y: 0 }, 1);
+    const state = makeState([caster, ally]);
+    applyBuffFromSpell(state, caster, ally, {
+      name: 'Warding Bond', type: 'special', description: '', spellLevel: 2,
+      durationRounds: 600, range: { normal: 5, long: 5 }, targetScope: 'one_ally',
+      buff: { name: 'Warding Bond', key: 'warding-bond', acBonus: 1, saveBonus: 1, resistAllDamageExcept: [], wardingBond: true },
+    });
+    const bond = ally.activeBuffs.find(buff => buff.key === 'warding-bond');
+    expect(bond?.acBonus).toBe(1);
+    expect(bond?.saveBonus).toBe(1);
+    applyDamage(state, ally, 9, 'fire', null);
+    expect(ally.currentHp).toBe(16); // Resistance halves to 4, then bond transfers 4.
+    expect(caster.currentHp).toBe(16);
   });
 });
 

@@ -33,7 +33,7 @@ import {
   magicMissile, burningHands, thunderwave, sleep,
   scorchingRay, summonBeast, findSteed, conjureAnimals, web, spikeGrowth, flamingSphere, cloudOfDaggers, shatter, moonbeam, holdPerson, spiritualWeapon,
   fireball, lightningBolt, spiritGuardians, callLightning, hypnoticPattern,
-  bless, bane, cureWounds, healingWord, heroism, protectionFromEvilAndGood, sanctuary, shieldOfFaith, guidingBolt,
+  bless, bane, cureWounds, healingWord, heroism, protectionFromEvilAndGood, sanctuary, shieldOfFaith, wardingBond, guidingBolt,
   hex, huntersMark, dissonantWhispers, entangle,
   iceStorm, banishment, blight, fireShield, stoneskin, deathWard,
   coneOfCold, flameStrike, holdMonster, massCureWounds, synapticStatic,
@@ -1712,7 +1712,7 @@ function buildOptionalSpells(
       pool.push(counterspell(spellAbility, mod, pb), dispelMagic(spellAbility, mod, pb));
       break;
     case 'Cleric':
-      pool.push(bane(spellAbility, mod, pb), inflictWounds(spellAbility, mod, pb), resistance(spellAbility, mod, pb), tollTheDead(spellAbility, mod, pb), command(spellAbility, mod, pb), protectionFromEvilAndGood(spellAbility, mod, pb), sanctuary(spellAbility, mod, pb));
+      pool.push(bane(spellAbility, mod, pb), inflictWounds(spellAbility, mod, pb), resistance(spellAbility, mod, pb), tollTheDead(spellAbility, mod, pb), command(spellAbility, mod, pb), protectionFromEvilAndGood(spellAbility, mod, pb), sanctuary(spellAbility, mod, pb), wardingBond());
       pool.push(blindnessDeafness(spellAbility, mod, pb));
       pool.push(lesserRestoration(spellAbility, mod, pb), protectionFromPoison(spellAbility, mod, pb));
       pool.push(dispelMagic(spellAbility, mod, pb));
@@ -1743,7 +1743,7 @@ function buildOptionalSpells(
       pool.push(bestowCurse(spellAbility, mod, pb), fear(spellAbility, mod, pb), fly(spellAbility, mod, pb));
       break;
     case 'Paladin':
-      pool.push(heroism(spellAbility, mod, pb));
+      pool.push(heroism(spellAbility, mod, pb), wardingBond());
       pool.push(protectionFromEvilAndGood(spellAbility, mod, pb));
       pool.push(divineFavor(spellAbility, mod, pb), brandingSmite(spellAbility, mod, pb), searingSmite(spellAbility, mod, pb), thunderousSmite(spellAbility, mod, pb), wrathfulSmite(spellAbility, mod, pb));
       pool.push(command(spellAbility, mod, pb));
@@ -2625,7 +2625,7 @@ export function getAvailableSpells(
       optional.push(counterspell(spellAbility, mod, pb), dispelMagic(spellAbility, mod, pb));
       break;
     case 'Cleric':
-      optional.push(bane(spellAbility, mod, pb), inflictWounds(spellAbility, mod, pb), resistance(spellAbility, mod, pb), tollTheDead(spellAbility, mod, pb), command(spellAbility, mod, pb), protectionFromEvilAndGood(spellAbility, mod, pb), sanctuary(spellAbility, mod, pb));
+      optional.push(bane(spellAbility, mod, pb), inflictWounds(spellAbility, mod, pb), resistance(spellAbility, mod, pb), tollTheDead(spellAbility, mod, pb), command(spellAbility, mod, pb), protectionFromEvilAndGood(spellAbility, mod, pb), sanctuary(spellAbility, mod, pb), wardingBond());
       optional.push(blindnessDeafness(spellAbility, mod, pb));
       optional.push(lesserRestoration(spellAbility, mod, pb), protectionFromPoison(spellAbility, mod, pb));
       optional.push(dispelMagic(spellAbility, mod, pb));
@@ -2658,6 +2658,7 @@ export function getAvailableSpells(
       break;
     case 'Paladin':
       optional.push(heroism(spellAbility, mod, pb));
+      optional.push(wardingBond());
       optional.push(protectionFromEvilAndGood(spellAbility, mod, pb));
       optional.push(divineFavor(spellAbility, mod, pb), brandingSmite(spellAbility, mod, pb), searingSmite(spellAbility, mod, pb), thunderousSmite(spellAbility, mod, pb), wrathfulSmite(spellAbility, mod, pb));
       optional.push(command(spellAbility, mod, pb));

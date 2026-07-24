@@ -51,6 +51,7 @@ export function rollAttackBuffBonus(attacker: Creature): number {
 export function rollSaveBuffBonus(saver: Creature): number {
   let total = 0;
   for (const b of saver.activeBuffs ?? []) {
+    total += b.saveBonus ?? 0;
     if (b.saveBonusDice) total += rollDice(b.saveBonusDice).total;
   }
   return total;
@@ -389,6 +390,16 @@ export function expireBuffsForCreature(state: BattleState, creature: Creature): 
   for (const buff of expired) {
     clearBuffCondition(creature, buff);
     if (buff.key === 'haste') applyHasteLethargy(state, creature, buff.casterId);
+  }
+  // Warding Bond ends when its pair dies or moves beyond 60 feet. Turn-start
+  // housekeeping is the shared movement-safe checkpoint for this timed link.
+  for (const target of state.creatures) {
+    for (const bond of (target.activeBuffs ?? []).filter(buff => buff.wardingBond)) {
+      const caster = state.creatures.find(candidate => candidate.id === bond.casterId);
+      if (!caster || !caster.isAlive || !target.isAlive || distance(caster.position, target.position) > 60) {
+        target.activeBuffs = (target.activeBuffs ?? []).filter(buff => buff !== bond);
+      }
+    }
   }
 }
 
