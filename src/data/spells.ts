@@ -1650,6 +1650,15 @@ export function haste(ability: SpellcastingAbility, _mod: number, _pb: number): 
   };
 }
 
+export function slow(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Slow', type: 'special', spellLevel: 3, spellSchool: 'transmutation', castingAbility: ability, concentration: true, durationRounds: 10,
+    description: `Up to 6 creatures within 120 feet make a WIS save (DC ${saveDC(mod, pb)}). On a failure, Speed is halved, AC is reduced by 2, Dexterity saves have Disadvantage, Reactions are unavailable, it can take only one attack, and it cannot take both an Action and a Bonus Action.`,
+    range: { normal: 120, long: 120 }, targetScope: 'one_enemy', multiTargetSave: { maxTargets: 6 }, savingThrow: { ability: 'wis', dc: saveDC(mod, pb) },
+    buffOnFailedSave: { name: 'Slow', key: 'slow', requiresConcentration: true, acBonus: -2, speedPenalty: 15, saveDisadvantageAbilities: ['dex'], preventsReactions: true, limitAttacksToOne: true, restrictActionBonusCombination: true, saveEnds: { ability: 'wis', dc: saveDC(mod, pb), at: 'targetTurnEnd' } },
+  };
+}
+
 export function wallOfFire(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
   return {
     name: 'Wall of Fire',
@@ -1714,6 +1723,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Spirit Guardians', spiritGuardians], ['Call Lightning', callLightning],
   ['Hypnotic Pattern', hypnoticPattern], ['Dispel Magic', dispelMagic], ['Haste', haste],
   ['Fear', fear], ['Fly', fly], ['Revivify', revivify],
+  ['Slow', slow],
   ['Bestow Curse', bestowCurse],
   ['Ice Storm', iceStorm], ['Banishment', banishment], ['Blight', blight],
   ['Fire Shield', fireShield], ['Stoneskin', stoneskin], ['Death Ward', deathWard],

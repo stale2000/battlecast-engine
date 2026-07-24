@@ -556,6 +556,8 @@ export function applyBuffFromSpell(
     attackersOfTypesHaveDisadvantage: tmpl.attackersOfTypesHaveDisadvantage,
     canSeeInvisible: tmpl.canSeeInvisible,
     hasteAction: tmpl.hasteAction,
+    limitAttacksToOne: tmpl.limitAttacksToOne,
+    restrictActionBonusCombination: tmpl.restrictActionBonusCombination,
     saveAdvantageAbilities: tmpl.saveAdvantageAbilities,
     saveAdvantageConditions: tmpl.saveAdvantageConditions,
     saveEnds: tmpl.saveEnds,

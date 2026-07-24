@@ -524,6 +524,10 @@ export interface BuffTemplate {
   canSeeInvisible?: boolean;
   /** Grants the restricted one-attack/Dash/Disengage/Hide action from Haste. */
   hasteAction?: boolean;
+  /** This effect limits the creature to one attack when it takes Attack. */
+  limitAttacksToOne?: boolean;
+  /** This effect prevents taking both an Action and a Bonus Action on a turn. */
+  restrictActionBonusCombination?: boolean;
   /** Ability-specific saving throw Advantage, such as Haste's Dexterity saves. */
   saveAdvantageAbilities?: Array<keyof Abilities>;
   /** Condition-specific saving throw Advantage, such as Protection from Poison. */
@@ -971,6 +975,10 @@ export interface ActiveBuff {
   attackersOfTypesHaveDisadvantage?: string[];
   canSeeInvisible?: boolean;
   hasteAction?: boolean;
+  /** This effect limits the creature to one attack when it takes Attack. */
+  limitAttacksToOne?: boolean;
+  /** This effect prevents taking both an Action and a Bonus Action on a turn. */
+  restrictActionBonusCombination?: boolean;
   saveAdvantageAbilities?: Array<keyof Abilities>;
   saveAdvantageConditions?: Condition[];
   /** Repeat this save at the specified point and remove the buff on success. */

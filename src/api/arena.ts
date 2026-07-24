@@ -73,6 +73,7 @@ function canHideFrom(state: NonNullable<Encounter['state']>, active: Creature, o
 }
 
 function attackRollBudget(creature: Creature): number {
+  if (creature.activeBuffs?.some(buff => buff.limitAttacksToOne)) return 1;
   const multiattack = getActiveActions(creature).find(action => action.type === 'multiattack')?.description.toLowerCase() ?? '';
   const count = multiattack.match(/\b(one|two|three|four|five|six)\b/)?.[1];
   return ({ one: 1, two: 2, three: 3, four: 4, five: 5, six: 6 } as const)[count as 'one' | 'two' | 'three' | 'four' | 'five' | 'six'] ?? 1;
@@ -94,6 +95,7 @@ function monkUnarmedAction(active: Creature): [number, MonsterAction] | undefine
 }
 
 function canCastArenaSpell(active: Creature, action: MonsterAction): boolean {
+  if (active.activeBuffs?.some(buff => buff.restrictActionBonusCombination) && active.bonusActionUsed && !action.isBonusAction) return false;
   if (action.isBonusAction && active.bonusActionUsed) return false;
   if (active.turnFlags?.bonusActionSpellCast && (action.spellLevel ?? 0) > 0 && !action.isBonusAction) return false;
   if (action.resourceCost && !hasResource(active, action.resourceCost.key, action.resourceCost.amount)) return false;
