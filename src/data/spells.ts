@@ -364,6 +364,14 @@ export function hellishRebuke(ability: SpellcastingAbility, mod: number, pb: num
   };
 }
 
+export function counterspell(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Counterspell', type: 'special', spellLevel: 3, spellSchool: 'abjuration', castingAbility: ability, reactionOnly: true,
+    description: 'Reaction when a creature within 60 feet casts a spell: the spell fails if it is level 3 or lower.',
+    range: { normal: 60, long: 60 }, targetScope: 'one_enemy',
+  };
+}
+
 export function grease(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
   return {
     name: 'Grease', type: 'special', spellLevel: 1, spellSchool: 'conjuration', castingAbility: ability,
@@ -1634,6 +1642,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Aid', aid], ['Magic Weapon', magicWeapon], ['Shining Smite', shiningSmite],
   ['Blindness/Deafness', blindnessDeafness], ['Mirror Image', mirrorImage],
   ['Invisibility', invisibility],
+  ['Counterspell', counterspell],
   ['See Invisibility', seeInvisibility],
   ['Gust of Wind', gustOfWind], ['Lesser Restoration', lesserRestoration], ['Protection from Poison', protectionFromPoison],
   ['Misty Step', mistyStep],

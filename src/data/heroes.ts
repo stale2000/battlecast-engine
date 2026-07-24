@@ -39,7 +39,7 @@ import {
   coneOfCold, flameStrike, holdMonster, massCureWounds, synapticStatic,
   harm, heal, fireStorm, sunburst, massHeal, stormOfVengeance,
   blindingSmite, conjureBarrage, protectionFromEnergy,
-  chromaticOrb, inflictWounds, command, witchBolt,
+  chromaticOrb, inflictWounds, command, witchBolt, counterspell,
   blindnessDeafness, invisibility, mirrorImage, seeInvisibility, dispelMagic, haste, wallOfFire,
   aid, magicWeapon, shiningSmite,
   acidArrow, armsOfHadar, barkskin, bestowCurse, blur, colorSpray, divineFavor, faerieFire, falseLife, fear, fly, fogCloud, grease, gustOfWind, lesserRestoration, mistyStep,
@@ -1683,6 +1683,7 @@ function buildOptionalSpells(
       pool.push(acidArrow(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb));
       pool.push(mistyStep(spellAbility, mod, pb));
       pool.push(dispelMagic(spellAbility, mod, pb), haste(spellAbility, mod, pb));
+      pool.push(counterspell(spellAbility, mod, pb));
       pool.push(bestowCurse(spellAbility, mod, pb), fear(spellAbility, mod, pb), fly(spellAbility, mod, pb));
       pool.push(wallOfFire(spellAbility, mod, pb));
       pool.push(blight(spellAbility, mod, pb));
@@ -1695,6 +1696,7 @@ function buildOptionalSpells(
       pool.push(acidArrow(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb));
       pool.push(mistyStep(spellAbility, mod, pb));
       pool.push(dispelMagic(spellAbility, mod, pb), haste(spellAbility, mod, pb));
+      pool.push(counterspell(spellAbility, mod, pb));
       pool.push(fear(spellAbility, mod, pb), fly(spellAbility, mod, pb));
       pool.push(wallOfFire(spellAbility, mod, pb));
       break;
@@ -1709,6 +1711,7 @@ function buildOptionalSpells(
       pool.push(blindnessDeafness(spellAbility, mod, pb));
       pool.push(lesserRestoration(spellAbility, mod, pb));
       pool.push(dispelMagic(spellAbility, mod, pb));
+      pool.push(counterspell(spellAbility, mod, pb));
       pool.push(revivify(spellAbility, mod, pb));
       break;
     case 'Druid':
@@ -2577,6 +2580,7 @@ export function getAvailableSpells(
       optional.push(acidArrow(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb));
       optional.push(mistyStep(spellAbility, mod, pb));
       optional.push(dispelMagic(spellAbility, mod, pb), haste(spellAbility, mod, pb));
+      optional.push(counterspell(spellAbility, mod, pb));
       optional.push(bestowCurse(spellAbility, mod, pb), fear(spellAbility, mod, pb), fly(spellAbility, mod, pb));
       optional.push(wallOfFire(spellAbility, mod, pb));
       break;
@@ -2588,6 +2592,7 @@ export function getAvailableSpells(
       optional.push(acidArrow(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb));
       optional.push(mistyStep(spellAbility, mod, pb));
       optional.push(dispelMagic(spellAbility, mod, pb), haste(spellAbility, mod, pb));
+      optional.push(counterspell(spellAbility, mod, pb));
       optional.push(fear(spellAbility, mod, pb), fly(spellAbility, mod, pb));
       optional.push(wallOfFire(spellAbility, mod, pb));
       break;
@@ -2602,6 +2607,7 @@ export function getAvailableSpells(
       optional.push(blindnessDeafness(spellAbility, mod, pb));
       optional.push(lesserRestoration(spellAbility, mod, pb));
       optional.push(dispelMagic(spellAbility, mod, pb));
+      optional.push(counterspell(spellAbility, mod, pb));
       optional.push(revivify(spellAbility, mod, pb));
       break;
     case 'Druid':

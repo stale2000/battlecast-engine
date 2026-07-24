@@ -102,6 +102,20 @@ function clearHealingSpellConditions(
   }
 }
 
+function tryAutomaticCounterspell(state: BattleState, caster: Creature, action: MonsterAction): boolean {
+  if (action.name === 'Counterspell' || (action.spellLevel ?? 0) > 3) return false;
+  const counterspeller = state.creatures
+    .filter(candidate => candidate.isAlive && candidate.team !== caster.team && !candidate.reactionUsed && !candidate.conditions.some(condition => ['incapacitated', 'paralyzed', 'stunned', 'unconscious'].includes(condition)) && creatureDistance(candidate, caster) <= 60)
+    .filter(candidate => candidate.monsterData.actions.some(candidateAction => candidateAction.name === 'Counterspell' && candidateAction.reactionOnly) && hasResource(candidate, 'slot-3'))
+    .sort((left, right) => left.id.localeCompare(right.id))[0];
+  if (!counterspeller) return false;
+  consumeResource(counterspeller, 'slot-3');
+  counterspeller.reactionUsed = true;
+  counterspeller.stats.actionUsage.Counterspell = (counterspeller.stats.actionUsage.Counterspell || 0) + 1;
+  pushLog(state, { round: state.round, turn: state.turnIndex, actor: counterspeller.displayName, action: 'Counterspell', details: `${counterspeller.displayName} counters ${caster.displayName}'s ${action.name}.`, type: 'special' });
+  return true;
+}
+
 function removeSpellConditions(
   state: BattleState,
   caster: Creature,
@@ -854,6 +868,7 @@ export function executeSpell(
     caster.turnFlags = { ...(caster.turnFlags ?? {}), bonusActionSpellCast: true };
   }
   const castAction = scaleAttackSpellForSlot(action, slotLevelUsed);
+  if (tryAutomaticCounterspell(state, caster, castAction)) return true;
 
   if (castAction.darkness && aoeCenter) {
     if (castAction.darkness.requiresConcentration) {

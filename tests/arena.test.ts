@@ -13,7 +13,7 @@ import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
-import { acidArrow, bane, barkskin, bestowCurse, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, cloudOfDaggers, command, dissonantWhispers, dispelMagic, entangle, flamingSphere, fly, grease, gustOfWind, haste, hellishRebuke, heroism, inflictWounds, invisibility, lesserRestoration, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, seeInvisibility, shield, shiningSmite, spikeGrowth, spiritualWeapon, tashasHideousLaughter, web, witchBolt } from '../src/data/spells.js';
+import { acidArrow, bane, barkskin, bestowCurse, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, cloudOfDaggers, command, counterspell, dissonantWhispers, dispelMagic, entangle, fireball, flamingSphere, fly, grease, gustOfWind, haste, hellishRebuke, heroism, inflictWounds, invisibility, lesserRestoration, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, seeInvisibility, shield, shiningSmite, spikeGrowth, spiritualWeapon, tashasHideousLaughter, web, witchBolt } from '../src/data/spells.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
@@ -488,6 +488,21 @@ describe('Kaggle arena bridge', () => {
     const action = getLegalActions(encounter, caster.id).find(choice => choice.type === 'spell' && choice.actionName === 'Bestow Curse' && choice.curseChoice === 'damage_rider')!;
     applyLegalAction(encounter, action);
     expect(target.activeBuffs.find(buff => buff.key === 'bestow-curse')?.damageRider).toBe('1d8 necrotic');
+  });
+
+  it('uses a nearby unused reaction and level-3 slot to counter an eligible spell', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [fireball('int', 3, 3)], additionalResources: { 'slot-3': 1 } } });
+    encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'blue', position: { x: 2, y: 0 }, heroOverrides: { additionalActions: [counterspell('int', 3, 3)], additionalResources: { 'slot-3': 1 } } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    const target = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
+    const hp = target.currentHp;
+    expect(executeSpell(encounter.state!, caster, fireball('int', 3, 3), target, [target], target.position)).toBe(true);
+    expect(target.currentHp).toBe(hp);
+    expect(caster.resources['slot-3']).toBe(0);
+    expect(target.resources['slot-3']).toBe(0);
+    expect(target.reactionUsed).toBe(true);
   });
 
   it('applies Bestow Curse forced Dodge at the start of the target turn', () => {
