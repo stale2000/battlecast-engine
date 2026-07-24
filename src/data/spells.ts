@@ -164,6 +164,7 @@ export function bane(ability: SpellcastingAbility, mod: number, pb: number): Mon
       requiresConcentration: true,
       attackBonusDice: '-1d4', saveBonusDice: '-1d4',
     },
+    multiTargetSave: { maxTargets: 3 },
     range: { normal: 30, long: 30 },
     targetScope: 'one_enemy',
   };

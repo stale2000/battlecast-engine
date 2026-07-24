@@ -207,6 +207,18 @@ function autoDartSpellActions(active: Creature, state: NonNullable<Encounter['st
   return result.slice(0, 32);
 }
 
+function multiTargetSaveSpellActions(active: Creature, state: NonNullable<Encounter['state']>, action: MonsterAction, actionIndex: number): ArenaAction[] {
+  const targets = spellTargets(active, state, action).sort((left, right) => left.id.localeCompare(right.id));
+  const result: ArenaAction[] = [];
+  const choose = (start: number, chosen: Creature[]): void => {
+    if (chosen.length) result.push({ id: `spell:${actionIndex}:${slug(action.name)}:targets:${chosen.map(target => target.id).join(',')}`, type: 'spell', actionName: action.name, actionIndex, targetId: chosen[0]!.id, targetIds: chosen.map(target => target.id) });
+    if (chosen.length === (action.multiTargetSave?.maxTargets ?? 1)) return;
+    for (let index = start; index < targets.length; index++) choose(index + 1, [...chosen, targets[index]!]);
+  };
+  choose(0, []);
+  return result;
+}
+
 function wildShapeActions(active: Creature, state: NonNullable<Encounter['state']>): ArenaAction[] {
   const level = active.monsterData.heroLevel ?? 0;
   if (active.monsterData.heroClass !== 'Druid' || level < 2 || active.wildShape || active.bonusActionUsed || active.concentratingOn || !hasResource(active, 'wild-shape')) return [];
@@ -236,6 +248,10 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
         if ((!action.replacesAttack && attackInProgress) || (action.replacesAttack && attacksUsed(active) >= attackRollBudget(active)) || !canCastArenaSpell(active, action)) continue;
         if (action.autoDarts || action.multiTargetAttack) {
           actions.push(...autoDartSpellActions(active, state, action, actionIndex));
+          continue;
+        }
+        if (action.multiTargetSave) {
+          actions.push(...multiTargetSaveSpellActions(active, state, action, actionIndex));
           continue;
         }
         if (action.teleport) {
@@ -461,7 +477,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
               ? { ...baseSpell, damageTypeChoice: { ...baseSpell.damageTypeChoice, selected: legal.damageType }, damageType: legal.damageType }
           : baseSpell;
       if (!spell || spell.name !== legal.actionName || !isSpellAction(spell)) throw new EncounterError(`Stale arena spell "${legal.id}".`);
-      if (!target || !executeSpell(state, active, spell, target, spell.autoDarts || spell.multiTargetAttack || spell.savingThrow?.area ? targets : undefined, legal.center)) throw new EncounterError(`Illegal or stale arena spell "${legal.id}".`);
+      if (!target || !executeSpell(state, active, spell, target, spell.autoDarts || spell.multiTargetAttack || spell.multiTargetSave || spell.savingThrow?.area ? targets : undefined, legal.center)) throw new EncounterError(`Illegal or stale arena spell "${legal.id}".`);
       if (spell.isBonusAction) active.bonusActionUsed = true;
       else if (spell.replacesAttack) {
         active.turnFlags[`arena-attack-${attacksUsed(active)}`] = true;

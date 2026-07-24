@@ -13,7 +13,7 @@ import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
-import { barkskin, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, dissonantWhispers, dispelMagic, fly, haste, hellishRebuke, heroism, invisibility, lesserRestoration, magicWeapon, mistyStep, moonbeam, protectionFromEnergy, resistance, revivify, scorchingRay, shield, shiningSmite, spiritualWeapon, web, witchBolt } from '../src/data/spells.js';
+import { bane, barkskin, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, dissonantWhispers, dispelMagic, fly, haste, hellishRebuke, heroism, invisibility, lesserRestoration, magicWeapon, mistyStep, moonbeam, protectionFromEnergy, resistance, revivify, scorchingRay, shield, shiningSmite, spiritualWeapon, web, witchBolt } from '../src/data/spells.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
@@ -388,6 +388,21 @@ describe('Kaggle arena bridge', () => {
     const action = getLegalActions(encounter, caster.id).find(choice => choice.type === 'spell' && choice.actionName === 'Chromatic Orb' && choice.damageType === 'acid')!;
     applyLegalAction(encounter, action);
     expect(encounter.state!.logs.some(log => log.action === 'Chromatic Orb' && log.details.includes('acid'))).toBe(true);
+  });
+
+  it('uses the exact server-generated Bane target set', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Bard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [bane('cha', 3, 3)], additionalResources: { 'slot-1': 1 } } });
+    for (const x of [2, 4, 6]) encounter.addCreature({ monster: 'Goblin Warrior', team: 'blue', position: { x, y: 0 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    const enemies = encounter.state!.creatures.filter(creature => creature.team === 'blue');
+    for (const enemy of enemies) enemy.monsterData = { ...enemy.monsterData, abilities: { ...enemy.monsterData.abilities, cha: 1 } };
+    encounter.state!.initiativeOrder = [caster.id];
+    startArena(encounter);
+    const action = getLegalActions(encounter, caster.id).find(choice => choice.type === 'spell' && choice.actionName === 'Bane' && choice.targetIds?.length === 2)!;
+    applyLegalAction(encounter, action);
+    for (const enemy of enemies) expect(enemy.activeBuffs.some(buff => buff.key === 'bane')).toBe(action.targetIds!.includes(enemy.id));
   });
 
   it('repeats Call Lightning from authoritative concentration state without another slot', () => {

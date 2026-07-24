@@ -694,7 +694,7 @@ export function tryUseBonusActionDamageBuff(state: BattleState, caster: Creature
   return true;
 }
 
-function applyBaneFromSpell(state: BattleState, caster: Creature, action: MonsterAction): void {
+function applyBaneFromSpell(state: BattleState, caster: Creature, action: MonsterAction, selectedTargets?: Creature[]): void {
   if (!action.buff || !action.savingThrow) return;
   const { ability } = action.savingThrow;
   const dc = action.savingThrow.dc + getSpellSaveDcBonus(caster, action);
@@ -703,10 +703,12 @@ function applyBaneFromSpell(state: BattleState, caster: Creature, action: Monste
     caster.concentratingOn = action.buff.key;
   }
   const range = action.range?.normal ?? 30;
-  const targets = getAliveCreatures(state)
+  const targets = (selectedTargets?.length ? selectedTargets : getAliveCreatures(state)
     .filter(c => c.team !== caster.team && creatureDistance(caster, c) <= range)
     .sort((a, b) => b.currentHp - a.currentHp)
-    .slice(0, 3);
+    .slice(0, action.multiTargetSave?.maxTargets ?? 3))
+    .filter(target => target.isAlive && target.team !== caster.team && creatureDistance(caster, target) <= range)
+    .slice(0, action.multiTargetSave?.maxTargets ?? 3);
 
   for (const target of targets) {
     const saveMod = getEffectiveSaveModifier(target, ability, state);
@@ -1024,7 +1026,7 @@ export function executeSpell(
   // Buff/debuff
   if (castAction.buff && primaryTarget && castAction.attackBonus === undefined) {
     if (castAction.name === 'Bane' && castAction.savingThrow) {
-      applyBaneFromSpell(state, caster, castAction);
+      applyBaneFromSpell(state, caster, castAction, aoeTargets);
       return true;
     }
     if (castAction.targetScope === 'all_allies_in_area') {
