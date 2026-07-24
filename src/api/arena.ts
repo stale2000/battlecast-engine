@@ -178,6 +178,7 @@ function withCurseChoice(spell: MonsterAction, choice: NonNullable<ArenaAction &
       attackDisadvantageAgainstCaster: choice === 'attack_disadvantage' ? true : undefined,
       damageRider: choice === 'damage_rider' ? '1d8 necrotic' : undefined,
       saveDisadvantageAbilities: ability ? [ability] : undefined,
+      abilityCheckDisadvantageAbilities: ability ? [ability] : undefined,
       forcedDodgeSave: choice === 'forced_dodge' && spell.savingThrow ? { ability: 'wis', dc: spell.savingThrow.dc } : undefined,
     },
   };

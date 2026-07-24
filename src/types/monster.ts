@@ -452,6 +452,7 @@ export interface BuffTemplate {
   /** One-shot rider such as Barbarian Staggering Blow: next save has Disadvantage. */
   saveDisadvantage?: boolean;
   saveDisadvantageAbilities?: Array<keyof Abilities>;
+  abilityCheckDisadvantageAbilities?: Array<keyof Abilities>;
   forcedDodgeSave?: { ability: keyof Abilities; dc: number };
   /** The target must use its action to Dash away from the caster each turn. */
   forcedFlee?: boolean;
@@ -900,6 +901,7 @@ export interface ActiveBuff {
   /** One-shot rider such as Barbarian Staggering Blow: next save has Disadvantage. */
   saveDisadvantage?: boolean;
   saveDisadvantageAbilities?: Array<keyof Abilities>;
+  abilityCheckDisadvantageAbilities?: Array<keyof Abilities>;
   forcedDodgeSave?: { ability: keyof Abilities; dc: number };
   forcedFlee?: boolean;
   /** Weapon Mastery: Slow reduces this creature's speed while active. */

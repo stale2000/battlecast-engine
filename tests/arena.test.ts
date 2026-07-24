@@ -507,6 +507,21 @@ describe('Kaggle arena bridge', () => {
     expect(target.turnFlags.dodge).toBe(true);
   });
 
+  it('applies Bestow Curse ability penalties to checks and saves', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [bestowCurse('int', 3, 3)], additionalResources: { 'slot-3': 1 } } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    const target = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
+    target.monsterData = { ...target.monsterData, abilities: { ...target.monsterData.abilities, wis: 1 } };
+    encounter.state!.initiativeOrder = [caster.id];
+    startArena(encounter);
+    const action = getLegalActions(encounter, caster.id).find(choice => choice.type === 'spell' && choice.actionName === 'Bestow Curse' && choice.curseChoice === 'ability_str')!;
+    withRng({ next: () => 0 }, () => applyLegalAction(encounter, action));
+    expect(target.activeBuffs.find(buff => buff.key === 'bestow-curse')).toMatchObject({ saveDisadvantageAbilities: ['str'], abilityCheckDisadvantageAbilities: ['str'] });
+  });
+
   it('rejects voluntary movement closer to the source of Fear', () => {
     const encounter = new Encounter({ seed: 1 });
     encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 } });

@@ -649,7 +649,8 @@ export function escapeGrapple(
   if (!timer || !source?.isAlive) return false;
   const dc = timer.saveDC ?? 8 + source.monsterData.proficiencyBonus + abilityModifier(getEffectiveAbilityScore(source, 'str'));
   const advantage = target.monsterData.heroSpecies === 'Goliath';
-  const rolled = rollAttack(0, advantage, false);
+  const disadvantage = (target.activeBuffs ?? []).some(buff => buff.abilityCheckDisadvantageAbilities?.includes(ability));
+  const rolled = rollAttack(0, advantage, disadvantage);
   const total = rolled.naturalRoll + abilityModifier(getEffectiveAbilityScore(target, ability));
   const success = total >= dc;
   state.events.push({ kind: 'save', targetId: target.id, success, durationMs: BASE_DURATIONS.save });
@@ -670,7 +671,7 @@ export function escapeBuff(
 ): boolean {
   const buff = target.activeBuffs.find(candidate => candidate.key === buffKey && candidate.escapeAction);
   if (!buff?.escapeAction) return false;
-  const rolled = rollAttack(0, target.monsterData.heroSpecies === 'Goliath', false);
+  const rolled = rollAttack(0, target.monsterData.heroSpecies === 'Goliath', (target.activeBuffs ?? []).some(candidate => candidate.abilityCheckDisadvantageAbilities?.includes(buff.escapeAction!.ability)));
   const total = rolled.naturalRoll + abilityModifier(getEffectiveAbilityScore(target, buff.escapeAction.ability));
   const success = total >= buff.escapeAction.dc;
   state.events.push({ kind: 'save', targetId: target.id, success, durationMs: BASE_DURATIONS.save });
