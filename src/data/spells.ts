@@ -86,6 +86,16 @@ export function starryWisp(ability: SpellcastingAbility, mod: number, pb: number
   };
 }
 
+export function thunderclap(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  const dice = pb >= 6 ? '4d6' : pb >= 4 ? '3d6' : pb >= 3 ? '2d6' : '1d6';
+  return {
+    name: 'Thunderclap', type: 'special', spellLevel: 0, spellSchool: 'evocation', castingAbility: ability,
+    description: `Each enemy in a 5-foot emanation must make a CON save (DC ${saveDC(mod, pb)}) or take ${dice} thunder damage.`,
+    damageType: 'thunder', targetScope: 'area_enemies',
+    savingThrow: { ability: 'con', dc: saveDC(mod, pb), damageOnFail: dice, area: '5-foot emanation' },
+  };
+}
+
 export function magicMissile(): MonsterAction {
   return {
     name: 'Magic Missile',
@@ -1797,7 +1807,7 @@ export function wallOfFire(ability: SpellcastingAbility, mod: number, pb: number
 type SpellFactory = (ability: SpellcastingAbility, mod: number, pb: number) => MonsterAction;
 const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Magic Missile', () => magicMissile()],
-  ['Blade Ward', bladeWard], ['Resistance', resistance], ['Poison Spray', poisonSpray], ['Thorn Whip', thornWhip], ['Acid Splash', acidSplash], ['Starry Wisp', starryWisp],
+  ['Blade Ward', bladeWard], ['Resistance', resistance], ['Poison Spray', poisonSpray], ['Thorn Whip', thornWhip], ['Acid Splash', acidSplash], ['Starry Wisp', starryWisp], ['Thunderclap', thunderclap],
   ['Shield', shield],
   ['Hellish Rebuke', hellishRebuke],
   ['Burning Hands', burningHands], ['Thunderwave', thunderwave], ['Sleep', sleep],

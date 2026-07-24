@@ -2075,6 +2075,16 @@ describe('Kaggle arena bridge', () => {
     activeWispTarget.conditions.push('invisible');
     applyLegalAction(wispEncounter, getLegalActions(wispEncounter, bard.id).find(candidate => candidate.actionName === 'Starry Wisp')!);
     expect(canSee(wispEncounter.state!, activeBard, activeWispTarget)).toBe(true);
+
+    for (const heroClass of ['Bard', 'Druid', 'Sorcerer', 'Warlock', 'Wizard'] as const) {
+      expect(getAvailableSpells(heroClass, 5).some(spell => spell.name === 'Thunderclap')).toBe(true);
+    }
+    expect(buildSpellAction('Thunderclap', 'cha', 3, 3)).toMatchObject({ spellLevel: 0, savingThrow: { damageOnFail: '2d6', area: '5-foot emanation' } });
+    const clapEncounter = new Encounter({ seed: 1 });
+    const [clapper] = clapEncounter.addCreature({ heroClass: 'Bard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { spells: ['Thunderclap'] } });
+    clapEncounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
+    clapEncounter.start(); clapEncounter.state!.initiativeOrder = [clapper.id]; startArena(clapEncounter);
+    expect(() => applyLegalAction(clapEncounter, getLegalActions(clapEncounter, clapper.id).find(candidate => candidate.actionName === 'Thunderclap')!)).not.toThrow();
   });
 
   it('summons a controlled Bestial Spirit with validated placement and removes it on concentration loss or expiry', () => {

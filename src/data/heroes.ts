@@ -43,7 +43,7 @@ import {
   blindnessDeafness, invisibility, mirrorImage, seeInvisibility, dispelMagic, haste, wallOfFire,
   aid, magicWeapon, shiningSmite,
   acidArrow, acidSplash, armsOfHadar, barkskin, bestowCurse, blur, colorSpray, darkness, divineFavor, enlargeReduce, expeditiousRetreat, faerieFire, falseLife, fear, fly, fogCloud, grease, gustOfWind, lesserRestoration, mistyStep,
-  armorOfAgathys, beaconOfHope, longstrider, mageArmor, passWithoutTrace, poisonSpray, rayOfEnfeeblement, rayOfSickness, revivify, slow, starryWisp, stinkingCloud, tashasHideousLaughter, thornWhip, vampiricTouch,
+  armorOfAgathys, beaconOfHope, longstrider, mageArmor, passWithoutTrace, poisonSpray, rayOfEnfeeblement, rayOfSickness, revivify, slow, starryWisp, stinkingCloud, tashasHideousLaughter, thunderclap, thornWhip, vampiricTouch,
   protectionFromPoison, shield, hellishRebuke,
   circleOfDeath, chainLightning, disintegrate, fingerOfDeath,
   befuddlement, powerWordHeal, powerWordKill, meteorSwarm,
@@ -1676,7 +1676,7 @@ function buildOptionalSpells(
   const pool: MonsterAction[] = [];
   switch (className) {
     case 'Wizard':
-      pool.push(acidSplash(spellAbility, mod, pb), poisonSpray(spellAbility, mod, pb));
+      pool.push(acidSplash(spellAbility, mod, pb), poisonSpray(spellAbility, mod, pb), thunderclap(spellAbility, mod, pb));
       pool.push(chromaticOrb(spellAbility, mod, pb), witchBolt(spellAbility, mod, pb));
       pool.push(shield(spellAbility, mod, pb), fogCloud(spellAbility, mod, pb));
       pool.push(expeditiousRetreat(spellAbility, mod, pb), falseLife(spellAbility, mod, pb), grease(spellAbility, mod, pb), mageArmor(spellAbility, mod, pb), rayOfSickness(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
@@ -1690,7 +1690,7 @@ function buildOptionalSpells(
       pool.push(blight(spellAbility, mod, pb));
       break;
     case 'Sorcerer':
-      pool.push(acidSplash(spellAbility, mod, pb), poisonSpray(spellAbility, mod, pb));
+      pool.push(acidSplash(spellAbility, mod, pb), poisonSpray(spellAbility, mod, pb), thunderclap(spellAbility, mod, pb));
       pool.push(chromaticOrb(spellAbility, mod, pb), witchBolt(spellAbility, mod, pb));
       pool.push(shield(spellAbility, mod, pb), fogCloud(spellAbility, mod, pb));
       pool.push(expeditiousRetreat(spellAbility, mod, pb), falseLife(spellAbility, mod, pb), grease(spellAbility, mod, pb), mageArmor(spellAbility, mod, pb), rayOfSickness(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
@@ -1703,7 +1703,7 @@ function buildOptionalSpells(
       pool.push(wallOfFire(spellAbility, mod, pb));
       break;
     case 'Warlock':
-      pool.push(poisonSpray(spellAbility, mod, pb));
+      pool.push(poisonSpray(spellAbility, mod, pb), thunderclap(spellAbility, mod, pb));
       pool.push(armorOfAgathys(spellAbility, mod, pb), armsOfHadar(spellAbility, mod, pb), colorSpray(spellAbility, mod, pb), darkness(spellAbility, mod, pb), expeditiousRetreat(spellAbility, mod, pb), rayOfEnfeeblement(spellAbility, mod, pb));
       pool.push(bestowCurse(spellAbility, mod, pb));
       pool.push(mirrorImage(spellAbility, mod, pb));
@@ -1719,7 +1719,7 @@ function buildOptionalSpells(
       pool.push(revivify(spellAbility, mod, pb));
       break;
     case 'Druid':
-      pool.push(poisonSpray(spellAbility, mod, pb), starryWisp(spellAbility, mod, pb), thornWhip(spellAbility, mod, pb));
+      pool.push(poisonSpray(spellAbility, mod, pb), starryWisp(spellAbility, mod, pb), thunderclap(spellAbility, mod, pb), thornWhip(spellAbility, mod, pb));
       pool.push(summonBeast(spellAbility, mod, pb));
       pool.push(barkskin(spellAbility, mod, pb), faerieFire(spellAbility, mod, pb), fogCloud(spellAbility, mod, pb), longstrider(spellAbility, mod, pb));
       pool.push(lesserRestoration(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb), passWithoutTrace(spellAbility, mod, pb), spikeGrowth(spellAbility, mod, pb));
@@ -1729,7 +1729,7 @@ function buildOptionalSpells(
       pool.push(wallOfFire(spellAbility, mod, pb));
       break;
     case 'Bard':
-      pool.push(starryWisp(spellAbility, mod, pb));
+      pool.push(starryWisp(spellAbility, mod, pb), thunderclap(spellAbility, mod, pb));
       pool.push(heroism(spellAbility, mod, pb));
       pool.push(faerieFire(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
       pool.push(command(spellAbility, mod, pb));
@@ -2582,7 +2582,7 @@ export function getAvailableSpells(
   const optional: MonsterAction[] = [];
   switch (className) {
     case 'Wizard':
-      optional.push(acidSplash(spellAbility, mod, pb), poisonSpray(spellAbility, mod, pb));
+      optional.push(acidSplash(spellAbility, mod, pb), poisonSpray(spellAbility, mod, pb), thunderclap(spellAbility, mod, pb));
       optional.push(chromaticOrb(spellAbility, mod, pb), witchBolt(spellAbility, mod, pb));
       optional.push(shield(spellAbility, mod, pb), fogCloud(spellAbility, mod, pb));
       optional.push(expeditiousRetreat(spellAbility, mod, pb), falseLife(spellAbility, mod, pb), grease(spellAbility, mod, pb), mageArmor(spellAbility, mod, pb), rayOfSickness(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
@@ -2597,7 +2597,7 @@ export function getAvailableSpells(
       optional.push(wallOfFire(spellAbility, mod, pb));
       break;
     case 'Sorcerer':
-      optional.push(acidSplash(spellAbility, mod, pb), poisonSpray(spellAbility, mod, pb));
+      optional.push(acidSplash(spellAbility, mod, pb), poisonSpray(spellAbility, mod, pb), thunderclap(spellAbility, mod, pb));
       optional.push(chromaticOrb(spellAbility, mod, pb), witchBolt(spellAbility, mod, pb));
       optional.push(shield(spellAbility, mod, pb), fogCloud(spellAbility, mod, pb));
       optional.push(expeditiousRetreat(spellAbility, mod, pb), falseLife(spellAbility, mod, pb), grease(spellAbility, mod, pb), mageArmor(spellAbility, mod, pb), rayOfSickness(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
@@ -2612,7 +2612,7 @@ export function getAvailableSpells(
       optional.push(wallOfFire(spellAbility, mod, pb));
       break;
     case 'Warlock':
-      optional.push(poisonSpray(spellAbility, mod, pb));
+      optional.push(poisonSpray(spellAbility, mod, pb), thunderclap(spellAbility, mod, pb));
       optional.push(armorOfAgathys(spellAbility, mod, pb), armsOfHadar(spellAbility, mod, pb), colorSpray(spellAbility, mod, pb), darkness(spellAbility, mod, pb), expeditiousRetreat(spellAbility, mod, pb), rayOfEnfeeblement(spellAbility, mod, pb));
       optional.push(bestowCurse(spellAbility, mod, pb));
       optional.push(mirrorImage(spellAbility, mod, pb));
@@ -2628,7 +2628,7 @@ export function getAvailableSpells(
       optional.push(revivify(spellAbility, mod, pb));
       break;
     case 'Druid':
-      optional.push(poisonSpray(spellAbility, mod, pb), starryWisp(spellAbility, mod, pb), thornWhip(spellAbility, mod, pb));
+      optional.push(poisonSpray(spellAbility, mod, pb), starryWisp(spellAbility, mod, pb), thunderclap(spellAbility, mod, pb), thornWhip(spellAbility, mod, pb));
       optional.push(summonBeast(spellAbility, mod, pb));
       optional.push(barkskin(spellAbility, mod, pb), faerieFire(spellAbility, mod, pb), fogCloud(spellAbility, mod, pb), longstrider(spellAbility, mod, pb));
       optional.push(lesserRestoration(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb), passWithoutTrace(spellAbility, mod, pb), spikeGrowth(spellAbility, mod, pb));
@@ -2638,7 +2638,7 @@ export function getAvailableSpells(
       optional.push(wallOfFire(spellAbility, mod, pb));
       break;
     case 'Bard':
-      optional.push(starryWisp(spellAbility, mod, pb));
+      optional.push(starryWisp(spellAbility, mod, pb), thunderclap(spellAbility, mod, pb));
       optional.push(heroism(spellAbility, mod, pb));
       optional.push(faerieFire(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
       optional.push(command(spellAbility, mod, pb));
