@@ -743,7 +743,7 @@ export function fear(ability: SpellcastingAbility, mod: number, pb: number): Mon
     name: 'Fear', type: 'special', spellLevel: 3, spellSchool: 'illusion', castingAbility: ability, concentration: true, durationRounds: 10,
     description: `30-foot cone. WIS save DC ${saveDC(mod, pb)} or Frightened for 1 minute; repeat the save at the end of each turn.`,
     savingThrow: { ability: 'wis', dc: saveDC(mod, pb), conditionOnFail: 'frightened', conditionDuration: '1_minute', area: '30-foot cone' }, targetScope: 'area_enemies',
-    buffOnFailedSave: { name: 'Fear', key: 'fear', requiresConcentration: true, appliedConditions: ['frightened'], saveEnds: { ability: 'wis', dc: saveDC(mod, pb), at: 'targetTurnEnd' } },
+    buffOnFailedSave: { name: 'Fear', key: 'fear', requiresConcentration: true, appliedConditions: ['frightened'], forcedFlee: true, saveEnds: { ability: 'wis', dc: saveDC(mod, pb), at: 'targetTurnEnd' } },
   };
 }
 

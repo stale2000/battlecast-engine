@@ -481,6 +481,19 @@ export function processTurnStart(state: BattleState, creature: Creature): boolea
   }
   processRecharges(creature);
   resetMovementStateForTurn(state, creature);
+  const fleeBuff = creature.activeBuffs.find(buff => buff.forcedFlee);
+  const fearSource = fleeBuff && state.creatures.find(candidate => candidate.id === fleeBuff.casterId && candidate.isAlive);
+  if (fearSource) {
+    const from = { ...creature.position };
+    creature.movementRemaining *= 2;
+    creature.position = moveToward(creature, {
+      x: creature.position.x + Math.sign(creature.position.x - fearSource.position.x) * (state.gridSize ?? 20),
+      y: creature.position.y + Math.sign(creature.position.y - fearSource.position.y) * (state.gridSize ?? 20),
+    }, state);
+    checkAuraEntry(state, creature, from);
+    creature.hasActed = true;
+    pushLog(state, { round: state.round, turn: state.turnIndex, actor: creature.displayName, action: fleeBuff!.name, details: `${creature.displayName} dashes away in fear.`, type: 'condition' });
+  }
   const forcedDodge = creature.activeBuffs.find(buff => buff.forcedDodgeSave);
   if (forcedDodge?.forcedDodgeSave) {
     const { ability, dc } = forcedDodge.forcedDodgeSave;

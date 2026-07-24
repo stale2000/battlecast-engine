@@ -506,6 +506,7 @@ export function applyBuffFromSpell(
     saveDisadvantage: tmpl.saveDisadvantage,
     saveDisadvantageAbilities: tmpl.saveDisadvantageAbilities,
     forcedDodgeSave: tmpl.forcedDodgeSave,
+    forcedFlee: tmpl.forcedFlee,
     speedPenalty: tmpl.speedPenalty,
     speedBonus: tmpl.speedBonus,
     stealthBonus: tmpl.stealthBonus,

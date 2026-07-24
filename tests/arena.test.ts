@@ -514,9 +514,12 @@ describe('Kaggle arena bridge', () => {
     encounter.start();
     const source = encounter.state!.creatures.find(creature => creature.team === 'red')!;
     const frightened = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
-    frightened.activeBuffs.push({ name: 'Fear', key: 'fear', casterId: source.id, appliedRound: 1, endRound: 11, appliedConditions: ['frightened'] });
+    frightened.activeBuffs.push({ name: 'Fear', key: 'fear', casterId: source.id, appliedRound: 1, endRound: 11, appliedConditions: ['frightened'], forcedFlee: true });
     expect(isFrightenedMoveLegal(frightened, { x: 4, y: 0 }, encounter.state!)).toBe(false);
     expect(isFrightenedMoveLegal(frightened, { x: 6, y: 0 }, encounter.state!)).toBe(true);
+    expect(processTurnStart(encounter.state!, frightened)).toBe(true);
+    expect(frightened.position.x).toBeGreaterThan(5);
+    expect(frightened.hasActed).toBe(true);
   });
 
   it('makes attackers pass Sanctuary before they can deal damage', () => {

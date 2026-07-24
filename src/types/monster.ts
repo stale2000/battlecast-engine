@@ -453,6 +453,8 @@ export interface BuffTemplate {
   saveDisadvantage?: boolean;
   saveDisadvantageAbilities?: Array<keyof Abilities>;
   forcedDodgeSave?: { ability: keyof Abilities; dc: number };
+  /** The target must use its action to Dash away from the caster each turn. */
+  forcedFlee?: boolean;
   /** Weapon Mastery: Slow reduces this creature's speed while active. */
   speedPenalty?: number;
   /** Longstrider-style increase to all movement speeds. */
@@ -899,6 +901,7 @@ export interface ActiveBuff {
   saveDisadvantage?: boolean;
   saveDisadvantageAbilities?: Array<keyof Abilities>;
   forcedDodgeSave?: { ability: keyof Abilities; dc: number };
+  forcedFlee?: boolean;
   /** Weapon Mastery: Slow reduces this creature's speed while active. */
   speedPenalty?: number;
   /** Longstrider-style increase to all movement speeds. */
