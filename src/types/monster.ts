@@ -690,6 +690,8 @@ export interface Creature {
   };
   /** True if the bonus action has been used this turn. */
   bonusActionUsed?: boolean;
+  /** Source of the one skipped turn imposed when Haste ends. */
+  hasteLethargySourceId?: string;
   /** Active concentration aura spell (Spirit Guardians, Call Lightning, Moonbeam).
    *  Deals damage each round to enemies in range while concentration holds. */
   concentrationAura?: {

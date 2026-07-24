@@ -515,6 +515,22 @@ describe('Kaggle arena bridge', () => {
     expect(caster.concentrationAura).toMatchObject({ spellName: 'Flaming Sphere', moveFt: 30, origin: 'point' });
   });
 
+  it('skips the target next turn when Haste ends', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [haste('int', 3, 3)], additionalResources: { 'slot-3': 1 } } });
+    encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'red', position: { x: 1, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 5, y: 0 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.monsterData.heroClass === 'Wizard')!;
+    const target = encounter.state!.creatures.find(creature => creature.monsterData.heroClass === 'Fighter')!;
+    expect(executeSpell(encounter.state!, caster, haste('int', 3, 3), target)).toBe(true);
+    dropConcentratedBuffsFrom(encounter.state!, caster.id);
+    expect(target.conditions).toContain('incapacitated');
+    expect(processTurnStart(encounter.state!, target)).toBe(false);
+    expect(target.conditions).not.toContain('incapacitated');
+    expect(processTurnStart(encounter.state!, target)).toBe(true);
+  });
+
   it('resolves Cloud of Daggers without a saving throw when a creature starts in it', () => {
     const encounter = new Encounter({ seed: 1 });
     encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [cloudOfDaggers('int', 3, 3)], additionalResources: { 'slot-2': 1 } } });

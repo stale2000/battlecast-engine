@@ -305,7 +305,10 @@ export function dropConcentratedBuffsFrom(
     if (!c.activeBuffs) continue;
     const removed = c.activeBuffs.filter(b => b.requiresConcentration && b.casterId === casterId && !(preserveHuntersMark && b.key === 'hunters-mark'));
     c.activeBuffs = c.activeBuffs.filter(b => !removed.includes(b));
-    for (const buff of removed) clearBuffCondition(c, buff);
+    for (const buff of removed) {
+      clearBuffCondition(c, buff);
+      if (buff.key === 'haste') applyHasteLethargy(state, c, casterId);
+    }
     if (c.id === casterId && c.concentrationAura) {
       state.events.push({
         kind: 'concentrationAura', creatureId: c.id, active: false,
@@ -341,10 +344,25 @@ function clearBuffCondition(creature: Creature, buff: ActiveBuff): void {
  * "beginning of your turn" rule). Buffs whose endRound has passed are
  * removed, along with their concentration effects.
  */
-export function expireBuffsForCreature(creature: Creature, currentRound: number): void {
-  const expired = creature.activeBuffs.filter(b => b.endRound <= currentRound);
-  creature.activeBuffs = creature.activeBuffs.filter(b => b.endRound > currentRound);
-  for (const buff of expired) clearBuffCondition(creature, buff);
+export function expireBuffsForCreature(state: BattleState, creature: Creature): void {
+  const expired = creature.activeBuffs.filter(b => b.endRound <= state.round);
+  creature.activeBuffs = creature.activeBuffs.filter(b => b.endRound > state.round);
+  for (const buff of expired) {
+    clearBuffCondition(creature, buff);
+    if (buff.key === 'haste') applyHasteLethargy(state, creature, buff.casterId);
+  }
+}
+
+function applyHasteLethargy(state: BattleState, creature: Creature, sourceId: string): void {
+  if (creature.hasteLethargySourceId || !creature.isAlive) return;
+  creature.hasteLethargySourceId = sourceId;
+  if (!creature.conditions.includes('incapacitated')) creature.conditions.push('incapacitated');
+  creature.conditionTimers.push({ condition: 'incapacitated', duration: 'permanent', appliedRound: state.round, sourceId });
+  pushLog(state, {
+    round: state.round, turn: state.turnIndex, actor: creature.displayName,
+    action: 'Haste', details: `${creature.displayName} is lethargic until after its next turn.`, type: 'condition',
+  });
+  state.events.push({ kind: 'condition', creatureId: creature.id, condition: 'incapacitated', applied: true, durationMs: BASE_DURATIONS.condition });
 }
 
 /** Remove source-turn mastery debuffs at the start of the source creature's next turn. */

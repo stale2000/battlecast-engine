@@ -383,7 +383,7 @@ export function processTurnStart(state: BattleState, creature: Creature): boolea
   }
   expireSourceTurnBuffs(state, creature);
   if (creature.activeBuffs) {
-    expireBuffsForCreature(creature, state.round);
+    expireBuffsForCreature(state, creature);
     for (const buff of creature.activeBuffs) {
       if (buff.temporaryHpAtTurnStart) applyTemporaryHp(state, creature, buff.temporaryHpAtTurnStart, creature, buff.name);
     }
@@ -422,6 +422,18 @@ export function processTurnStart(state: BattleState, creature: Creature): boolea
     }
   }
   processConditionTimers(state, creature);
+  if (creature.hasteLethargySourceId) {
+    const sourceId = creature.hasteLethargySourceId;
+    creature.hasteLethargySourceId = undefined;
+    creature.conditionTimers = creature.conditionTimers.filter(timer => !(timer.condition === 'incapacitated' && timer.sourceId === sourceId));
+    if (!creature.conditionTimers.some(timer => timer.condition === 'incapacitated')) creature.conditions = creature.conditions.filter(condition => condition !== 'incapacitated');
+    pushLog(state, {
+      round: state.round, turn: state.turnIndex, actor: creature.displayName,
+      action: 'Haste', details: `${creature.displayName} loses its Haste turn.`, type: 'condition',
+    });
+    state.events.push({ kind: 'condition', creatureId: creature.id, condition: 'incapacitated', applied: false, durationMs: BASE_DURATIONS.condition });
+    return false;
+  }
   const incapacitated = creature.conditions.some(condition =>
     condition === 'incapacitated' || condition === 'stunned' || condition === 'paralyzed' || condition === 'petrified' || condition === 'unconscious'
   );
