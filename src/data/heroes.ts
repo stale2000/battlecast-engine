@@ -1692,7 +1692,7 @@ function buildOptionalSpells(
       break;
     case 'Sorcerer':
       pool.push(acidSplash(spellAbility, mod, pb), poisonSpray(spellAbility, mod, pb), thunderclap(spellAbility, mod, pb));
-      pool.push(chromaticOrb(spellAbility, mod, pb), colorSpray(spellAbility, mod, pb), witchBolt(spellAbility, mod, pb));
+      pool.push(chromaticOrb(spellAbility, mod, pb), colorSpray(spellAbility, mod, pb), sleep(spellAbility, mod, pb), witchBolt(spellAbility, mod, pb));
       pool.push(shield(spellAbility, mod, pb), fogCloud(spellAbility, mod, pb));
       pool.push(expeditiousRetreat(spellAbility, mod, pb), falseLife(spellAbility, mod, pb), grease(spellAbility, mod, pb), mageArmor(spellAbility, mod, pb), rayOfSickness(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
       pool.push(blindnessDeafness(spellAbility, mod, pb), blur(spellAbility, mod, pb), cloudOfDaggers(spellAbility, mod, pb), darkness(spellAbility, mod, pb), enlargeReduce(spellAbility, mod, pb), flamingSphere(spellAbility, mod, pb), invisibility(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb), seeInvisibility(spellAbility, mod, pb));
@@ -1730,7 +1730,7 @@ function buildOptionalSpells(
       break;
     case 'Bard':
       pool.push(starryWisp(spellAbility, mod, pb), thunderclap(spellAbility, mod, pb));
-      pool.push(colorSpray(spellAbility, mod, pb));
+      pool.push(colorSpray(spellAbility, mod, pb), sleep(spellAbility, mod, pb));
       pool.push(heroism(spellAbility, mod, pb));
       pool.push(faerieFire(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
       pool.push(command(spellAbility, mod, pb));
@@ -2600,7 +2600,7 @@ export function getAvailableSpells(
       break;
     case 'Sorcerer':
       optional.push(acidSplash(spellAbility, mod, pb), poisonSpray(spellAbility, mod, pb), thunderclap(spellAbility, mod, pb));
-      optional.push(chromaticOrb(spellAbility, mod, pb), colorSpray(spellAbility, mod, pb), witchBolt(spellAbility, mod, pb));
+      optional.push(chromaticOrb(spellAbility, mod, pb), colorSpray(spellAbility, mod, pb), sleep(spellAbility, mod, pb), witchBolt(spellAbility, mod, pb));
       optional.push(shield(spellAbility, mod, pb), fogCloud(spellAbility, mod, pb));
       optional.push(expeditiousRetreat(spellAbility, mod, pb), falseLife(spellAbility, mod, pb), grease(spellAbility, mod, pb), mageArmor(spellAbility, mod, pb), rayOfSickness(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
       optional.push(blindnessDeafness(spellAbility, mod, pb), blur(spellAbility, mod, pb), cloudOfDaggers(spellAbility, mod, pb), darkness(spellAbility, mod, pb), enlargeReduce(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb));
@@ -2640,7 +2640,7 @@ export function getAvailableSpells(
       break;
     case 'Bard':
       optional.push(starryWisp(spellAbility, mod, pb), thunderclap(spellAbility, mod, pb));
-      optional.push(colorSpray(spellAbility, mod, pb));
+      optional.push(colorSpray(spellAbility, mod, pb), sleep(spellAbility, mod, pb));
       optional.push(heroism(spellAbility, mod, pb));
       optional.push(faerieFire(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
       optional.push(command(spellAbility, mod, pb));

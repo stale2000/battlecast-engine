@@ -148,23 +148,21 @@ export function thunderwave(ability: SpellcastingAbility, mod: number, pb: numbe
   };
 }
 
-export function sleep(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
-  void _mod;
-  void _pb;
-  // 2024 Sleep: 5d8 HP pool, lowest-current-HP creatures in the 20-ft sphere
-  // fall Unconscious until the pool is exhausted. No saving throw.
+export function sleep(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
   return {
     name: 'Sleep',
     type: 'special',
-    description: '20-foot radius. Roll 5d8 as an HP pool. Starting with the lowest-HP creatures, each falls Unconscious (1 minute) and its current HP is subtracted from the pool; stop when the next creature exceeds the pool.',
+    description: 'Each creature in a 5-foot sphere makes a Wisdom save or is Incapacitated until the end of its next turn. On a second failed save, it becomes Unconscious for the duration. Concentration.',
     spellLevel: 1,
     castingAbility: ability,
+    concentration: true,
+    durationRounds: 10,
+    range: { normal: 60, long: 60 },
     savingThrow: {
-      ability: 'wis', dc: 0, // not used - hpPoolDice is authoritative
-      hpPoolDice: '5d8',
-      conditionOnFail: 'unconscious',
-      conditionDuration: '1_minute',
-      area: '20-foot sphere',
+      ability: 'wis', dc: saveDC(mod, pb),
+      conditionOnFail: 'incapacitated', conditionDuration: 'end_of_next_turn',
+      secondFailureCondition: 'unconscious', secondFailureDuration: '1_minute',
+      area: '5-foot sphere',
     },
     targetScope: 'area_enemies',
   };

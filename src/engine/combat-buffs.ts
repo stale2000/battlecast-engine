@@ -325,8 +325,12 @@ export function dropConcentratedBuffsFrom(
     && (caster.monsterData.heroLevel ?? 0) >= 13;
   for (const c of state.creatures) {
     for (const zone of removedZones) {
+      const removedCondition = zone.conditionOnFail && c.conditionTimers.some(timer => timer.sourceId === casterId && timer.condition === zone.conditionOnFail);
       c.conditionTimers = c.conditionTimers.filter(timer => !(timer.sourceId === casterId && timer.condition === zone.conditionOnFail));
-      if (!c.conditionTimers.some(timer => timer.condition === zone.conditionOnFail)) c.conditions = c.conditions.filter(condition => condition !== zone.conditionOnFail);
+      if (zone.conditionOnFail && removedCondition && !c.conditionTimers.some(timer => timer.condition === zone.conditionOnFail)) {
+        c.conditions = c.conditions.filter(condition => condition !== zone.conditionOnFail);
+        state.events.push({ kind: 'condition', creatureId: c.id, condition: zone.conditionOnFail, applied: false, durationMs: BASE_DURATIONS.condition });
+      }
     }
     if (!c.activeBuffs) continue;
     const removed = c.activeBuffs.filter(b => b.requiresConcentration && b.casterId === casterId && !(preserveHuntersMark && b.key === 'hunters-mark'));

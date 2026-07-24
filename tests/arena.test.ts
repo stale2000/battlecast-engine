@@ -1894,6 +1894,11 @@ describe('Kaggle arena bridge', () => {
     expect(buildSpellAction('Color Spray', 'cha', 3, 3)).toMatchObject({ savingThrow: { ability: 'con', dc: 14, conditionOnFail: 'blinded', conditionDuration: 'end_of_next_turn', area: '15-foot cone' } });
   });
 
+  it('uses the SRD staged Sleep effect for every caster class', () => {
+    for (const heroClass of ['Bard', 'Sorcerer', 'Wizard'] as const) expect(getAvailableSpells(heroClass, 5).some(action => action.name === 'Sleep')).toBe(true);
+    expect(buildSpellAction('Sleep', 'cha', 3, 3)).toMatchObject({ concentration: true, range: { normal: 60 }, savingThrow: { ability: 'wis', dc: 14, conditionOnFail: 'incapacitated', conditionDuration: 'end_of_next_turn', secondFailureCondition: 'unconscious', secondFailureDuration: '1_minute', area: '5-foot sphere' } });
+  });
+
   it('offers and resolves supported resource actions without trusting client parameters', () => {
     const encounter = new Encounter({ seed: 1 });
     const [fighter] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'red', position: { x: 0, y: 0 } });
