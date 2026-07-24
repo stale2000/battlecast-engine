@@ -148,6 +148,9 @@ export interface MonsterAction {
   attackBonus?: number;
   damage?: string; // dice expression like "2d6+4"
   damageType?: string;
+  /** Immediate damage dealt when attaching a linked buff (Heat Metal). */
+  initialDamage?: string;
+  initialDamageType?: string;
   additionalDamage?: string; // e.g., "2d6 poison"
   reach?: number;
   range?: { normal: number; long: number };
@@ -557,6 +560,10 @@ export interface BuffTemplate {
   weaponAttacksMagical?: boolean;
   /** Extra magical damage on this creature's next weapon hit. */
   weaponDamageRider?: string;
+  /** Replaces the base weapon damage die while this buff is active (Shillelagh). */
+  weaponDamageDie?: string;
+  /** Restricts weapon overrides to named weapons (for example Club/Quarterstaff). */
+  weaponNames?: string[];
   /** Ability used for weapon attack rolls while this buff is active (True Strike). */
   weaponAttackAbility?: keyof Abilities;
   /** Optional save-gated condition delivered by weaponDamageRider. */
@@ -1058,6 +1065,10 @@ export interface ActiveBuff {
   weaponDamagePenaltyDice?: string;
   weaponAttacksMagical?: boolean;
   weaponDamageRider?: string;
+  /** Replaces the base weapon damage die while this buff is active (Shillelagh). */
+  weaponDamageDie?: string;
+  /** Restricts weapon overrides to named weapons (for example Club/Quarterstaff). */
+  weaponNames?: string[];
   /** Ability used for weapon attack rolls while this buff is active (True Strike). */
   weaponAttackAbility?: keyof Abilities;
   weaponConditionOnHit?: MonsterAction['conditionOnHit'];

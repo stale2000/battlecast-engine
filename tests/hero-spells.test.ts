@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Creature, MonsterData, MonsterAction } from '../src/types/monster';
+import { heatMetal } from '../src/data/spells.js';
 import {
   BattleState, DEFAULT_TACTICS, createCreature,
   executeSpell, applyHealing, applyAutoDarts, applyBuffFromSpell, applyDamage,
@@ -89,6 +90,27 @@ describe('applyAutoDarts (Magic Missile)', () => {
 });
 
 describe('applyBuffFromSpell', () => {
+  it('Heat Metal applies initial damage and exposes the repeatable bonus action', () => {
+    const caster = createCreature(makeMonsterData({ initialResources: { 'slot-2': 1 } }), 'red', { x: 0, y: 0 }, 0);
+    const target = createCreature(makeMonsterData({ hp: 30 }), 'blue', { x: 5, y: 0 }, 1);
+    const state = makeState([caster, target]);
+    expect(executeSpell(state, caster, heatMetal('wis', 3, 3), target)).toBe(true);
+    expect(target.currentHp).toBeLessThan(30);
+    expect(target.activeBuffs.some(buff => buff.key === 'heat-metal' && buff.bonusActionDamage === '2d8')).toBe(true);
+    expect(tryUseBonusActionDamageBuff(state, caster, target.id)).toBe(true);
+    expect(target.currentHp).toBeLessThan(30);
+  });
+
+  it('Shillelagh changes weapon ability, die, and magic flag', () => {
+    const caster = createCreature(makeMonsterData({ abilities: { str: 10, dex: 10, con: 10, int: 10, wis: 16, cha: 10 } }), 'red', { x: 0, y: 0 }, 0);
+    const state = makeState([caster]);
+    applyBuffFromSpell(state, caster, caster, {
+      name: 'Shillelagh', type: 'special', description: '', spellLevel: 0, durationRounds: 1,
+      buff: { name: 'Shillelagh', key: 'shillelagh', weaponAttackAbility: 'wis', weaponDamageDie: '1d8', weaponAttacksMagical: true, weaponNames: ['Club', 'Quarterstaff'] },
+    });
+    expect(caster.activeBuffs[0]).toMatchObject({ weaponAttackAbility: 'wis', weaponDamageDie: '1d8', weaponAttacksMagical: true, weaponNames: ['Club', 'Quarterstaff'] });
+  });
+
   it('attaches a Bless-shaped buff with the right endRound', () => {
     const caster = createCreature(makeMonsterData(), 'red', { x: 0, y: 0 }, 0);
     const ally = createCreature(makeMonsterData(), 'red', { x: 5, y: 0 }, 1);

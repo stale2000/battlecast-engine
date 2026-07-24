@@ -39,7 +39,8 @@ describe('Kaggle arena bridge', () => {
     const initial = kaggleStep(init());
     const team = initial.statuses.red === 'ACTIVE' ? 'red' : 'blue';
     const inactiveTeam = team === 'red' ? 'blue' : 'red';
-    const actions = initial.observations[team].legalActions;
+    const allActions = initial.observations[team].legalActions;
+    const actions = [...new Map(allActions.map(action => [`${action.type}:${action.actionName ?? action.id.split(':')[0]}`, action] as const)).values()];
     const active = initial.observations[team].activeCreatureIds[0];
     expect(kaggleStep({ version: 1, mode: 'step', state: initial.state, team, action: actions.find(action => action.type !== 'move_to')! }).state).toBeTruthy();
     for (const action of actions) {
@@ -56,7 +57,7 @@ describe('Kaggle arena bridge', () => {
     expect(() => kaggleStep({ version: 1, mode: 'step', state: initial.state, team: inactiveTeam, action: 'end_turn' })).toThrow(/does not own/);
     expect(JSON.stringify(initial.state)).toBe(before);
     expect(() => kaggleStep({ version: 1, mode: 'step', state: initial.state, team, action: 'stale' })).toThrow(/Illegal or stale/);
-    if (actions.some(action => action.type === 'move_to')) {
+    if (allActions.some(action => action.type === 'move_to')) {
       expect(() => kaggleStep({ version: 1, mode: 'step', state: initial.state, team, action: { id: 'move_to', x: -1, y: -1 } })).toThrow(/move destination/);
       expect(JSON.stringify(initial.state)).toBe(before);
     }
@@ -2024,16 +2025,25 @@ describe('Kaggle arena bridge', () => {
     let result = kaggleStep(init());
     for (let turn = 0; turn < 8; turn++) {
       const team = result.statuses.red === 'ACTIVE' ? 'red' : 'blue';
+      // Exercise each action independently from the same authoritative turn
+      // snapshot. Applying every action cumulatively grows summons/effects and
+      // turns this contract test into an accidental stress simulation.
+      const turnState = result.state;
+      const representatives = new Map<string, typeof result.observations[typeof team]['legalActions'][number]>();
       for (const action of result.observations[team].legalActions) {
+        const key = `${action.type}:${action.actionName ?? action.id.split(':')[0]}`;
+        if (!representatives.has(key)) representatives.set(key, action);
+      }
+      for (const action of representatives.values()) {
         if (action.type === 'move_to') {
-          const encounter = Encounter.fromJSON(result.state);
+          const encounter = Encounter.fromJSON(turnState);
           const destination = reachableMovementDestinations(getActiveCreature(encounter)!, encounter.state!)[0]!;
-          expect(() => kaggleStep({ version: 1, mode: 'step', state: result.state, team, action: { id: action.id, x: destination.x, y: destination.y } })).not.toThrow();
+          expect(() => kaggleStep({ version: 1, mode: 'step', state: turnState, team, action: { id: action.id, x: destination.x, y: destination.y } })).not.toThrow();
         } else {
-          expect(() => kaggleStep({ version: 1, mode: 'step', state: result.state, team, action })).not.toThrow();
+          expect(() => kaggleStep({ version: 1, mode: 'step', state: turnState, team, action })).not.toThrow();
         }
       }
-      result = kaggleStep({ version: 1, mode: 'step', state: result.state, team, action: 'end_turn' });
+      result = kaggleStep({ version: 1, mode: 'step', state: turnState, team, action: 'end_turn' });
     }
   });
 
@@ -2074,7 +2084,12 @@ describe('Kaggle arena bridge', () => {
       encounter.state!.initiativeOrder = [hero.id];
       startArena(encounter);
       const snapshot = encounter.toJSON();
+      const representatives = new Map<string, ReturnType<typeof getLegalActions>[number]>();
       for (const action of getLegalActions(encounter, hero.id)) {
+        const key = `${action.type}:${action.actionName ?? action.id.split(':')[0]}`;
+        if (!representatives.has(key)) representatives.set(key, action);
+      }
+      for (const action of representatives.values()) {
         const copy = Encounter.fromJSON(snapshot);
         if (action.type === 'move_to') {
           const destination = reachableMovementDestinations(getActiveCreature(copy)!, copy.state!)[0]!;

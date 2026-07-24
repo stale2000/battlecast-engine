@@ -113,6 +113,15 @@ export function trueStrike(ability: SpellcastingAbility, _mod: number, _pb: numb
   };
 }
 
+export function shillelagh(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Shillelagh', type: 'special', spellLevel: 0, spellSchool: 'transmutation', castingAbility: ability,
+    description: 'Imbue the club or quarterstaff you are holding. Until the end of your next turn, it deals 1d8 damage and you can use your spellcasting ability for its attack and damage rolls; its damage is magical.',
+    targetScope: 'self', durationRounds: 1,
+    buff: { name: 'Shillelagh', key: 'shillelagh', weaponAttackAbility: ability, weaponAttacksMagical: true, weaponDamageDie: '1d8', weaponNames: ['Club', 'Quarterstaff'] },
+  };
+}
+
 export function magicMissile(): MonsterAction {
   return {
     name: 'Magic Missile',
@@ -673,6 +682,63 @@ export function conjureAnimals(ability: SpellcastingAbility, mod: number, pb: nu
   };
 }
 
+/** Build the level-3 Summon Fey spirit. Form-specific charm/fear riders are
+ * intentionally not exposed until the action resolver can stage them safely. */
+function feySpirit(form: 'fuming' | 'mirthful' | 'tricksy', mod: number, pb: number): MonsterData {
+  return {
+    name: `Fey Spirit (${form})`, size: 'Small', type: 'Fey', alignment: 'Neutral',
+    ac: 12, hp: 30, hpFormula: '30', speed: { walk: 30 },
+    abilities: { str: 13, dex: 16, con: 15, int: 14, wis: 11, cha: 16 },
+    senses: 'Darkvision 60 ft., Passive Perception 10', languages: 'Sylvan', cr: '0', xp: 0, proficiencyBonus: pb,
+    actions: [{ name: 'Fey Blade', type: 'melee', attackBonus: spellAttackBonus(mod, pb), damage: '1d6+3', damageType: 'psychic', reach: 5, magical: true,
+      description: 'Melee Spell Attack: your spell attack modifier, reach 5 ft. Hit: 1d6 + 3 psychic damage.' }],
+  };
+}
+
+/** Summon Fey (3rd-level). The summoned spirit is a normal controlled
+ * creature, so its attack and concentration lifecycle use the shared engine. */
+export function summonFey(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Summon Fey', type: 'special', spellLevel: 3, spellSchool: 'conjuration', castingAbility: ability, concentration: true, durationRounds: 600,
+    description: 'Summon a Fey Spirit in an unoccupied space you can see within 90 feet. It takes its turn immediately after yours and disappears when the spell ends or it drops to 0 Hit Points.',
+    targetScope: 'self', summon: {
+      rangeFt: 90, durationRounds: 600,
+      variants: (['fuming', 'mirthful', 'tricksy'] as const).map(key => ({
+        key, monsterData: feySpirit(key, mod, pb), hpPerSlotLevel: 10, acPerSlotLevel: 1,
+        attack: { actionName: 'Fey Blade', dice: '1d6', baseBonus: 3, baseSpellLevel: 3 },
+      })),
+    },
+  };
+}
+
+function undeadSpirit(form: 'ghostly' | 'putrid' | 'skeletal', mod: number, pb: number): MonsterData {
+  const ghostly = form === 'ghostly';
+  return {
+    name: `Undead Spirit (${form})`, size: 'Medium', type: 'Undead', alignment: 'Neutral',
+    ac: 12, hp: 30, hpFormula: '30', speed: ghostly ? { walk: 30, fly: 40 } : { walk: 30 },
+    abilities: { str: 12, dex: 16, con: 15, int: 4, wis: 10, cha: 9 },
+    resistances: ['necrotic'], senses: 'Darkvision 60 ft., Passive Perception 10', languages: 'Understands the languages you speak', cr: '0', xp: 0, proficiencyBonus: pb,
+    actions: [{ name: 'Deathly Touch', type: ghostly ? 'melee' : 'ranged', attackBonus: spellAttackBonus(mod, pb), damage: '1d10+3', damageType: 'necrotic', reach: ghostly ? 5 : undefined, range: ghostly ? undefined : { normal: 60, long: 60 }, magical: true,
+      description: `${ghostly ? 'Melee' : 'Ranged'} Spell Attack: your spell attack modifier. Hit: 1d10 + 3 necrotic damage.` }],
+  };
+}
+
+/** Summon Undead (3rd-level). Putrid paralysis and skeletal fear riders stay
+ * out of the catalogue until their staged saves are supported end-to-end. */
+export function summonUndead(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Summon Undead', type: 'special', spellLevel: 3, spellSchool: 'necromancy', castingAbility: ability, concentration: true, durationRounds: 600,
+    description: 'Summon an Undead Spirit in an unoccupied space you can see within 90 feet. It takes its turn immediately after yours and disappears when the spell ends or it drops to 0 Hit Points.',
+    targetScope: 'self', summon: {
+      rangeFt: 90, durationRounds: 600,
+      variants: (['ghostly', 'putrid', 'skeletal'] as const).map(key => ({
+        key, monsterData: undeadSpirit(key, mod, pb), hpPerSlotLevel: 10, acPerSlotLevel: 1,
+        attack: { actionName: 'Deathly Touch', dice: '1d10', baseBonus: 3, baseSpellLevel: 3 },
+      })),
+    },
+  };
+}
+
 export function scorchingRay(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
   return {
     name: 'Scorching Ray',
@@ -946,6 +1012,16 @@ export function flamingSphere(ability: SpellcastingAbility, mod: number, pb: num
     description: `A 5-foot sphere of fire within 60 feet. Creatures it enters or starts beside make a DC ${saveDC(mod, pb)} DEX save, taking 2d6 fire damage on a failure and half on a success. You can move it 30 feet as an action.`,
     damageType: 'fire', savingThrow: { ability: 'dex', dc: saveDC(mod, pb), damageOnFail: '2d6', damageOnSuccess: 'half', area: '5-foot sphere' },
     range: { normal: 60, long: 60 }, targetScope: 'area_enemies',
+  };
+}
+
+export function heatMetal(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Heat Metal', type: 'special', spellLevel: 2, spellSchool: 'transmutation', castingAbility: ability,
+    concentration: true, durationRounds: 10, range: { normal: 60, long: 60 }, targetScope: 'one_enemy', damageType: 'fire',
+    description: 'Heat a manufactured metal object within 60 feet. The creature in contact with it takes 2d8 fire damage immediately and can take the damage again as a Bonus Action on later turns. Concentration.',
+    initialDamage: '2d8', initialDamageType: 'fire',
+    buff: { name: 'Heat Metal', key: 'heat-metal', requiresConcentration: true, bonusActionDamage: '2d8', bonusActionDamageType: 'fire', bonusActionDamageRange: 60, endsWhenTargetDies: true },
   };
 }
 
@@ -1970,7 +2046,7 @@ export function wallOfFire(ability: SpellcastingAbility, mod: number, pb: number
 type SpellFactory = (ability: SpellcastingAbility, mod: number, pb: number) => MonsterAction;
 const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Magic Missile', () => magicMissile()],
-  ['Blade Ward', bladeWard], ['Resistance', resistance], ['Poison Spray', poisonSpray], ['Thorn Whip', thornWhip], ['Acid Splash', acidSplash], ['Starry Wisp', starryWisp], ['Thunderclap', thunderclap], ['Toll the Dead', tollTheDead], ['True Strike', trueStrike],
+  ['Blade Ward', bladeWard], ['Resistance', resistance], ['Shillelagh', shillelagh], ['Poison Spray', poisonSpray], ['Thorn Whip', thornWhip], ['Acid Splash', acidSplash], ['Starry Wisp', starryWisp], ['Thunderclap', thunderclap], ['Toll the Dead', tollTheDead], ['True Strike', trueStrike],
   ['Shield', shield],
   ['Hellish Rebuke', hellishRebuke],
   ['Burning Hands', burningHands], ['Thunderwave', thunderwave], ['Sleep', sleep],
@@ -1991,8 +2067,8 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Enlarge/Reduce', enlargeReduce],
   ['Mage Armor', mageArmor],
   ['Ray of Enfeeblement', rayOfEnfeeblement], ['Ray of Sickness', rayOfSickness], ["Tasha's Hideous Laughter", tashasHideousLaughter],
-  ['Scorching Ray', scorchingRay], ['Summon Beast', summonBeast], ['Find Steed', findSteed], ['Conjure Animals', conjureAnimals], ['Web', web], ['Spike Growth', spikeGrowth], ['Hold Person', holdPerson],
-  ['Flaming Sphere', flamingSphere], ['Cloud of Daggers', cloudOfDaggers],
+  ['Scorching Ray', scorchingRay], ['Summon Beast', summonBeast], ['Summon Fey', summonFey], ['Summon Undead', summonUndead], ['Find Steed', findSteed], ['Conjure Animals', conjureAnimals], ['Web', web], ['Spike Growth', spikeGrowth], ['Hold Person', holdPerson],
+  ['Flaming Sphere', flamingSphere], ['Heat Metal', heatMetal], ['Cloud of Daggers', cloudOfDaggers],
   ['Shatter', shatter], ['Moonbeam', moonbeam], ['Spiritual Weapon', spiritualWeapon],
   ['Aid', aid], ['Magic Weapon', magicWeapon], ['Shining Smite', shiningSmite],
   ['Branding Smite', brandingSmite], ['Ensnaring Strike', ensnaringStrike], ['Searing Smite', searingSmite], ['Thunderous Smite', thunderousSmite], ['Wrathful Smite', wrathfulSmite],

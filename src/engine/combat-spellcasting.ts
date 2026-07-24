@@ -592,6 +592,8 @@ export function applyBuffFromSpell(
     weaponDamagePenaltyDice: tmpl.weaponDamagePenaltyDice,
     weaponAttacksMagical: tmpl.weaponAttacksMagical,
     weaponDamageRider: tmpl.weaponDamageRider,
+    weaponDamageDie: tmpl.weaponDamageDie,
+    weaponNames: tmpl.weaponNames,
     weaponAttackAbility: tmpl.weaponAttackAbility,
     weaponConditionOnHit: tmpl.weaponConditionOnHit,
     endsOnWeaponHit: tmpl.endsOnWeaponHit,
@@ -673,6 +675,13 @@ function scaleAttackSpellForSlot(action: MonsterAction, slotLevelUsed: number): 
       temporaryHp: { ...action.temporaryHp, dice: String(amount) },
       buff: { ...action.buff, reactiveDamage: `${amount} cold` },
     };
+  }
+
+  if (action.name === 'Heat Metal' && action.initialDamage && action.buff?.bonusActionDamage) {
+    const extra = Math.max(0, slotLevelUsed - (action.spellLevel ?? 2));
+    if (!extra) return action;
+    const dice = `${2 + extra}d8`;
+    return { ...action, initialDamage: dice, buff: { ...action.buff, bonusActionDamage: dice } };
   }
 
   if (action.name !== 'Witch Bolt' || !action.damage) return action;
@@ -1259,6 +1268,11 @@ export function executeSpell(
       return true;
     }
     applyBuffFromSpell(state, caster, primaryTarget, castAction);
+    if (castAction.initialDamage && primaryTarget.isAlive) {
+      const amount = applyDamageRollPenalty(caster, rollDice(castAction.initialDamage).total);
+      applyDamage(state, primaryTarget, amount, castAction.initialDamageType ?? castAction.damageType ?? 'untyped', caster, true, true);
+      pushLog(state, { round: state.round, turn: state.turnIndex, actor: caster.displayName, action: castAction.name, details: `${primaryTarget.displayName} takes ${amount} ${castAction.initialDamageType ?? castAction.damageType ?? 'untyped'} damage.`, damage: amount, type: 'damage' });
+    }
     if (castAction.sizeChangeChoice?.selected) {
       const index = SIZE_STEPS.indexOf(primaryTarget.temporarySize ?? primaryTarget.monsterData.size);
       primaryTarget.temporarySize = SIZE_STEPS[index + (castAction.sizeChangeChoice.selected === 'enlarge' ? 1 : -1)]!;

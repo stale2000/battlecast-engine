@@ -3987,8 +3987,9 @@ function resolveAttack(
   if (action.type === 'multiattack') return;
   // True Strike and similar effects can replace the ability used for a
   // weapon attack while preserving proficiency and weapon-style bonuses.
+  const weaponBuff = attacker.activeBuffs.find(buff => (!buff.weaponNames || buff.weaponNames.includes(action.name)) && (buff.weaponAttackAbility || buff.weaponDamageDie || buff.weaponAttacksMagical));
   const abilityOverride = action.attackAbility
-    ? attacker.activeBuffs.find(buff => buff.weaponAttackAbility)?.weaponAttackAbility
+    ? weaponBuff?.weaponAttackAbility
     : undefined;
   const effectiveAttackBonus = abilityOverride && action.attackAbility
     ? action.attackBonus - abilityModifier(attacker.monsterData.abilities[action.attackAbility])
@@ -4252,10 +4253,14 @@ function resolveAttack(
     ) : false;
 
     if (action.damage) {
-      const overchannelDamage = tryConsumeWizardOverchannel(state, attacker, action, action.damage);
-      let totalDmg = applyDamageRollPenalty(attacker, overchannelDamage ?? rollDamage(action.damage, isCrit, action.rerollDamageOnes).total);
+      const weaponDamageDie = action.spellLevel === undefined
+        ? attacker.activeBuffs?.find(buff => (!buff.weaponNames || buff.weaponNames.includes(action.name)) && buff.weaponDamageDie)?.weaponDamageDie
+        : undefined;
+      const damageExpression = weaponDamageDie ? action.damage.replace(/^\d+d\d+/i, weaponDamageDie) : action.damage;
+      const overchannelDamage = tryConsumeWizardOverchannel(state, attacker, action, damageExpression);
+      let totalDmg = applyDamageRollPenalty(attacker, overchannelDamage ?? rollDamage(damageExpression, isCrit, action.rerollDamageOnes).total);
       if (overchannelDamage === null && hasOriginFeat(attacker, 'Savage Attacker') && !attacker.turnFlags.savageAttackerUsed && action.spellLevel === undefined && (action.type === 'melee' || action.type === 'ranged')) {
-        totalDmg = Math.max(totalDmg, applyDamageRollPenalty(attacker, rollDamage(action.damage, isCrit, action.rerollDamageOnes).total));
+        totalDmg = Math.max(totalDmg, applyDamageRollPenalty(attacker, rollDamage(damageExpression, isCrit, action.rerollDamageOnes).total));
         attacker.turnFlags.savageAttackerUsed = true;
       }
       const mainType = action.damageType || 'bludgeoning';
@@ -4315,7 +4320,7 @@ function resolveAttack(
       }
 
       if (autoCrit && !isCrit) {
-        const critDmg = rollDamage(action.damage, true, action.rerollDamageOnes);
+        const critDmg = rollDamage(damageExpression, true, action.rerollDamageOnes);
         totalDmg = applyDamageRollPenalty(attacker, critDmg.total);
         pushLog(state, {
           round: state.round, turn: state.turnIndex,
@@ -4326,7 +4331,7 @@ function resolveAttack(
       }
 
       totalDmg = applyCuttingWordsToDamageRoll(state, attacker, target, totalDmg);
-      const weaponMagic = action.spellLevel === undefined && attacker.activeBuffs?.some(buff => buff.weaponAttacksMagical) === true;
+      const weaponMagic = action.spellLevel === undefined && attacker.activeBuffs?.some(buff => (!buff.weaponNames || buff.weaponNames.includes(action.name)) && buff.weaponAttacksMagical) === true;
       const weaponDamageBonus = action.spellLevel === undefined
         ? attacker.activeBuffs?.reduce((sum, buff) => sum + (buff.weaponDamageBonus ?? 0), 0) ?? 0
         : 0;
