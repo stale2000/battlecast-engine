@@ -166,6 +166,7 @@ export interface MonsterAction {
     extraDamageOnFail?: Array<{ damage: string; damageType: string }>;
     area?: string; // e.g., "30-foot Cone"
     conditionOnFail?: Condition;
+    additionalConditionsOnFail?: Condition[];
     conditionDuration?: ConditionDuration;
     /** 2024 cascading-save effects (Brass Dragon Sleep Breath, Silver
      *  Dragon Paralyzing Breath): when the initial conditionOnFail
@@ -453,6 +454,7 @@ export interface BuffTemplate {
   endsOnWeaponHit?: boolean;
   /** Condition paired with this buff and removed whenever the buff ends. */
   appliedCondition?: Condition;
+  appliedConditions?: Condition[];
   /** Temporary HP granted at the start of each of the target's turns. */
   temporaryHpAtTurnStart?: number;
   /** Conditions this buff prevents while it lasts. */
@@ -863,6 +865,7 @@ export interface ActiveBuff {
   weaponConditionOnHit?: MonsterAction['conditionOnHit'];
   endsOnWeaponHit?: boolean;
   appliedCondition?: Condition;
+  appliedConditions?: Condition[];
   temporaryHpAtTurnStart?: number;
   conditionImmunities?: Condition[];
   /** Repeat this save at the specified point and remove the buff on success. */

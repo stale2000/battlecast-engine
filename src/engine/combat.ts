@@ -2496,9 +2496,9 @@ export function processTargetTurnEndOngoingEffects(state: BattleState, target: C
     });
     if (passed) {
       target.activeBuffs = target.activeBuffs.filter(candidate => candidate !== buff);
-      if (buff.appliedCondition) {
-        target.conditionTimers = target.conditionTimers.filter(timer => !(timer.condition === buff.appliedCondition && timer.sourceId === buff.casterId));
-        if (!target.conditionTimers.some(timer => timer.condition === buff.appliedCondition)) target.conditions = target.conditions.filter(condition => condition !== buff.appliedCondition);
+      for (const condition of buff.appliedConditions ?? (buff.appliedCondition ? [buff.appliedCondition] : [])) {
+        target.conditionTimers = target.conditionTimers.filter(timer => !(timer.condition === condition && timer.sourceId === buff.casterId));
+        if (!target.conditionTimers.some(timer => timer.condition === condition)) target.conditions = target.conditions.filter(candidate => candidate !== condition);
       }
     }
   }

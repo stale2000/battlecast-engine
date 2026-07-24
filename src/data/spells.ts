@@ -308,6 +308,8 @@ export function entangle(ability: SpellcastingAbility, mod: number, pb: number):
     type: 'special',
     description: `20-foot square. STR save DC ${saveDC(mod, pb)}; on fail, target is Restrained for 1 minute (repeat save each turn). Concentration.`,
     spellLevel: 1,
+    concentration: true,
+    durationRounds: 10,
     castingAbility: ability,
     savingThrow: {
       ability: 'str', dc: saveDC(mod, pb),
@@ -316,6 +318,7 @@ export function entangle(ability: SpellcastingAbility, mod: number, pb: number):
       area: '20-foot sphere',
     },
     targetScope: 'area_enemies',
+    buffOnFailedSave: { name: 'Entangle', key: 'entangle', requiresConcentration: true, appliedConditions: ['restrained'], saveEnds: { ability: 'str', dc: saveDC(mod, pb), at: 'targetTurnEnd' } },
   };
 }
 
@@ -399,7 +402,8 @@ export function tashasHideousLaughter(ability: SpellcastingAbility, mod: number,
   return {
     name: "Tasha's Hideous Laughter", type: 'special', spellLevel: 1, spellSchool: 'enchantment', castingAbility: ability, concentration: true, durationRounds: 10,
     description: `One creature within 30 ft. WIS save DC ${saveDC(mod, pb)} or Prone and Incapacitated; repeat the save at end of each turn.`,
-    savingThrow: { ability: 'wis', dc: saveDC(mod, pb), conditionOnFail: 'incapacitated', conditionDuration: '1_minute' }, range: { normal: 30, long: 30 }, targetScope: 'one_enemy',
+    savingThrow: { ability: 'wis', dc: saveDC(mod, pb), conditionOnFail: 'incapacitated', additionalConditionsOnFail: ['prone'], conditionDuration: '1_minute' }, range: { normal: 30, long: 30 }, targetScope: 'one_enemy',
+    buffOnFailedSave: { name: "Tasha's Hideous Laughter", key: 'hideous-laughter', requiresConcentration: true, appliedConditions: ['incapacitated', 'prone'], saveEnds: { ability: 'wis', dc: saveDC(mod, pb), at: 'targetTurnEnd' } },
   };
 }
 

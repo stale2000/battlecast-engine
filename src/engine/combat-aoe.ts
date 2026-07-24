@@ -176,6 +176,7 @@ function applySaveBuff(state: BattleState, attacker: Creature, target: Creature,
     damageRollPenalty: tmpl.damageRollPenalty,
     saveEnds: tmpl.saveEnds,
     appliedCondition: tmpl.appliedCondition,
+    appliedConditions: tmpl.appliedConditions,
   });
   pushLog(state, {
     round: state.round, turn: state.turnIndex,
@@ -285,7 +286,7 @@ export function resolveSingleTargetSave(
     logTotalCoverFromContainer(state, attacker, target, action.name);
     return;
   }
-  const { ability, damageOnFail, damageOnSuccess, conditionOnFail, conditionDuration } = action.savingThrow;
+  const { ability, damageOnFail, damageOnSuccess, conditionOnFail, additionalConditionsOnFail, conditionDuration } = action.savingThrow;
   const dc = action.savingThrow.dc + getSpellSaveDcBonus(attacker, action);
 
   const visual = getSingleTargetVisual(action.name);
@@ -402,6 +403,7 @@ export function resolveSingleTargetSave(
   if (!passed && conditionOnFail && conditionTargetMatchesActionSize(action, target)) {
     applyCondition(state, target, conditionOnFail, attacker,
       conditionDuration || 'end_of_next_turn', dc, ability);
+    for (const condition of additionalConditionsOnFail ?? []) applyCondition(state, target, condition, attacker, conditionDuration || 'end_of_next_turn', dc, ability);
   }
 
   if (!passed && !damageOnFail) {
@@ -749,6 +751,7 @@ export function resolveAoE(
         : undefined;
       const emittedStart = state.events.length;
       applyCondition(state, target, conditionOnFail, attacker, conditionDuration || 'end_of_next_turn', dc, ability, stageInfo);
+      for (const condition of action.savingThrow.additionalConditionsOnFail ?? []) applyCondition(state, target, condition, attacker, conditionDuration || 'end_of_next_turn', dc, ability);
       followUpEvents.push(...state.events.splice(emittedStart));
     }
 

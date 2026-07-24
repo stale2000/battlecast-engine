@@ -308,9 +308,10 @@ export function dropConcentratedBuffsFrom(
 }
 
 function clearBuffCondition(creature: Creature, buff: ActiveBuff): void {
-  if (!buff.appliedCondition) return;
-  creature.conditionTimers = creature.conditionTimers.filter(timer => !(timer.condition === buff.appliedCondition && timer.sourceId === buff.casterId));
-  if (!creature.conditionTimers.some(timer => timer.condition === buff.appliedCondition)) creature.conditions = creature.conditions.filter(condition => condition !== buff.appliedCondition);
+  for (const condition of buff.appliedConditions ?? (buff.appliedCondition ? [buff.appliedCondition] : [])) {
+    creature.conditionTimers = creature.conditionTimers.filter(timer => !(timer.condition === condition && timer.sourceId === buff.casterId));
+    if (!creature.conditionTimers.some(timer => timer.condition === condition)) creature.conditions = creature.conditions.filter(candidate => candidate !== condition);
+  }
 }
 
 /**
