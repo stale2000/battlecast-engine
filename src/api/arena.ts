@@ -328,9 +328,12 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
   }
   const enemies = state.creatures.filter(c => c.team !== active.team && c.isAlive && !c.dying);
   const actions: ArenaAction[] = [];
+  // ponytail: movement reachability is an O(grid * pathfinding) scan; reuse it
+  // for this immutable catalogue instead of recalculating it per branch.
+  const reachable = reachableMovementDestinations(active, state);
   const rider = active.riderId ? state.creatures.find(candidate => candidate.id === active.riderId) : undefined;
   if (active.controlledMountForId && rider?.mountedOnId === active.id && !isIncapacitated(rider)) {
-    if (reachableMovementDestinations(active, state).length) actions.push({ id: 'move_to', type: 'move_to' });
+    if (reachable.length) actions.push({ id: 'move_to', type: 'move_to' });
     if (active.movementRemaining > 0) actions.push({ id: 'dash', type: 'dash', isBonusAction: false });
     actions.push({ id: 'dodge', type: 'dodge' });
     actions.push({ id: 'disengage', type: 'disengage', isBonusAction: false });
@@ -465,7 +468,7 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
   actions.push(...mountActions(state, active));
   if (!active.hasActed && active.concentrationAura?.origin === 'point' && active.concentrationAura.moveFt && active.concentrationAura.endRound > state.round
     && !active.concentrationAura.movedThisTurn && (!active.concentrationAura.moveRequiresCasterMove || active.hasMovedThisTurn)) actions.push({ id: 'move_aura', type: 'move_aura' });
-  if (reachableMovementDestinations(active, state).length) actions.push({ id: 'move_to', type: 'move_to' });
+  if (reachable.length) actions.push({ id: 'move_to', type: 'move_to' });
   actions.push(...getClassFeatureLegalActions(active));
   if (!active.hasActed && !attackInProgress) {
     if (active.movementRemaining > 0) actions.push({ id: 'dash', type: 'dash', isBonusAction: false });
@@ -580,6 +583,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
   const state = encounter.state;
   const active = getActiveCreature(encounter);
   if (!state || !active) throw new EncounterError('No active creature.');
+  const activeActions = getActiveActions(active);
   const legal = getLegalActions(encounter, active.id).find(candidate => candidate.id === action.id);
   if (!legal || (legal.type !== 'move_to' && legal.type !== 'move_aura' && legal.type !== 'species_teleport' && legal.type !== 'spell_teleport' && !sameArenaAction(legal, action))) {
     throw new EncounterError(`Illegal or stale arena action "${action.id}".`);
@@ -587,7 +591,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
   encounter.runWithRng(() => {
     if (legal.type === 'attack') {
       const target = state.creatures.find(c => c.id === legal.targetId)!;
-      const attack = getActiveActions(active)[legal.actionIndex];
+      const attack = activeActions[legal.actionIndex];
       if (!attack || attack.name !== legal.actionName) throw new EncounterError(`Stale arena attack "${legal.id}".`);
       const damageBefore = target.stats.damageTaken;
       const eventCountBefore = state.events.length;
@@ -610,7 +614,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
         active.hasActed = attacksUsed(active) >= attackRollBudget(active);
       }
       if (target.isAlive && state.events.slice(eventCountBefore).some(event => event.kind === 'hit' && event.targetId === target.id)) {
-        const postHit = getActiveActions(active).map((candidate, index) => ({ candidate, index }))
+        const postHit = activeActions.map((candidate, index) => ({ candidate, index }))
           .filter(({ candidate }) => (candidate.postHit?.trigger === 'weapon_hit' || (candidate.postHit?.trigger === 'melee_hit' && attack.type === 'melee')) && candidate.isBonusAction && canCastArenaSpell(active, candidate));
         if (postHit.length) state.pendingHit = { attackerId: active.id, targetId: target.id, actionIndexes: postHit.map(({ index }) => index), actionNames: postHit.map(({ candidate }) => candidate.name) };
       }
@@ -619,7 +623,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       const pending = state.pendingHit;
       if (!pending || pending.attackerId !== active.id || (legal.actionIndex >= 0 && !pending.actionIndexes.includes(legal.actionIndex)) || pending.targetId !== legal.targetId) throw new EncounterError(`Illegal or stale post-hit action "${legal.id}".`);
       if (!legal.decline) {
-        const spell = getActiveActions(active)[legal.actionIndex];
+        const spell = activeActions[legal.actionIndex];
         const target = state.creatures.find(candidate => candidate.id === pending.targetId);
         if (!spell || !target || !spell.postHit || !spell.isBonusAction || !canCastArenaSpell(active, spell) || !executeSpell(state, active, spell, target)) throw new EncounterError(`Illegal or stale post-hit spell "${legal.id}".`);
         active.bonusActionUsed = true;
@@ -629,7 +633,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
     } else if (legal.type === 'spell') {
       const targets = (legal.targetIds ?? [legal.targetId]).map(id => state.creatures.find(c => c.id === id)).filter((target): target is Creature => Boolean(target));
       const target = targets[0];
-      const baseSpell = getActiveActions(active)[legal.actionIndex];
+      const baseSpell = activeActions[legal.actionIndex];
       const spell = baseSpell && legal.areaShape && baseSpell.savingThrow
         ? { ...baseSpell, savingThrow: { ...baseSpell.savingThrow!, area: legal.areaShape } }
         : baseSpell && legal.effectKey && baseSpell.dispelMagic
@@ -658,7 +662,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       checkBattleComplete(state);
     } else if (legal.type === 'spell_teleport') {
       const destination = action.type === 'spell_teleport' ? action.destination : undefined;
-      const spell = getActiveActions(active)[legal.actionIndex];
+      const spell = activeActions[legal.actionIndex];
       if (!destination || !Number.isInteger(destination.x) || !Number.isInteger(destination.y) || !spell || spell.name !== legal.actionName || !spell.teleport || !executeSpell(state, active, spell, active, undefined, destination)) {
         throw new EncounterError(`Illegal or stale arena spell "${legal.id}".`);
       }
@@ -667,7 +671,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       checkBattleComplete(state);
     } else if (legal.type === 'spell_summon') {
       const destination = legal.destination;
-      const baseSpell = getActiveActions(active)[legal.actionIndex];
+      const baseSpell = activeActions[legal.actionIndex];
       const variant = baseSpell?.summon?.variants.find(candidate => candidate.key === legal.variantKey);
       const spell = baseSpell && variant ? { ...baseSpell, summon: { ...baseSpell.summon!, variants: [variant] } } : undefined;
       if (!destination || !Number.isInteger(destination.x) || !Number.isInteger(destination.y) || !spell || spell.name !== legal.actionName || !executeSpell(state, active, spell, active, undefined, destination)) {
@@ -821,7 +825,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       active.bonusActionUsed = true;
       pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Wild Shape', details: `${active.displayName} transforms into a ${beast.name}.`, type: 'special' });
     } else if (legal.type === 'monk_strike') {
-      const strike = getActiveActions(active)[legal.actionIndex];
+      const strike = activeActions[legal.actionIndex];
       const target = state.creatures.find(creature => creature.id === legal.targetId);
       const flurryStrikes = Object.keys(active.turnFlags).filter(key => key.startsWith('arena-flurry-')).length;
       if (active.monsterData.heroClass !== 'Monk' || !strike || !target || !target.isAlive || !attackInRange(active, target, strike)) throw new EncounterError('Illegal or stale arena Monk strike.');
