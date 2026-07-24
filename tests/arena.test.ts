@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { Encounter } from '../src/api/encounter.js';
 import { getActiveCreature, getLegalActions, applyLegalAction, startArena } from '../src/api/arena.js';
-import { isFrightenedMoveLegal, reachableMovementDestinations } from '../src/engine/ai-movement.js';
+import { isFrightenedMoveLegal, moveToDestination, moveToward, reachableMovementDestinations } from '../src/engine/ai-movement.js';
 import { processTurnStart } from '../src/engine/ai-turn.js';
 import { applyDamage, applyDamageRollPenalty, executeSpell, getEffectiveMoveSpeed, hasDisadvantage, processTargetTurnEndOngoingEffects, processTargetTurnStartOngoingEffects, resolveAttack, rollAllInitiatives, runDeathSave, triggerPersistentZones } from '../src/engine/combat.js';
 import { dropConcentratedBuffsFrom } from '../src/engine/combat-buffs.js';
@@ -13,7 +13,7 @@ import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
-import { acidArrow, bane, barkskin, bestowCurse, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, cloudOfDaggers, command, dissonantWhispers, dispelMagic, entangle, flamingSphere, fly, grease, haste, hellishRebuke, heroism, inflictWounds, invisibility, lesserRestoration, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, seeInvisibility, shield, shiningSmite, spiritualWeapon, tashasHideousLaughter, web, witchBolt } from '../src/data/spells.js';
+import { acidArrow, bane, barkskin, bestowCurse, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, cloudOfDaggers, command, dissonantWhispers, dispelMagic, entangle, flamingSphere, fly, grease, haste, hellishRebuke, heroism, inflictWounds, invisibility, lesserRestoration, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, seeInvisibility, shield, shiningSmite, spikeGrowth, spiritualWeapon, tashasHideousLaughter, web, witchBolt } from '../src/data/spells.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
@@ -566,6 +566,45 @@ describe('Kaggle arena bridge', () => {
     target.conditionTimers = [];
     withRng({ next: () => 0 }, () => processTargetTurnEndOngoingEffects(encounter.state!, target));
     expect(target.conditions).toContain('prone');
+  });
+
+  it('charges difficult-terrain movement and Spike Growth damage through the shared movement path', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Druid', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [grease('wis', 3, 3), spikeGrowth('wis', 3, 3)], additionalResources: { 'slot-1': 1, 'slot-2': 1 } } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 3, y: 0 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    const target = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
+    withRng({ next: () => 0 }, () => expect(executeSpell(encounter.state!, caster, grease('wis', 3, 3), target, [target], target.position)).toBe(true));
+    target.movementRemaining = 10;
+    expect(reachableMovementDestinations(target, encounter.state!).some(destination => destination.x === 5 && destination.y === 0)).toBe(false);
+    moveToDestination(target, { x: 4, y: 0 }, encounter.state!);
+    expect(target.movementRemaining).toBe(0);
+    dropConcentratedBuffsFrom(encounter.state!, caster.id);
+    target.position = { x: 3, y: 0 };
+    target.movementRemaining = 10;
+    expect(executeSpell(encounter.state!, caster, spikeGrowth('wis', 3, 3), target, [target], target.position)).toBe(true);
+    const hp = target.currentHp;
+    expect(target.movementRemaining).toBe(10);
+    expect(reachableMovementDestinations(target, encounter.state!).some(destination => destination.x === 4 && destination.y === 0)).toBe(true);
+    withRng({ next: () => 0 }, () => { target.position = moveToward(target, { x: 6, y: 0 }, encounter.state!); });
+    expect(target.position).toEqual({ x: 4, y: 0 });
+    expect(target.currentHp).toBe(hp - 2);
+    expect(target.movementRemaining).toBe(0);
+  });
+
+  it('offers Spike Growth as a server-owned area action', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Druid', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [spikeGrowth('wis', 3, 3)], additionalResources: { 'slot-2': 1 } } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 3, y: 0 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    encounter.state!.initiativeOrder = [caster.id];
+    startArena(encounter);
+    const action = getLegalActions(encounter, caster.id).find(choice => choice.type === 'spell' && choice.actionName === 'Spike Growth')!;
+    expect(action.center).toBeTruthy();
+    applyLegalAction(encounter, action);
+    expect(encounter.state!.persistentZones?.[0]).toMatchObject({ name: 'Spike Growth', difficultTerrain: true, damagePer5Ft: { dice: '2d4', type: 'piercing' } });
   });
 
   it('protects a target from attacks by the listed creature types', () => {

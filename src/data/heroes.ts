@@ -31,7 +31,7 @@ import { monsters } from './monsters.js';
 import {
   FULL_CASTER_SLOTS, HALF_CASTER_SLOTS, WARLOCK_SLOTS, slotsToResources,
   magicMissile, burningHands, thunderwave, sleep,
-  scorchingRay, web, flamingSphere, cloudOfDaggers, shatter, moonbeam, holdPerson, spiritualWeapon,
+  scorchingRay, web, spikeGrowth, flamingSphere, cloudOfDaggers, shatter, moonbeam, holdPerson, spiritualWeapon,
   fireball, lightningBolt, spiritGuardians, callLightning, hypnoticPattern,
   bless, bane, cureWounds, healingWord, heroism, protectionFromEvilAndGood, sanctuary, shieldOfFaith, guidingBolt,
   hex, huntersMark, dissonantWhispers, entangle,
@@ -1713,7 +1713,7 @@ function buildOptionalSpells(
       break;
     case 'Druid':
       pool.push(barkskin(spellAbility, mod, pb), faerieFire(spellAbility, mod, pb), fogCloud(spellAbility, mod, pb), longstrider(spellAbility, mod, pb));
-      pool.push(lesserRestoration(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb));
+      pool.push(lesserRestoration(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb), spikeGrowth(spellAbility, mod, pb));
       pool.push(dispelMagic(spellAbility, mod, pb));
       pool.push(fear(spellAbility, mod, pb), fly(spellAbility, mod, pb), revivify(spellAbility, mod, pb));
       pool.push(wallOfFire(spellAbility, mod, pb));
@@ -1737,6 +1737,7 @@ function buildOptionalSpells(
       break;
     case 'Ranger':
       pool.push(protectionFromPoison(spellAbility, mod, pb));
+      pool.push(spikeGrowth(spellAbility, mod, pb));
       pool.push(dispelMagic(spellAbility, mod, pb));
       break;
   }
@@ -2605,7 +2606,7 @@ export function getAvailableSpells(
       break;
     case 'Druid':
       optional.push(barkskin(spellAbility, mod, pb), faerieFire(spellAbility, mod, pb), fogCloud(spellAbility, mod, pb), longstrider(spellAbility, mod, pb));
-      optional.push(lesserRestoration(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb));
+      optional.push(lesserRestoration(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb), spikeGrowth(spellAbility, mod, pb));
       optional.push(dispelMagic(spellAbility, mod, pb));
       optional.push(fear(spellAbility, mod, pb), fly(spellAbility, mod, pb), revivify(spellAbility, mod, pb));
       optional.push(wallOfFire(spellAbility, mod, pb));
@@ -2628,7 +2629,7 @@ export function getAvailableSpells(
       break;
     case 'Ranger':
       optional.push(faerieFire(spellAbility, mod, pb), longstrider(spellAbility, mod, pb));
-      optional.push(protectionFromPoison(spellAbility, mod, pb));
+      optional.push(protectionFromPoison(spellAbility, mod, pb), spikeGrowth(spellAbility, mod, pb));
       optional.push(dispelMagic(spellAbility, mod, pb));
       break;
   }

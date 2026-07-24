@@ -101,7 +101,7 @@ function canCastArenaSpell(active: Creature, action: MonsterAction): boolean {
 }
 
 function spellTargets(active: Creature, state: NonNullable<Encounter['state']>, action: MonsterAction): Creature[] {
-  if (action.autoDarts || action.savingThrow?.area || (action.targetScope === 'all_allies_in_area' && !action.multiTargetBuff)) return [];
+  if (action.autoDarts || action.savingThrow?.area || action.persistentZone || (action.targetScope === 'all_allies_in_area' && !action.multiTargetBuff)) return [];
   const living = action.revive
     ? state.creatures.filter(c => !c.isAlive && c.team === active.team && c.stats.deathRound !== undefined && state.round - c.stats.deathRound <= action.revive!.maxDeathRounds)
     : state.creatures.filter(c => c.isAlive && (!c.dying || action.heal !== undefined));
@@ -120,10 +120,10 @@ function spellTargets(active: Creature, state: NonNullable<Encounter['state']>, 
 }
 
 function areaSpellActions(state: NonNullable<Encounter['state']>, active: Creature, action: MonsterAction, actionIndex: number): ArenaAction[] {
-  const originalArea = action.savingThrow?.area?.toLowerCase() ?? '';
-  const areas = originalArea.includes('cone or') && originalArea.includes('line')
+  const areaText = originalArea(action);
+  const areas = areaText.includes('cone or') && areaText.includes('line')
     ? ['15-foot cone', '30-foot line']
-    : [originalArea];
+    : [areaText];
   return areas.flatMap(area => areaSpellAction(state, active, action, actionIndex, area));
 }
 
@@ -159,7 +159,7 @@ function areaSpellAction(state: NonNullable<Encounter['state']>, active: Creatur
 }
 
 function originalArea(action: MonsterAction): string {
-  return action.savingThrow?.area?.toLowerCase() ?? '';
+  return action.savingThrow?.area?.toLowerCase() ?? (action.persistentZone ? `${action.persistentZone.radiusFt}-foot sphere` : '');
 }
 
 function repeatAreaSpellActions(state: NonNullable<Encounter['state']>, active: Creature): ArenaAction[] {
@@ -267,7 +267,7 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
           actions.push({ id: `spell:${actionIndex}:${slug(action.name)}:allies`, type: 'spell', actionName: action.name, actionIndex, targetId: active.id });
           continue;
         }
-        if (action.savingThrow?.area) {
+        if (action.savingThrow?.area || action.persistentZone) {
           actions.push(...areaSpellActions(state, active, action, actionIndex));
           continue;
         }
@@ -476,7 +476,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       const targets = (legal.targetIds ?? [legal.targetId]).map(id => state.creatures.find(c => c.id === id)).filter((target): target is Creature => Boolean(target));
       const target = targets[0];
       const baseSpell = getActiveActions(active)[legal.actionIndex];
-      const spell = baseSpell && legal.areaShape
+      const spell = baseSpell && legal.areaShape && baseSpell.savingThrow
         ? { ...baseSpell, savingThrow: { ...baseSpell.savingThrow!, area: legal.areaShape } }
         : baseSpell && legal.effectKey && baseSpell.dispelMagic
           ? { ...baseSpell, dispelMagic: { ...baseSpell.dispelMagic, selectedKey: legal.effectKey } }
@@ -488,7 +488,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
                 ? { ...baseSpell, curseChoice: { ...baseSpell.curseChoice, selected: legal.curseChoice }, buffOnFailedSave: { ...baseSpell.buffOnFailedSave, attackDisadvantage: legal.curseChoice === 'attack_disadvantage' ? true : undefined, damageRider: legal.curseChoice === 'damage_rider' ? '1d8 necrotic' : undefined } }
           : baseSpell;
       if (!spell || spell.name !== legal.actionName || !isSpellAction(spell)) throw new EncounterError(`Stale arena spell "${legal.id}".`);
-      if (!target || !executeSpell(state, active, spell, target, spell.autoDarts || spell.multiTargetAttack || spell.multiTargetSave || spell.multiTargetBuff || spell.savingThrow?.area ? targets : undefined, legal.center)) throw new EncounterError(`Illegal or stale arena spell "${legal.id}".`);
+      if (!target || !executeSpell(state, active, spell, target, spell.autoDarts || spell.multiTargetAttack || spell.multiTargetSave || spell.multiTargetBuff || spell.savingThrow?.area || spell.persistentZone ? targets : undefined, legal.center)) throw new EncounterError(`Illegal or stale arena spell "${legal.id}".`);
       if (spell.isBonusAction) active.bonusActionUsed = true;
       else if (spell.replacesAttack) {
         active.turnFlags[`arena-attack-${attacksUsed(active)}`] = true;

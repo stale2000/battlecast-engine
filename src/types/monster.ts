@@ -377,8 +377,14 @@ export interface MonsterAction {
   spiritualWeapon?: { moveFt: number };
   /** A damaging concentration area that remains after the initial cast. */
   persistentAura?: { moveFt?: number; automaticDamage?: boolean; damageOnInitialCast?: boolean };
-  /** Creates a static control zone whose triggers are resolved by the engine. */
-  persistentZone?: { radiusFt: number; durationRounds: number; triggers: Array<'entry' | 'turnStart' | 'turnEnd'> };
+  /** Creates a static control zone whose triggers and movement effects are resolved by the engine. */
+  persistentZone?: {
+    radiusFt: number;
+    durationRounds: number;
+    triggers: Array<'entry' | 'turnStart' | 'turnEnd'>;
+    difficultTerrain?: boolean;
+    damagePer5Ft?: { dice: string; type: string };
+  };
   /** Enables a later no-slot repeat of this concentration spell (Call Lightning). */
   repeatableAreaSpell?: true;
   /** The spell cannot affect a target wearing Heavy armor (Barkskin). */
@@ -948,11 +954,13 @@ export interface PersistentZone {
   y: number;
   radius: number;
   endRound: number;
-  saveAbility: keyof Abilities;
-  saveDC: number;
-  conditionOnFail: Condition;
-  conditionDuration: ConditionDuration;
+  saveAbility?: keyof Abilities;
+  saveDC?: number;
+  conditionOnFail?: Condition;
+  conditionDuration?: ConditionDuration;
   triggers: Array<'entry' | 'turnStart' | 'turnEnd'>;
+  difficultTerrain?: boolean;
+  damagePer5Ft?: { dice: string; type: string };
   requiresConcentration: boolean;
 }
 

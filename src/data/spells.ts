@@ -376,7 +376,7 @@ export function grease(ability: SpellcastingAbility, mod: number, pb: number): M
     description: `10-foot square within 60 ft. Difficult Terrain for 1 minute. DEX save DC ${saveDC(mod, pb)} or Prone when it appears, when a creature enters, or when it ends a turn there.`,
     savingThrow: { ability: 'dex', dc: saveDC(mod, pb), conditionOnFail: 'prone', conditionDuration: 'end_of_next_turn', area: '10-foot square' },
     range: { normal: 60, long: 60 }, targetScope: 'area_enemies',
-    persistentZone: { radiusFt: 10, durationRounds: 10, triggers: ['entry', 'turnEnd'] },
+    persistentZone: { radiusFt: 10, durationRounds: 10, triggers: ['entry', 'turnEnd'], difficultTerrain: true },
   };
 }
 
@@ -643,6 +643,15 @@ export function spiritualWeapon(ability: SpellcastingAbility, mod: number, pb: n
     spiritualWeapon: { moveFt: 20 },
     range: { normal: 60, long: 60 },
     targetScope: 'one_enemy',
+  };
+}
+
+export function spikeGrowth(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Spike Growth', type: 'special', spellLevel: 2, spellSchool: 'transmutation', castingAbility: ability, concentration: true, durationRounds: 100,
+    description: `20-foot-radius sphere within 150 feet becomes Difficult Terrain. A creature takes 2d4 piercing damage for every 5 feet it moves into or within the area. Concentration, 10 minutes.`,
+    range: { normal: 150, long: 150 }, targetScope: 'area_enemies',
+    persistentZone: { radiusFt: 20, durationRounds: 100, triggers: [], difficultTerrain: true, damagePer5Ft: { dice: '2d4', type: 'piercing' } },
   };
 }
 
@@ -1624,7 +1633,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Arms of Hadar', armsOfHadar], ['Color Spray', colorSpray], ['Divine Favor', divineFavor],
   ['Faerie Fire', faerieFire], ['False Life', falseLife], ['Fog Cloud', fogCloud], ['Grease', grease], ['Longstrider', longstrider],
   ['Ray of Sickness', rayOfSickness], ["Tasha's Hideous Laughter", tashasHideousLaughter],
-  ['Scorching Ray', scorchingRay], ['Web', web], ['Hold Person', holdPerson],
+  ['Scorching Ray', scorchingRay], ['Web', web], ['Spike Growth', spikeGrowth], ['Hold Person', holdPerson],
   ['Flaming Sphere', flamingSphere], ['Cloud of Daggers', cloudOfDaggers],
   ['Shatter', shatter], ['Moonbeam', moonbeam], ['Spiritual Weapon', spiritualWeapon],
   ['Aid', aid], ['Magic Weapon', magicWeapon], ['Shining Smite', shiningSmite],

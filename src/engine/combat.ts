@@ -3793,22 +3793,51 @@ export function passesSanctuary(state: BattleState, attacker: Creature, target: 
 export function createPersistentZone(state: BattleState, caster: Creature, action: MonsterAction, center: { x: number; y: number } | undefined): void {
   const config = action.persistentZone;
   const save = action.savingThrow;
-  if (!config || !save?.conditionOnFail || !center) return;
+  if (!config || !center) return;
   state.persistentZones = (state.persistentZones ?? []).filter(zone => !(zone.sourceId === caster.id && zone.name === action.name));
   state.persistentZones.push({
     sourceId: caster.id, name: action.name, x: center.x, y: center.y, radius: config.radiusFt,
-    endRound: state.round + config.durationRounds, saveAbility: save.ability, saveDC: save.dc + getSpellSaveDcBonus(caster, action),
-    conditionOnFail: save.conditionOnFail, conditionDuration: save.conditionDuration ?? 'end_of_next_turn', triggers: config.triggers,
+    endRound: state.round + config.durationRounds, saveAbility: save?.ability, saveDC: save ? save.dc + getSpellSaveDcBonus(caster, action) : undefined,
+    conditionOnFail: save?.conditionOnFail, conditionDuration: save?.conditionDuration ?? 'end_of_next_turn', triggers: config.triggers,
+    difficultTerrain: config.difficultTerrain, damagePer5Ft: config.damagePer5Ft,
     requiresConcentration: action.concentration === true,
   });
+}
+
+function isInPersistentZone(zone: PersistentZone, position: { x: number; y: number }): boolean {
+  return distance(position, { x: zone.x, y: zone.y }) <= zone.radius;
+}
+
+export function persistentZoneMovementCost(state: BattleState, creature: Creature, position: { x: number; y: number }): number {
+  if (creature.airborne) return 1;
+  return (state.persistentZones ?? []).some(zone => zone.endRound > state.round && zone.difficultTerrain && isInPersistentZone(zone, position)) ? 2 : 1;
+}
+
+export function applyPersistentZoneMovementEffects(state: BattleState, creature: Creature, path: Array<{ x: number; y: number }>, from: { x: number; y: number }): void {
+  if (creature.airborne) return;
+  let previous = from;
+  for (const position of path) {
+    for (const zone of state.persistentZones ?? []) {
+      if (zone.endRound <= state.round || !zone.damagePer5Ft || (!isInPersistentZone(zone, previous) && !isInPersistentZone(zone, position))) continue;
+      const source = getCreatureById(state, zone.sourceId) ?? null;
+      const damage = rollDice(zone.damagePer5Ft.dice).total;
+      const beforeHp = creature.currentHp;
+      pushLog(state, { round: state.round, turn: state.turnIndex, actor: source?.displayName ?? zone.name, action: zone.name, details: `${creature.displayName} takes ${damage} ${zone.damagePer5Ft.type} damage moving through ${zone.name}.`, damage, type: 'damage' });
+      const event = pushHitEvent(state, creature.id, damage, zone.damagePer5Ft.type, false, beforeHp);
+      applyDamage(state, creature, damage, zone.damagePer5Ft.type, source, false, true);
+      event.targetHpAfter = creature.currentHp;
+      if (!creature.isAlive) return;
+    }
+    previous = position;
+  }
 }
 
 export function triggerPersistentZones(state: BattleState, target: Creature, trigger: 'entry' | 'turnStart' | 'turnEnd'): void {
   state.persistentZones = (state.persistentZones ?? []).filter(zone => zone.endRound > state.round);
   for (const zone of state.persistentZones ?? []) {
-    if (!zone.triggers.includes(trigger) || distance(target.position, { x: zone.x, y: zone.y }) > zone.radius) continue;
+    if (!zone.triggers.includes(trigger) || !zone.conditionOnFail || zone.saveAbility === undefined || zone.saveDC === undefined || !isInPersistentZone(zone, target.position)) continue;
     const source = getCreatureById(state, zone.sourceId);
-    if (!source?.isAlive) continue;
+    if (!source) continue;
     const save = rollSaveWithBuffs(target, getEffectiveSaveModifier(target, zone.saveAbility, state), hasActiveTrait(target, 'Magic Resistance'), zone.saveDC, zone.saveAbility, zone.conditionOnFail);
     const passed = save.total >= zone.saveDC;
     state.events.push({ kind: 'save', targetId: target.id, success: passed, durationMs: BASE_DURATIONS.save });
