@@ -175,7 +175,7 @@ function summonSpellActions(state: NonNullable<Encounter['state']>, active: Crea
 
 function areaSpellAction(state: NonNullable<Encounter['state']>, active: Creature, action: MonsterAction, actionIndex: number, area: string): ArenaAction[] {
   const radius = Number(area.match(/(\d+)-foot/)?.[1] ?? 20);
-  const rangedPointArea = Boolean(action.range && (area.includes('sphere') || area.includes('cylinder') || area.includes('radius')));
+  const rangedPointArea = Boolean(action.range && (area.includes('sphere') || area.includes('cylinder') || area.includes('cube') || area.includes('radius')));
   const shapedAction = area === originalArea(action) ? action : { ...action, savingThrow: { ...action.savingThrow!, area } };
   const pick = rangedPointArea ? pickRangedSphereCenter(state, active, shapedAction, radius) : undefined;
   const directional = area.includes('line') ? bestDirectionalTargets(state, active, radius, isInLine) : undefined;

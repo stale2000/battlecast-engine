@@ -762,7 +762,7 @@ export function cloudOfDaggers(ability: SpellcastingAbility, mod: number, pb: nu
       // persistentAura marker makes this metadata rather than a real save.
       ability: 'dex', dc: saveDC(mod, pb), damageOnFail: '4d4', area: '5-foot cube',
     },
-    targetScope: 'area_enemies',
+    range: { normal: 60, long: 60 }, targetScope: 'area_enemies',
   };
 }
 

@@ -1986,6 +1986,43 @@ describe('Kaggle arena bridge', () => {
     }
   });
 
+  it('resolves a legal representative of every selectable level-5 spell', () => {
+    const noTurnChoice = new Set(['Shield', 'Hellish Rebuke', 'Counterspell', 'Dispel Magic']);
+    for (const heroClass of HERO_CLASS_NAMES) {
+      const spells = getAvailableSpells(heroClass, 5).filter(spell => spell.spellLevel > 0).map(spell => spell.name);
+      if (!spells.length) continue;
+      const encounter = new Encounter({ seed: 1 });
+      const [hero] = encounter.addCreature({ heroClass, heroLevel: 5, heroOverrides: { spells }, team: 'red', position: { x: 0, y: 0 } });
+      const [ally] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'red', position: { x: 1, y: 1 } });
+      const [fallenAlly] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'red', position: { x: 0, y: 1 } });
+      encounter.addCreature({ monster: 'Goblin Warrior', team: 'blue', position: { x: 1, y: 0 } });
+      encounter.start();
+      const state = encounter.state!;
+      state.initiativeOrder = [hero.id];
+      const caster = state.creatures.find(creature => creature.id === hero.id)!;
+      const injuredAlly = state.creatures.find(creature => creature.id === ally.id)!;
+      injuredAlly.currentHp = Math.max(1, injuredAlly.maxHp - 10);
+      const deadAlly = state.creatures.find(creature => creature.id === fallenAlly.id)!;
+      deadAlly.isAlive = false;
+      deadAlly.currentHp = 0;
+      deadAlly.stats.deathRound = state.round;
+      injuredAlly.conditions = ['blinded', 'deafened', 'paralyzed', 'poisoned'];
+      startArena(encounter);
+      const snapshot = encounter.toJSON();
+      for (const spellName of spells) {
+        if (noTurnChoice.has(spellName)) continue;
+        const copy = Encounter.fromJSON(snapshot);
+        const action = getLegalActions(copy, hero.id).find(candidate => candidate.actionName === spellName);
+        expect(action, `${heroClass} ${spellName}`).toBeTruthy();
+        const submitted = action!.type === 'spell_teleport'
+          ? { ...action!, destination: { x: 2, y: 0 } }
+          : action!;
+        expect(() => applyLegalAction(copy, submitted)).not.toThrow();
+        expect(copy.state!.logs.some(log => log.details.includes("isn't simulated"))).toBe(false);
+      }
+    }
+  });
+
   it('summons a controlled Bestial Spirit with validated placement and removes it on concentration loss or expiry', () => {
     expect(buildSpellAction('Summon Beast', 'wis', 3, 3)?.summon).toBeTruthy();
     expect(buildCustomHero('Druid', 5, { spells: ['Summon Beast'] }).actions.some(action => action.name === 'Summon Beast')).toBe(true);
