@@ -36,7 +36,7 @@ import {
   pushLog, getAliveCreatures, getEnemies,
   getEffectiveSaveModifier, hasActiveTrait, getActiveSize,
   applyActionRuntimeEffects, emptyDamageSummary, addDamageToSummary,
-  conditionTargetMatchesActionSize, hasTotalCoverFromContainer, logTotalCoverFromContainer,
+  conditionTargetMatchesActionSize, hasTotalCoverFromContainer, logTotalCoverFromContainer, passesSanctuary,
   isImmuneToDamageType,
   type BattleState,
 } from './combat.js';
@@ -587,6 +587,7 @@ export function resolveAoE(
 
   for (const target of targets) {
     if (!target.isAlive) continue;
+    if (action.targetScope !== 'area_enemies' && !passesSanctuary(state, attacker, target)) continue;
     if (hasTotalCoverFromContainer(target, attacker)) {
       logTotalCoverFromContainer(state, attacker, target, action.name);
       continue;

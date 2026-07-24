@@ -3755,6 +3755,20 @@ function applyCuttingWordsToDamageRoll(
   return Math.max(0, damage - reduction);
 }
 
+export function passesSanctuary(state: BattleState, attacker: Creature, target: Creature): boolean {
+  const sanctuary = target.activeBuffs?.find(buff => buff.sanctuarySaveDc !== undefined);
+  if (!sanctuary || attacker.id === target.id) return true;
+  const sanctuaryDc = sanctuary.sanctuarySaveDc!;
+  const save = rollSaveWithBuffs(attacker, getEffectiveSaveModifier(attacker, 'wis', state), false, sanctuaryDc, 'wis');
+  state.events.push({ kind: 'save', targetId: attacker.id, success: save.total >= sanctuaryDc, durationMs: BASE_DURATIONS.save });
+  if (save.total >= sanctuaryDc) return true;
+  pushLog(state, {
+    round: state.round, turn: state.turnIndex, actor: attacker.displayName, action: 'Sanctuary',
+    details: `${attacker.displayName} cannot bring itself to attack ${target.displayName} (${save.total} vs DC ${sanctuaryDc}).`, type: 'save',
+  });
+  return false;
+}
+
 function resolveAttack(
   state: BattleState,
   attacker: Creature,
@@ -3765,19 +3779,7 @@ function resolveAttack(
   if (!action.attackBonus && action.attackBonus !== 0) return;
   if (!target.isAlive) return;
   if (action.type === 'multiattack') return;
-  const sanctuary = target.activeBuffs?.find(buff => buff.sanctuarySaveDc !== undefined);
-  if (sanctuary && attacker.id !== target.id) {
-    const sanctuaryDc = sanctuary.sanctuarySaveDc!;
-    const save = rollSaveWithBuffs(attacker, getEffectiveSaveModifier(attacker, 'wis', state), false, sanctuaryDc, 'wis');
-    state.events.push({ kind: 'save', targetId: attacker.id, success: save.total >= sanctuaryDc, durationMs: BASE_DURATIONS.save });
-    if (save.total < sanctuaryDc) {
-      pushLog(state, {
-        round: state.round, turn: state.turnIndex, actor: attacker.displayName, action: 'Sanctuary',
-        details: `${attacker.displayName} cannot bring itself to attack ${target.displayName} (${save.total} vs DC ${sanctuaryDc}).`, type: 'save',
-      });
-      return;
-    }
-  }
+  if (!passesSanctuary(state, attacker, target)) return;
   for (const buff of [...attacker.activeBuffs].filter(candidate => candidate.endsOnAttackOrCast)) {
     removeActiveBuff(state, attacker, buff);
   }
