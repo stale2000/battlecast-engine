@@ -403,6 +403,15 @@ export function falseLife(ability: SpellcastingAbility, _mod: number, _pb: numbe
   };
 }
 
+export function armorOfAgathys(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Armor of Agathys', type: 'special', spellLevel: 1, spellSchool: 'abjuration', castingAbility: ability, isBonusAction: true, durationRounds: 600,
+    description: 'You gain 5 Temporary Hit Points for 1 hour. While you have those hit points, a creature that hits you with a melee attack takes 5 cold damage.', targetScope: 'self',
+    temporaryHp: { dice: '5' },
+    buff: { name: 'Armor of Agathys', key: 'armor-of-agathys', reactiveDamage: '5 cold', endsWhenTemporaryHpDepleted: true },
+  };
+}
+
 export function mageArmor(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
   return {
     name: 'Mage Armor', type: 'special', spellLevel: 1, spellSchool: 'abjuration', castingAbility: ability, durationRounds: 4800,
@@ -1639,7 +1648,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Entangle', entangle], ['Command', command], ['Chromatic Orb', chromaticOrb],
   ['Inflict Wounds', inflictWounds], ['Witch Bolt', witchBolt],
   ['Arms of Hadar', armsOfHadar], ['Color Spray', colorSpray], ['Divine Favor', divineFavor],
-  ['Faerie Fire', faerieFire], ['False Life', falseLife], ['Fog Cloud', fogCloud], ['Grease', grease], ['Longstrider', longstrider],
+  ['Armor of Agathys', armorOfAgathys], ['Faerie Fire', faerieFire], ['False Life', falseLife], ['Fog Cloud', fogCloud], ['Grease', grease], ['Longstrider', longstrider],
   ['Mage Armor', mageArmor],
   ['Ray of Sickness', rayOfSickness], ["Tasha's Hideous Laughter", tashasHideousLaughter],
   ['Scorching Ray', scorchingRay], ['Web', web], ['Spike Growth', spikeGrowth], ['Hold Person', holdPerson],

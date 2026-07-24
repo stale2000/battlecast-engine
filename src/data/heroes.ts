@@ -43,7 +43,7 @@ import {
   blindnessDeafness, invisibility, mirrorImage, seeInvisibility, dispelMagic, haste, wallOfFire,
   aid, magicWeapon, shiningSmite,
   acidArrow, armsOfHadar, barkskin, bestowCurse, blur, colorSpray, divineFavor, faerieFire, falseLife, fear, fly, fogCloud, grease, gustOfWind, lesserRestoration, mistyStep,
-  longstrider, mageArmor, rayOfSickness, revivify, tashasHideousLaughter,
+  armorOfAgathys, longstrider, mageArmor, rayOfSickness, revivify, tashasHideousLaughter,
   protectionFromPoison, shield, hellishRebuke,
   circleOfDeath, chainLightning, disintegrate, fingerOfDeath,
   befuddlement, powerWordHeal, powerWordKill, meteorSwarm,
@@ -1701,7 +1701,7 @@ function buildOptionalSpells(
       pool.push(wallOfFire(spellAbility, mod, pb));
       break;
     case 'Warlock':
-      pool.push(armsOfHadar(spellAbility, mod, pb), colorSpray(spellAbility, mod, pb));
+      pool.push(armorOfAgathys(spellAbility, mod, pb), armsOfHadar(spellAbility, mod, pb), colorSpray(spellAbility, mod, pb));
       pool.push(bestowCurse(spellAbility, mod, pb));
       pool.push(mirrorImage(spellAbility, mod, pb));
       pool.push(dispelMagic(spellAbility, mod, pb));
@@ -2597,7 +2597,7 @@ export function getAvailableSpells(
       optional.push(wallOfFire(spellAbility, mod, pb));
       break;
     case 'Warlock':
-      optional.push(armsOfHadar(spellAbility, mod, pb), colorSpray(spellAbility, mod, pb));
+      optional.push(armorOfAgathys(spellAbility, mod, pb), armsOfHadar(spellAbility, mod, pb), colorSpray(spellAbility, mod, pb));
       optional.push(bestowCurse(spellAbility, mod, pb));
       optional.push(mirrorImage(spellAbility, mod, pb));
       optional.push(dispelMagic(spellAbility, mod, pb));

@@ -439,6 +439,8 @@ export interface BuffTemplate {
   conditionalRider?: 'targetNotFullHp';
   /** Damage dealt to melee attackers that hit this creature (e.g. Fire Shield "2d8 fire"). */
   reactiveDamage?: string;
+  /** This effect ends when the temporary HP that powers it are depleted. */
+  endsWhenTemporaryHpDepleted?: boolean;
   /** If true, the first time the target would drop to 0 HP, it drops to 1 HP instead (Death Ward). */
   preventDeath?: boolean;
   /** Weapon Mastery: Vex gives one attacker Advantage against this creature. */
@@ -890,6 +892,8 @@ export interface ActiveBuff {
   conditionalRider?: 'targetNotFullHp';
   /** Damage dealt to melee attackers that hit this creature (e.g. Fire Shield "2d8 fire"). */
   reactiveDamage?: string;
+  /** This effect ends when the temporary HP that powers it are depleted. */
+  endsWhenTemporaryHpDepleted?: boolean;
   /** If true, the first time the target would drop to 0 HP, it drops to 1 HP instead (Death Ward). */
   preventDeath?: boolean;
   /** Weapon Mastery: Vex gives one attacker Advantage against this creature. */

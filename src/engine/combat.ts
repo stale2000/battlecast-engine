@@ -3162,7 +3162,10 @@ function applyDamage(state: BattleState, target: Creature, damage: number, damag
       details: `${target.displayName}'s temporary HP absorbs ${absorbed} damage (${target.temporaryHp} temporary HP left).`,
       type: 'info',
     });
-    if (damage <= 0) return 0;
+    if (damage <= 0) {
+      target.activeBuffs = target.activeBuffs.filter(buff => !buff.endsWhenTemporaryHpDepleted || (target.temporaryHp ?? 0) > 0);
+      return 0;
+    }
   }
 
   // 2024 Wild Shape: the Druid keeps real HP and the form's temporary HP
@@ -3190,6 +3193,7 @@ function applyDamage(state: BattleState, target: Creature, damage: number, damag
   }
 
   processHydraDamage(state, target, damage, damageType, attacker);
+  target.activeBuffs = target.activeBuffs.filter(buff => !buff.endsWhenTemporaryHpDepleted || (target.temporaryHp ?? 0) > 0);
   if (!target.isAlive) return damage;
 
   for (const buff of [...(target.activeBuffs ?? [])]) {
@@ -4140,6 +4144,9 @@ function resolveAttack(
 
   if (!shielded && (isCrit || combatProwessHit || roll.total >= ac)) {
     attacker.stats.attacksHit++;
+    const reactiveBuffsAtHit = (action.type === 'melee' || action.type === undefined)
+      ? (target.activeBuffs ?? []).filter(buff => buff.reactiveDamage && (!buff.endsWhenTemporaryHpDepleted || (target.temporaryHp ?? 0) > 0))
+      : [];
     let dealtActionDamage = false;
     const actionDamageSummary = emptyDamageSummary();
     // D&D 5e: attacks within 5ft of a paralyzed OR unconscious creature are auto-crits
@@ -4471,10 +4478,9 @@ function resolveAttack(
 
     // Fire Shield (and similar reactive damage buffs): when hit by a melee
     // attack, the attacker takes damage from the target's reactive buff.
-    if ((action.type === 'melee' || action.type === undefined) && attacker.isAlive) {
-      for (const b of target.activeBuffs ?? []) {
-        if (!b.reactiveDamage) continue;
-        const parts = b.reactiveDamage.split(' ');
+    if (reactiveBuffsAtHit.length && attacker.isAlive) {
+      for (const b of reactiveBuffsAtHit) {
+        const parts = b.reactiveDamage!.split(' ');
         const diceExpr = parts[0];
         const dmgType = parts.slice(1).join(' ') || 'fire';
         const reactiveDmg = applyDamageRollPenalty(target, rollDamage(diceExpr, false).total);

@@ -512,6 +512,7 @@ export function applyBuffFromSpell(
     rageDamageBonus: tmpl.rageDamageBonus,
     conditionalRider: tmpl.conditionalRider,
     reactiveDamage: tmpl.reactiveDamage,
+    endsWhenTemporaryHpDepleted: tmpl.endsWhenTemporaryHpDepleted,
     preventDeath: tmpl.preventDeath,
     advantageForAttackerId: tmpl.advantageForAttackerId,
     advantageForAllAttackers: tmpl.advantageForAllAttackers,
@@ -605,6 +606,16 @@ function scaleAttackSpellForSlot(action: MonsterAction, slotLevelUsed: number): 
     };
   }
 
+  if (action.name === 'Armor of Agathys' && action.temporaryHp && action.buff?.reactiveDamage) {
+    const amount = 5 * slotLevelUsed;
+    return {
+      ...action,
+      description: `You gain ${amount} Temporary Hit Points for 1 hour. While you have those hit points, a creature that hits you with a melee attack takes ${amount} cold damage.`,
+      temporaryHp: { ...action.temporaryHp, dice: String(amount) },
+      buff: { ...action.buff, reactiveDamage: `${amount} cold` },
+    };
+  }
+
   if (action.name !== 'Witch Bolt' || !action.damage) return action;
   const baseLevel = action.spellLevel ?? 1;
   const extraDice = Math.max(0, slotLevelUsed - baseLevel);
@@ -646,6 +657,7 @@ function endAttackOrCastBuffs(state: BattleState, caster: Creature): void {
       action: buff.name, details: `${caster.displayName} becomes visible.`, type: 'special',
     });
   }
+
 }
 
 /** Move the caster's spectral weapon up to its recorded speed and attack a chosen target. */
@@ -1028,7 +1040,7 @@ export function executeSpell(
   if (castAction.temporaryHp && primaryTarget) {
     const amount = rollDice(castAction.temporaryHp.dice).total;
     applyTemporaryHp(state, primaryTarget, amount, caster, castAction.name);
-    return true;
+    if (!castAction.buff) return true;
   }
 
   if (castAction.removesConditions && primaryTarget) {
