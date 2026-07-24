@@ -604,6 +604,8 @@ export interface Creature {
   movementRemaining: number;
   temporaryFlightSpeed?: number;
   temporaryFlightExpiresRound?: number;
+  /** Caster maintaining the temporary fly speed, if concentration is required. */
+  temporaryFlightSourceId?: string;
   /** A temporary size change, such as a Goliath's Large Form. */
   temporarySize?: MonsterData['size'];
   temporarySizeExpiresRound?: number;

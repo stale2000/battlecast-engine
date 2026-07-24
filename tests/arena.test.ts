@@ -361,6 +361,20 @@ describe('Kaggle arena bridge', () => {
     expect(caster.activeBuffs.find(buff => buff.key === 'protection-energy')?.resistDamageTypes).toEqual(['fire']);
   });
 
+  it('ends concentration-granted flight when its caster drops concentration', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [fly('int', 3, 3)], additionalResources: { 'slot-3': 1 } } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 2, y: 0 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    expect(executeSpell(encounter.state!, caster, fly('int', 3, 3), caster)).toBe(true);
+    expect(caster.temporaryFlightSpeed).toBe(60);
+    expect(caster.concentratingOn).toBe('Fly');
+    dropConcentratedBuffsFrom(encounter.state!, caster.id);
+    expect(caster.temporaryFlightSpeed).toBeUndefined();
+    expect(caster.concentratingOn).toBeUndefined();
+  });
+
   it('repeats Call Lightning from authoritative concentration state without another slot', () => {
     const encounter = new Encounter({ seed: 1 });
     encounter.addCreature({ heroClass: 'Druid', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [callLightning('wis', 3, 3)], additionalResources: { 'slot-3': 1 } } });

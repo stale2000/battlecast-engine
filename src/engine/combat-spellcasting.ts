@@ -1006,8 +1006,13 @@ export function executeSpell(
   }
 
   if (castAction.grantsFlight && primaryTarget) {
+    if (castAction.concentration) {
+      dropConcentratedBuffsFrom(state, caster.id);
+      caster.concentratingOn = castAction.name;
+    }
     primaryTarget.temporaryFlightSpeed = castAction.grantsFlight.speed;
     primaryTarget.temporaryFlightExpiresRound = state.round + castAction.grantsFlight.durationRounds;
+    primaryTarget.temporaryFlightSourceId = castAction.concentration ? caster.id : undefined;
     pushLog(state, {
       round: state.round, turn: state.turnIndex, actor: caster.displayName, action: castAction.name,
       details: `${primaryTarget.displayName} gains a ${castAction.grantsFlight.speed}-foot Fly Speed.`, type: 'special',

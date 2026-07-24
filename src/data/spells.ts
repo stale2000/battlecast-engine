@@ -1439,6 +1439,7 @@ export function blindnessDeafness(ability: SpellcastingAbility, mod: number, pb:
       conditionOnFail: 'blinded',
       conditionDuration: '1_minute',
     },
+    buffOnFailedSave: { name: 'Blindness/Deafness', key: 'blindness-deafness', appliedCondition: 'blinded', saveEnds: { ability: 'con', dc: saveDC(mod, pb), at: 'targetTurnEnd' } },
     range: { normal: 120, long: 120 },
     targetScope: 'one_enemy',
   };
