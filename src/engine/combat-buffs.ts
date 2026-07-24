@@ -130,6 +130,11 @@ export function rollSaveWithBuffs(
     .some(buff => buff.saveAdvantageAbilities?.includes(ability));
   const buffConditionSaveAdvantage = condition !== undefined && (saver.activeBuffs ?? [])
     .some(buff => buff.saveAdvantageConditions?.includes(condition));
+  const auraSaveAdvantage = ability !== undefined
+    && saver.concentrationAura?.origin === 'point'
+    && saver.concentrationAura.point !== undefined
+    && saver.concentrationAura.saveAdvantageWithinFt?.ability === ability
+    && distance(saver.position, saver.concentrationAura.point) <= saver.concentrationAura.saveAdvantageWithinFt.radiusFt;
   const saveDisadvantageKeys = (saver.activeBuffs ?? [])
     .filter(b => b.saveDisadvantage)
     .map(b => b.key);
@@ -138,7 +143,7 @@ export function rollSaveWithBuffs(
 
   const halflingLuck = saver.monsterData.heroSpecies === 'Halfling';
   const strengthTestDisadvantage = ability === 'str' && (saver.activeBuffs ?? []).some(buff => buff.strengthTestDisadvantage);
-  const result = rollSave(mod, advantage || barbarianSaveAdvantage || gnomishCunning || speciesConditionAdvantage || buffSaveAdvantage || buffConditionSaveAdvantage, saveDisadvantageKeys.length > 0 || abilitySaveDisadvantage || strengthTestDisadvantage, halflingLuck);
+  const result = rollSave(mod, advantage || barbarianSaveAdvantage || gnomishCunning || speciesConditionAdvantage || buffSaveAdvantage || buffConditionSaveAdvantage || auraSaveAdvantage, saveDisadvantageKeys.length > 0 || abilitySaveDisadvantage || strengthTestDisadvantage, halflingLuck);
   if (saveDisadvantageKeys.length > 0) {
     saver.activeBuffs = saver.activeBuffs.filter(b => !saveDisadvantageKeys.includes(b.key));
   }
@@ -429,7 +434,12 @@ export function attachConcentrationAura(state: BattleState, caster: Creature, ac
     saveAbility: action.savingThrow.ability,
     saveDC: action.savingThrow.dc + getSpellSaveDcBonus(caster, action),
     radiusFt, endRound: state.round + action.durationRounds, moveFt: action.persistentAura.moveFt,
-    automaticDamage: action.persistentAura.automaticDamage, origin, point,
+    automaticDamage: action.persistentAura.automaticDamage, triggers: action.persistentAura.triggers,
+    moveRequiresCasterMove: action.persistentAura.moveRequiresCasterMove,
+    moveUsesAction: action.persistentAura.moveUsesAction,
+    oncePerTurn: action.persistentAura.triggers?.includes('turnEnd') || undefined,
+    saveAdvantageWithinFt: action.persistentAura.saveAdvantageWithinFt,
+    origin, point,
   };
   state.events.push({
     kind: 'concentrationAura', creatureId: caster.id, active: true,
@@ -442,15 +452,28 @@ export function attachConcentrationAura(state: BattleState, caster: Creature, ac
  * On the affected creature's turn start, tick every enemy concentration
  * aura the creature is currently inside. One save per aura per round.
  */
-export function processConcentrationAuras(state: BattleState, creature: Creature): void {
+function auraTriggers(aura: NonNullable<Creature['concentrationAura']>, trigger: 'entry' | 'turnStart' | 'turnEnd'): boolean {
+  return aura.triggers?.includes(trigger) ?? trigger !== 'turnEnd';
+}
+
+function auraCanAffect(state: BattleState, aura: NonNullable<Creature['concentrationAura']>, target: Creature): boolean {
+  if (!aura.oncePerTurn) return true;
+  const key = `${state.round}:${state.turnIndex}`;
+  if (aura.affectedTurnKeys?.[target.id] === key) return false;
+  aura.affectedTurnKeys = { ...aura.affectedTurnKeys, [target.id]: key };
+  return true;
+}
+
+export function processConcentrationAuras(state: BattleState, creature: Creature, trigger: 'turnStart' | 'turnEnd' = 'turnStart'): void {
   for (const other of state.creatures) {
     if (!other.isAlive || !other.concentrationAura || other.id === creature.id) continue;
     if (other.team === creature.team) continue;
 
     const aura = other.concentrationAura!;
+    if (!auraTriggers(aura, trigger)) continue;
     const center = aura.origin === 'caster' ? other.position : aura.point!;
     const dist = distance(creature.position, center);
-    if (dist > aura.radiusFt) continue;
+    if (dist > aura.radiusFt || !auraCanAffect(state, aura, creature)) continue;
 
     const dmg = rollDice(aura.damageDice).total;
     const automatic = aura.automaticDamage === true;
@@ -483,16 +506,18 @@ export function moveConcentrationAura(state: BattleState, caster: Creature, dest
   const oldPoint = aura?.point;
   const gridSize = state.gridSize ?? 20;
   if (!aura || aura.origin !== 'point' || !oldPoint || !aura.moveFt || aura.endRound <= state.round
+    || aura.movedThisTurn || (aura.moveRequiresCasterMove && !caster.hasMovedThisTurn)
     || !Number.isInteger(destination.x) || !Number.isInteger(destination.y)
     || destination.x < 0 || destination.y < 0 || destination.x >= gridSize || destination.y >= gridSize
     || Math.max(Math.abs(destination.x - oldPoint.x), Math.abs(destination.y - oldPoint.y)) * 5 > aura.moveFt) return false;
   aura.point = { ...destination };
+  aura.movedThisTurn = true;
   pushLog(state, {
     round: state.round, turn: state.turnIndex, actor: caster.displayName, action: aura.spellName,
     details: `${caster.displayName} moves ${aura.spellName} to (${destination.x}, ${destination.y}).`, type: 'move',
   });
   for (const target of state.creatures) {
-    if (!target.isAlive || target.team === caster.team || distance(target.position, oldPoint) <= aura.radiusFt || distance(target.position, destination) > aura.radiusFt) continue;
+    if (!target.isAlive || target.team === caster.team || !auraTriggers(aura, 'entry') || distance(target.position, oldPoint) <= aura.radiusFt || distance(target.position, destination) > aura.radiusFt || !auraCanAffect(state, aura, target)) continue;
     const automatic = aura.automaticDamage === true;
     const save = automatic ? undefined : rollSaveWithBuffs(target, getEffectiveSaveModifier(target, aura.saveAbility, state), hasActiveTrait(target, 'Magic Resistance'), aura.saveDC, aura.saveAbility);
     const passed = !automatic && save!.total >= aura.saveDC;
@@ -526,7 +551,7 @@ export function checkAuraEntry(
     const center = aura.origin === 'caster' ? other.position : aura.point!;
     const distNow = distance(creature.position, center);
     const distBefore = distance(oldPos, center);
-    if (distNow <= aura.radiusFt && distBefore > aura.radiusFt) {
+    if (auraTriggers(aura, 'entry') && distNow <= aura.radiusFt && distBefore > aura.radiusFt && auraCanAffect(state, aura, creature)) {
       const dmg = rollDice(aura.damageDice).total;
       const automatic = aura.automaticDamage === true;
       const save = automatic ? undefined : rollSaveWithBuffs(creature, getEffectiveSaveModifier(creature, aura.saveAbility, state), hasActiveTrait(creature, 'Magic Resistance'), aura.saveDC, aura.saveAbility);
@@ -554,7 +579,7 @@ export function checkAuraEntry(
       if (!enemy.isAlive || enemy.id === creature.id || enemy.team === creature.team) continue;
       const distNow = distance(enemy.position, creature.position);
       const distBefore = distance(enemy.position, oldPos);
-      if (distNow <= creature.concentrationAura.radiusFt && distBefore > creature.concentrationAura.radiusFt) {
+      if (auraTriggers(creature.concentrationAura, 'entry') && distNow <= creature.concentrationAura.radiusFt && distBefore > creature.concentrationAura.radiusFt && auraCanAffect(state, creature.concentrationAura, enemy)) {
         const aura = creature.concentrationAura;
         const dmg = rollDice(aura.damageDice).total;
         const automatic = aura.automaticDamage === true;

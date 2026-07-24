@@ -401,7 +401,8 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
     for (const target of enemies.filter(target => creatureDistance(active, target) <= 5)) actions.push({ id: `repeat_action_spell:${slug(active.repeatableActionSpell.name)}:${target.id}`, type: 'repeat_action_spell', spellName: active.repeatableActionSpell.name, targetId: target.id });
   }
   actions.push(...repeatAreaSpellActions(state, active));
-  if (!active.hasActed && active.concentrationAura?.origin === 'point' && active.concentrationAura.moveFt && active.concentrationAura.endRound > state.round) actions.push({ id: 'move_aura', type: 'move_aura' });
+  if (!active.hasActed && active.concentrationAura?.origin === 'point' && active.concentrationAura.moveFt && active.concentrationAura.endRound > state.round
+    && !active.concentrationAura.movedThisTurn && (!active.concentrationAura.moveRequiresCasterMove || active.hasMovedThisTurn)) actions.push({ id: 'move_aura', type: 'move_aura' });
   if (reachableMovementDestinations(active, state).length) actions.push({ id: 'move_to', type: 'move_to' });
   actions.push(...getClassFeatureLegalActions(active));
   if (!active.hasActed && !attackInProgress) {
@@ -621,7 +622,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
     } else if (legal.type === 'move_aura') {
       const destination = action.type === 'move_aura' ? action.destination : undefined;
       if (!destination || !moveConcentrationAura(state, active, destination)) throw new EncounterError('Illegal or stale concentration-aura destination.');
-      active.hasActed = true;
+      if (active.concentrationAura?.moveUsesAction !== false) active.hasActed = true;
       checkBattleComplete(state);
     } else if (legal.type === 'move_to') {
       const destination = action.type === 'move_to' ? action.destination : undefined;

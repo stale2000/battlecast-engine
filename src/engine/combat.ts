@@ -17,6 +17,7 @@ import {
   addBuff,
   dropConcentratedBuffsFrom,
   removeActiveBuff,
+  processConcentrationAuras,
 } from './combat-buffs.js';
 import { applyHealing, applyTemporaryHp } from './combat-spellcasting.js';
 import { pushTargetAwayFromCaster } from './combat-aoe.js';
@@ -2542,6 +2543,8 @@ export function processSourceTurnStartOngoingEffects(state: BattleState, source:
 }
 
 export function processTargetTurnEndOngoingEffects(state: BattleState, target: Creature): void {
+  if (!target.isAlive) return;
+  processConcentrationAuras(state, target, 'turnEnd');
   if (!target.isAlive) return;
   triggerPersistentZones(state, target, 'turnEnd');
   if (!target.isAlive) return;

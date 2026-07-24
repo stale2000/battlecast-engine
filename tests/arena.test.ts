@@ -14,7 +14,7 @@ import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildCustomHero, buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
-import { acidArrow, armorOfAgathys, bane, barkskin, beaconOfHope, bestowCurse, bladeWard, bless, blindingSmite, buildSpellAction, callLightning, chromaticOrb, cloudOfDaggers, command, counterspell, cureWounds, dissonantWhispers, dispelMagic, enlargeReduce, entangle, expeditiousRetreat, fireball, flamingSphere, fly, grease, gustOfWind, haste, hellishRebuke, heroism, inflictWounds, invisibility, lesserRestoration, mageArmor, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, seeInvisibility, shield, shiningSmite, slow, spikeGrowth, spiritualWeapon, summonBeast, tashasHideousLaughter, web, witchBolt } from '../src/data/spells.js';
+import { acidArrow, armorOfAgathys, bane, barkskin, beaconOfHope, bestowCurse, bladeWard, bless, blindingSmite, buildSpellAction, callLightning, chromaticOrb, cloudOfDaggers, command, conjureAnimals, counterspell, cureWounds, dissonantWhispers, dispelMagic, enlargeReduce, entangle, expeditiousRetreat, fireball, flamingSphere, fly, grease, gustOfWind, haste, hellishRebuke, heroism, inflictWounds, invisibility, lesserRestoration, mageArmor, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, seeInvisibility, shield, shiningSmite, slow, spikeGrowth, spiritualWeapon, summonBeast, tashasHideousLaughter, web, witchBolt } from '../src/data/spells.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
@@ -2075,6 +2075,45 @@ describe('Kaggle arena bridge', () => {
     const caster = encounter.state!.creatures.find(creature => creature.id === druid.id)!;
     expect(trySpellcast(encounter.state!, caster)).toBe(true);
     expect(encounter.state!.creatures.some(creature => creature.summonedById === caster.id)).toBe(true);
+  });
+
+  it('resolves Conjure Animals as a movable spectral pack with its own timing rules', () => {
+    expect(buildSpellAction('Conjure Animals', 'wis', 3, 3)?.persistentAura).toBeTruthy();
+    expect(buildCustomHero('Druid', 5, { spells: ['Conjure Animals'] }).actions.some(action => action.name === 'Conjure Animals')).toBe(true);
+    const encounter = new Encounter({ seed: 1, gridSize: 12 });
+    const [caster] = encounter.addCreature({
+      heroClass: 'Druid', heroLevel: 5, team: 'red', position: { x: 0, y: 0 },
+      heroOverrides: { additionalActions: [conjureAnimals('wis', 3, 3)], additionalResources: { 'slot-3': 1 } },
+    });
+    const [target] = encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 5, y: 0 } });
+    encounter.start(); encounter.state!.initiativeOrder = [caster.id]; startArena(encounter);
+    const cast = getLegalActions(encounter, caster.id).find(action => action.actionName === 'Conjure Animals')!;
+    const activeTarget = encounter.state!.creatures.find(creature => creature.id === target.id)!;
+    const hpBeforeCast = activeTarget.currentHp;
+    applyLegalAction(encounter, cast);
+    const activeCaster = encounter.state!.creatures.find(creature => creature.id === caster.id)!;
+    expect(activeCaster.concentrationAura).toMatchObject({
+      spellName: 'Conjure Animals', radiusFt: 10, moveFt: 30, triggers: ['entry', 'turnEnd'], moveRequiresCasterMove: true, moveUsesAction: false,
+    });
+    expect(activeTarget.currentHp).toBe(hpBeforeCast);
+    activeCaster.concentrationAura!.point = { x: 2, y: 0 };
+    activeCaster.hasActed = false;
+    expect(getLegalActions(encounter, caster.id).some(action => action.type === 'move_aura')).toBe(false);
+    applyLegalAction(encounter, { id: 'move_to', type: 'move_to', destination: { x: 1, y: 0 } });
+    const movePack = getLegalActions(encounter, caster.id).find(action => action.type === 'move_aura')!;
+    withRng({ next: () => 0 }, () => applyLegalAction(encounter, { ...movePack, destination: { x: 4, y: 0 } }));
+    expect(activeCaster.hasActed).toBe(false);
+    expect(activeCaster.concentrationAura?.point).toEqual({ x: 4, y: 0 });
+    expect(activeTarget.currentHp).toBeLessThan(hpBeforeCast);
+    const hpAfterMove = activeTarget.currentHp;
+    withRng({ next: () => 0 }, () => processTargetTurnEndOngoingEffects(encounter.state!, activeTarget));
+    expect(activeTarget.currentHp).toBe(hpAfterMove);
+    encounter.state!.turnIndex++;
+    withRng({ next: () => 0 }, () => processTargetTurnEndOngoingEffects(encounter.state!, activeTarget));
+    expect(activeTarget.currentHp).toBeLessThan(hpAfterMove);
+    activeCaster.position = { x: 3, y: 0 };
+    const saveRolls = [0, 0.99];
+    expect(withRng({ next: () => saveRolls.shift()! }, () => rollSaveWithBuffs(activeCaster, 0, false, 99, 'str').rolls)).toEqual([1, 20]);
   });
 
   it('ends at the configured round cap and keeps CLI protocol output on stdout', () => {

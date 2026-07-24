@@ -549,6 +549,21 @@ export function summonBeast(ability: SpellcastingAbility, mod: number, pb: numbe
   };
 }
 
+export function conjureAnimals(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Conjure Animals', type: 'special', spellLevel: 3, spellSchool: 'conjuration', castingAbility: ability,
+    concentration: true, durationRounds: 100,
+    description: `Conjure a Large spectral pack within 60 feet. Creatures you can see take 3d10 slashing damage on a failed DEX save when the pack moves within 10 feet, enters the pack, or ends a turn there. You have Advantage on STR saves within 5 feet of the pack.`,
+    damageType: 'slashing', range: { normal: 60, long: 60 }, targetScope: 'area_enemies',
+    savingThrow: { ability: 'dex', dc: saveDC(mod, pb), damageOnFail: '3d10', damageOnSuccess: 'none', area: '10-foot sphere' },
+    persistentAura: {
+      moveFt: 30, damageOnInitialCast: false, triggers: ['entry', 'turnEnd'],
+      moveRequiresCasterMove: true, moveUsesAction: false,
+      saveAdvantageWithinFt: { ability: 'str', radiusFt: 5 },
+    },
+  };
+}
+
 export function scorchingRay(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
   return {
     name: 'Scorching Ray',
@@ -1761,7 +1776,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Enlarge/Reduce', enlargeReduce],
   ['Mage Armor', mageArmor],
   ['Ray of Enfeeblement', rayOfEnfeeblement], ['Ray of Sickness', rayOfSickness], ["Tasha's Hideous Laughter", tashasHideousLaughter],
-  ['Scorching Ray', scorchingRay], ['Summon Beast', summonBeast], ['Web', web], ['Spike Growth', spikeGrowth], ['Hold Person', holdPerson],
+  ['Scorching Ray', scorchingRay], ['Summon Beast', summonBeast], ['Conjure Animals', conjureAnimals], ['Web', web], ['Spike Growth', spikeGrowth], ['Hold Person', holdPerson],
   ['Flaming Sphere', flamingSphere], ['Cloud of Daggers', cloudOfDaggers],
   ['Shatter', shatter], ['Moonbeam', moonbeam], ['Spiritual Weapon', spiritualWeapon],
   ['Aid', aid], ['Magic Weapon', magicWeapon], ['Shining Smite', shiningSmite],

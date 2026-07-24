@@ -31,7 +31,7 @@ import { monsters } from './monsters.js';
 import {
   FULL_CASTER_SLOTS, HALF_CASTER_SLOTS, WARLOCK_SLOTS, slotsToResources,
   magicMissile, burningHands, thunderwave, sleep,
-  scorchingRay, summonBeast, web, spikeGrowth, flamingSphere, cloudOfDaggers, shatter, moonbeam, holdPerson, spiritualWeapon,
+  scorchingRay, summonBeast, conjureAnimals, web, spikeGrowth, flamingSphere, cloudOfDaggers, shatter, moonbeam, holdPerson, spiritualWeapon,
   fireball, lightningBolt, spiritGuardians, callLightning, hypnoticPattern,
   bless, bane, cureWounds, healingWord, heroism, protectionFromEvilAndGood, sanctuary, shieldOfFaith, guidingBolt,
   hex, huntersMark, dissonantWhispers, entangle,
@@ -1720,6 +1720,7 @@ function buildOptionalSpells(
       pool.push(barkskin(spellAbility, mod, pb), faerieFire(spellAbility, mod, pb), fogCloud(spellAbility, mod, pb), longstrider(spellAbility, mod, pb));
       pool.push(lesserRestoration(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb), passWithoutTrace(spellAbility, mod, pb), spikeGrowth(spellAbility, mod, pb));
       pool.push(dispelMagic(spellAbility, mod, pb));
+      pool.push(conjureAnimals(spellAbility, mod, pb));
       pool.push(fear(spellAbility, mod, pb), fly(spellAbility, mod, pb), revivify(spellAbility, mod, pb));
       pool.push(wallOfFire(spellAbility, mod, pb));
       break;
@@ -2623,6 +2624,7 @@ export function getAvailableSpells(
       optional.push(barkskin(spellAbility, mod, pb), faerieFire(spellAbility, mod, pb), fogCloud(spellAbility, mod, pb), longstrider(spellAbility, mod, pb));
       optional.push(lesserRestoration(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb), passWithoutTrace(spellAbility, mod, pb), spikeGrowth(spellAbility, mod, pb));
       optional.push(dispelMagic(spellAbility, mod, pb));
+      optional.push(conjureAnimals(spellAbility, mod, pb));
       optional.push(fear(spellAbility, mod, pb), fly(spellAbility, mod, pb), revivify(spellAbility, mod, pb));
       optional.push(wallOfFire(spellAbility, mod, pb));
       break;

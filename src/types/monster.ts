@@ -393,7 +393,19 @@ export interface MonsterAction {
   /** Creates a persistent spiritual weapon that can make later bonus-action attacks. */
   spiritualWeapon?: { moveFt: number };
   /** A damaging concentration area that remains after the initial cast. */
-  persistentAura?: { moveFt?: number; automaticDamage?: boolean; damageOnInitialCast?: boolean };
+  persistentAura?: {
+    moveFt?: number;
+    automaticDamage?: boolean;
+    damageOnInitialCast?: boolean;
+    /** Defaults to entry and turn-start, matching the original aura spells. */
+    triggers?: Array<'entry' | 'turnStart' | 'turnEnd'>;
+    /** The aura can move only after its caster has moved this turn. */
+    moveRequiresCasterMove?: boolean;
+    /** Moving the aura consumes the caster's action unless explicitly disabled. */
+    moveUsesAction?: boolean;
+    /** The caster has Advantage on this saving throw while close to the point aura. */
+    saveAdvantageWithinFt?: { ability: keyof Abilities; radiusFt: number };
+  };
   /** Creates a static control zone whose triggers and movement effects are resolved by the engine. */
   persistentZone?: {
     radiusFt: number;
@@ -772,6 +784,13 @@ export interface Creature {
     moveFt?: number;
     /** The area deals its full damage without a saving throw (Cloud of Daggers). */
     automaticDamage?: boolean;
+    triggers?: Array<'entry' | 'turnStart' | 'turnEnd'>;
+    moveRequiresCasterMove?: boolean;
+    moveUsesAction?: boolean;
+    movedThisTurn?: boolean;
+    oncePerTurn?: boolean;
+    affectedTurnKeys?: Record<string, string>;
+    saveAdvantageWithinFt?: { ability: keyof Abilities; radiusFt: number };
     origin: 'caster' | 'point';
     point?: { x: number; y: number };
   };

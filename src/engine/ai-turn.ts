@@ -373,6 +373,7 @@ export function processTurnStart(state: BattleState, creature: Creature): boolea
   if (creature.concentrationAura && creature.concentrationAura.endRound <= state.round) {
     dropConcentratedBuffsFrom(state, creature.id);
   }
+  if (creature.concentrationAura) creature.concentrationAura.movedThisTurn = false;
   state.events.push({ kind: 'turnStart', creatureId: creature.id, durationMs: BASE_DURATIONS.turnStart });
   state.darknessZones = state.darknessZones?.filter(zone => zone.endRound > state.round);
   revealVisibleHiddenCreatures(state);
