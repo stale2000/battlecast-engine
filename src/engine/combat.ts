@@ -3981,6 +3981,35 @@ function rollActionDamage(action: MonsterAction, expression: string, critical: b
     : rollDamage(expression, critical, rerollOnes).total;
 }
 
+function resolveWeaponHitArea(
+  state: BattleState,
+  attacker: Creature,
+  target: Creature,
+  action: MonsterAction,
+): void {
+  if (action.type !== 'ranged' || action.spellLevel !== undefined) return;
+  const buff = attacker.activeBuffs.find(candidate => candidate.weaponHitArea);
+  const config = buff?.weaponHitArea;
+  if (!config) return;
+  const targets = state.creatures.filter(creature => creature.isAlive && creatureDistance(target, creature) <= config.radiusFt);
+  if (targets.length) {
+    resolveAoE(state, attacker, {
+      name: buff!.name,
+      type: 'special',
+      description: `${buff!.name} burst`,
+      damageType: config.damageType,
+      savingThrow: {
+        ability: config.saveAbility,
+        dc: config.saveDc,
+        damageOnFail: config.damage,
+        damageOnSuccess: 'half',
+        area: `${config.radiusFt}-foot sphere`,
+      },
+    }, targets, target.position, undefined, true);
+  }
+  dropConcentratedBuffsFrom(state, attacker.id);
+}
+
 function resolveAttack(
   state: BattleState,
   attacker: Creature,
@@ -4468,29 +4497,7 @@ function resolveAttack(
       if (b.endsOnWeaponHit) dropConcentratedBuffsFrom(state, attacker.id);
     }
 
-    // Hail of Thorns and similar effects burst around the target of the next
-    // ranged weapon hit, then consume their concentration-bound rider.
-    if (action.type === 'ranged' && action.spellLevel === undefined) {
-      const burst = attacker.activeBuffs.find(buff => buff.weaponHitArea);
-      if (burst?.weaponHitArea) {
-        const config = burst.weaponHitArea;
-        const areaTargets = state.creatures.filter(creature => creature.isAlive && creatureDistance(target, creature) <= config.radiusFt);
-        resolveAoE(state, attacker, {
-          name: burst.name,
-          type: 'special',
-          description: `${burst.name} burst`,
-          damageType: config.damageType,
-          savingThrow: {
-            ability: config.saveAbility,
-            dc: config.saveDc,
-            damageOnFail: config.damage,
-            damageOnSuccess: 'half',
-            area: `${config.radiusFt}-foot sphere`,
-          },
-        }, areaTargets, target.position, undefined, true);
-        dropConcentratedBuffsFrom(state, attacker.id);
-      }
-    }
+    resolveWeaponHitArea(state, attacker, target, action);
 
     // Sneak Attack / additional damage
     const isRogueSneak = attacker.monsterData.isHero &&
