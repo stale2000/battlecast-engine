@@ -346,6 +346,7 @@ function processTurnStartTraits(state: BattleState, creature: Creature): void {
 /** Turn start: expire buffs, process conditions, recharge, reset movement.
  *  Returns false if the creature can't act (incapacitated/dead). */
 export function processTurnStart(state: BattleState, creature: Creature): boolean {
+  if (creature.spiritualWeapon && creature.spiritualWeapon.endRound <= state.round) creature.spiritualWeapon = undefined;
   if (creature.concentrationAura && creature.concentrationAura.endRound <= state.round) {
     dropConcentratedBuffsFrom(state, creature.id);
   }

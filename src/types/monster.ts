@@ -351,6 +351,8 @@ export interface MonsterAction {
   darkness?: { radius: number; durationRounds: number; requiresConcentration?: boolean };
   /** Server-validated teleport destination, used by spells such as Misty Step. */
   teleport?: { distanceFt: number };
+  /** Creates a persistent spiritual weapon that can make later bonus-action attacks. */
+  spiritualWeapon?: { moveFt: number };
   /** The spell cannot affect a target wearing Heavy armor (Barkskin). */
   requiresNoHeavyArmor?: boolean;
   /**
@@ -437,6 +439,12 @@ export interface BuffTemplate {
   weaponDamageBonus?: number;
   /** This creature's weapon attacks count as magical. */
   weaponAttacksMagical?: boolean;
+  /** Extra magical damage on this creature's next weapon hit. */
+  weaponDamageRider?: string;
+  /** Optional save-gated condition delivered by weaponDamageRider. */
+  weaponConditionOnHit?: MonsterAction['conditionOnHit'];
+  /** Removes this buff when its damage rider lands. */
+  endsOnWeaponHit?: boolean;
   /** Temporary HP granted at the start of each of the target's turns. */
   temporaryHpAtTurnStart?: number;
   /** Conditions this buff prevents while it lasts. */
@@ -651,6 +659,15 @@ export interface Creature {
     origin: 'caster' | 'point';
     point?: { x: number; y: number };
   };
+  /** Persistent state for Spiritual Weapon. It is not a creature and never blocks a cell. */
+  spiritualWeapon?: {
+    position: { x: number; y: number };
+    endRound: number;
+    moveFt: number;
+    attackBonus: number;
+    damage: string;
+    damageType: string;
+  };
   /** Active 2024 Wild Shape overlay. When present, the Druid fights as a beast:
    *  beast AC/speed/attacks/physical stats replace the Druid's, spellcasting
    *  is blocked, and the form lasts until its Wild Shape temporary HP is gone. */
@@ -823,6 +840,9 @@ export interface ActiveBuff {
   damageRollPenalty?: string;
   weaponDamageBonus?: number;
   weaponAttacksMagical?: boolean;
+  weaponDamageRider?: string;
+  weaponConditionOnHit?: MonsterAction['conditionOnHit'];
+  endsOnWeaponHit?: boolean;
   temporaryHpAtTurnStart?: number;
   conditionImmunities?: Condition[];
   /** Repeat this save at the specified point and remove the buff on success. */

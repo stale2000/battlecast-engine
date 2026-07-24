@@ -514,6 +514,9 @@ export function applyBuffFromSpell(
     damageRollPenalty: tmpl.damageRollPenalty,
     weaponDamageBonus: tmpl.weaponDamageBonus,
     weaponAttacksMagical: tmpl.weaponAttacksMagical,
+    weaponDamageRider: tmpl.weaponDamageRider,
+    weaponConditionOnHit: tmpl.weaponConditionOnHit,
+    endsOnWeaponHit: tmpl.endsOnWeaponHit,
     temporaryHpAtTurnStart: tmpl.temporaryHpAtTurnStart,
     conditionImmunities: tmpl.conditionImmunities,
     saveEnds: tmpl.saveEnds,
@@ -597,6 +600,21 @@ function clearDeadBonusActionDamageLinks(state: BattleState, caster: Creature): 
   if (clearedConcentrationKey && caster.concentratingOn === clearedConcentrationKey) {
     caster.concentratingOn = undefined;
   }
+}
+
+/** Move the caster's spectral weapon up to its recorded speed and attack a chosen target. */
+export function useSpiritualWeaponAttack(state: BattleState, caster: Creature, target: Creature): boolean {
+  const weapon = caster.spiritualWeapon;
+  if (!weapon || weapon.endRound <= state.round || caster.bonusActionUsed || !target.isAlive || target.team === caster.team) return false;
+  const distanceToTarget = Math.max(Math.abs(target.position.x - weapon.position.x), Math.abs(target.position.y - weapon.position.y)) * 5;
+  if (distanceToTarget > weapon.moveFt + 5) return false;
+  weapon.position = { ...target.position };
+  resolveAttack(state, caster, target, {
+    name: 'Spiritual Weapon', type: 'melee', description: 'Spectral weapon attack.',
+    attackBonus: weapon.attackBonus, damage: weapon.damage, damageType: weapon.damageType, reach: 5, magical: true,
+  });
+  caster.bonusActionUsed = true;
+  return true;
 }
 
 function canReceiveTacticalBuff(creature: Creature): boolean {
@@ -723,6 +741,7 @@ export function executeSpell(
    */
   aoeCenter?: { x: number; y: number },
 ): boolean {
+  if (action.spiritualWeapon && caster.spiritualWeapon && caster.spiritualWeapon.endRound > state.round) return false;
   if (action.requiresNoHeavyArmor && primaryTarget?.monsterData.wearingHeavyArmor) return false;
   if (action.darkness) {
     const range = action.range?.normal ?? action.range?.long ?? 0;
@@ -832,6 +851,15 @@ export function executeSpell(
     caster.position = { ...aoeCenter };
     state.events.push({ kind: 'move', creatureId: caster.id, from, to: { ...aoeCenter }, durationMs: 0 });
     pushLog(state, { round: state.round, turn: state.turnIndex, actor: caster.displayName, action: castAction.name, details: `${caster.displayName} teleports to (${aoeCenter.x}, ${aoeCenter.y}).`, type: 'move' });
+    return true;
+  }
+
+  if (castAction.spiritualWeapon && primaryTarget && castAction.attackBonus !== undefined && castAction.damage) {
+    caster.spiritualWeapon = {
+      position: { ...primaryTarget.position }, endRound: state.round + (castAction.durationRounds ?? 10), moveFt: castAction.spiritualWeapon.moveFt,
+      attackBonus: castAction.attackBonus, damage: castAction.damage, damageType: castAction.damageType ?? 'force',
+    };
+    resolveAttack(state, caster, primaryTarget, { ...castAction, magical: true });
     return true;
   }
 

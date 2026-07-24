@@ -578,7 +578,7 @@ export function shiningSmite(ability: SpellcastingAbility, _mod: number, _pb: nu
   return {
     name: 'Shining Smite',
     type: 'special',
-    description: `Bonus action. Mark one enemy; your weapon hits add 2d6 radiant damage against it. Concentration. (Next-hit targeting is approximated as a marked target.)`,
+    description: 'Bonus action. The next time you hit the marked enemy with a weapon attack, it takes 2d6 radiant damage. Concentration.',
     spellLevel: 2,
     isBonusAction: true,
     concentration: true,
@@ -589,6 +589,7 @@ export function shiningSmite(ability: SpellcastingAbility, _mod: number, _pb: nu
       name: 'Shining Smite', key: 'shining-smite',
       requiresConcentration: true,
       damageRider: '2d6 radiant',
+      endsOnWeaponHit: true,
     },
     range: { normal: 60, long: 60 },
     targetScope: 'one_enemy',
@@ -596,18 +597,17 @@ export function shiningSmite(ability: SpellcastingAbility, _mod: number, _pb: nu
 }
 
 export function spiritualWeapon(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
-  // SRD: summon a spectral weapon that attacks as a bonus action each turn.
-  // We approximate with a single up-front ranged attack at cast time.
   return {
     name: 'Spiritual Weapon',
     type: 'ranged',
-    description: `Create a spectral weapon within 60 ft. Initial attack: melee spell attack +${spellAttackBonus(mod, pb)}, 1d8 + mod force damage. Bonus action. (Ongoing bonus-action attacks not simulated.)`,
+    description: `Create a spectral weapon within 60 ft. It immediately makes a melee spell attack +${spellAttackBonus(mod, pb)}, 1d8 + mod force damage; on later turns it can move 20 ft. and attack as a Bonus Action.`,
     spellLevel: 2,
     isBonusAction: true,
     castingAbility: ability,
     attackBonus: spellAttackBonus(mod, pb),
     damage: `1d8+${mod}`,
     damageType: 'force',
+    spiritualWeapon: { moveFt: 20 },
     range: { normal: 60, long: 60 },
     targetScope: 'one_enemy',
   };
@@ -810,7 +810,9 @@ export function blindingSmite(ability: SpellcastingAbility, mod: number, pb: num
     buff: {
       name: 'Blinding Smite', key: 'blinding-smite',
       requiresConcentration: true,
-      damageRider: '3d8 radiant',
+      weaponDamageRider: '3d8 radiant',
+      weaponConditionOnHit: { condition: 'blinded', save: { ability: 'con', dc: saveDC(mod, pb) }, duration: 'end_of_next_turn' },
+      endsOnWeaponHit: true,
     },
     targetScope: 'self',
   };

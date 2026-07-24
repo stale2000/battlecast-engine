@@ -16,6 +16,7 @@ import {
   pushLog,
   resolveAttack,
   tryUseBonusActionDamageBuff,
+  useSpiritualWeaponAttack,
   escapeGrapple,
 } from '../engine/combat.js';
 import { canSee, getActiveActions } from '../engine/ai-targeting.js';
@@ -202,6 +203,7 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
     for (const [actionIndex, action] of getActiveActions(active).entries()) {
       if (action.legendaryOnly || action.reactionOnly || action.type === 'multiattack') continue;
       if (isSpellAction(action)) {
+        if (action.spiritualWeapon && active.spiritualWeapon && active.spiritualWeapon.endRound > state.round) continue;
         if ((!action.replacesAttack && attackInProgress) || (action.replacesAttack && attacksUsed(active) >= attackRollBudget(active)) || !canCastArenaSpell(active, action)) continue;
         if (action.autoDarts) {
           actions.push(...autoDartSpellActions(active, state, action, actionIndex));
@@ -244,6 +246,12 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
       for (const buff of target.activeBuffs ?? []) {
         if (buff.casterId !== active.id || !buff.bonusActionDamage || buff.appliedRound >= state.round || creatureDistance(active, target) > (buff.bonusActionDamageRange ?? Infinity)) continue;
         actions.push({ id: `repeat_spell:${slug(buff.key)}:${target.id}`, type: 'repeat_spell', buffKey: buff.key, targetId: target.id });
+      }
+    }
+    if (active.spiritualWeapon && active.spiritualWeapon.endRound > state.round) {
+      for (const target of enemies) {
+        const distance = Math.max(Math.abs(target.position.x - active.spiritualWeapon.position.x), Math.abs(target.position.y - active.spiritualWeapon.position.y)) * 5;
+        if (distance <= active.spiritualWeapon.moveFt + 5) actions.push({ id: `spiritual_weapon:${target.id}`, type: 'spiritual_weapon', targetId: target.id });
       }
     }
   }
@@ -399,6 +407,10 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       checkBattleComplete(state);
     } else if (legal.type === 'repeat_spell') {
       if (!tryUseBonusActionDamageBuff(state, active, legal.targetId)) throw new EncounterError(`Illegal or stale repeated spell "${legal.id}".`);
+      checkBattleComplete(state);
+    } else if (legal.type === 'spiritual_weapon') {
+      const target = state.creatures.find(creature => creature.id === legal.targetId);
+      if (!target || !useSpiritualWeaponAttack(state, active, target)) throw new EncounterError(`Illegal or stale Spiritual Weapon action "${legal.id}".`);
       checkBattleComplete(state);
     } else if (legal.type === 'move_to') {
       const destination = action.type === 'move_to' ? action.destination : undefined;

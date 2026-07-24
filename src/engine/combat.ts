@@ -4146,6 +4146,33 @@ function resolveAttack(
       applyDamage(state, target, rider.total, type, attacker, true, true, isCrit);
       ev.targetHpAfter = target.currentHp;
       applySuperiorHuntersPrey(state, attacker, target, b);
+      if (b.endsOnWeaponHit) dropConcentratedBuffsFrom(state, attacker.id);
+    }
+
+    // Caster-sourced next-hit riders (Blinding Smite and similar effects).
+    for (const b of [...(attacker.activeBuffs ?? [])]) {
+      if (!b.weaponDamageRider || !target.isAlive) continue;
+      const parts = b.weaponDamageRider.split(' ');
+      const diceExpr = parts[0];
+      const type = parts.slice(1).join(' ') || 'untyped';
+      const rider = rollDamage(diceExpr, isCrit);
+      rider.total = applyDamageRollPenalty(attacker, rider.total);
+      pushLog(state, {
+        round: state.round, turn: state.turnIndex,
+        actor: attacker.displayName, action: b.name,
+        details: `${b.name} adds ${rider.total} ${type} damage.`, damage: rider.total, type: 'damage',
+      });
+      const beforeHp = target.currentHp;
+      const ev = pushHitEvent(state, target.id, rider.total, type, false, beforeHp);
+      applyDamage(state, target, rider.total, type, attacker, true, true, isCrit);
+      ev.targetHpAfter = target.currentHp;
+      if (b.weaponConditionOnHit && target.isAlive) {
+        const save = b.weaponConditionOnHit.save;
+        if (!save || rollSaveWithBuffs(target, getEffectiveSaveModifier(target, save.ability, state), false, save.dc, save.ability, b.weaponConditionOnHit.condition).total < save.dc) {
+          applyCondition(state, target, b.weaponConditionOnHit.condition, attacker, b.weaponConditionOnHit.duration);
+        }
+      }
+      if (b.endsOnWeaponHit) dropConcentratedBuffsFrom(state, attacker.id);
     }
 
     // Sneak Attack / additional damage
@@ -4424,7 +4451,7 @@ export {
 } from './combat-aoe.js';
 // Spellcasting lives in ./combat-spellcasting; re-export the same way.
 export {
-  applyHealing, applyTemporaryHp, applyAutoDarts, applyBuffFromSpell, executeSpell, tryUseBonusActionDamageBuff,
+  applyHealing, applyTemporaryHp, applyAutoDarts, applyBuffFromSpell, executeSpell, tryUseBonusActionDamageBuff, useSpiritualWeaponAttack,
 } from './combat-spellcasting.js';
 // Buff / resource / concentration-aura helpers live in ./combat-buffs;
 // re-export them here so external `from './combat.js'` imports keep working.
