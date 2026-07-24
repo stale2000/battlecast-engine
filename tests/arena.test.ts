@@ -1027,13 +1027,13 @@ describe('Kaggle arena bridge', () => {
   });
 
   it('validates optional class cantrip selections without changing default builds', () => {
-    const wizard = { heroClass: 'Wizard', species: 'Dwarf', background: 'Soldier', abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 }, cantrips: ['Ray of Frost'], spells: getAvailableSpells('Wizard', 5).filter(spell => spell.spellLevel > 0).slice(0, 8).map(spell => spell.name) };
+    const wizard = { heroClass: 'Wizard', species: 'Dwarf', background: 'Soldier', abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 }, cantrips: ['Ray of Frost', 'Chill Touch', 'Shocking Grasp'], spells: getAvailableSpells('Wizard', 5).filter(spell => spell.spellLevel > 0).slice(0, 8).map(spell => spell.name) };
     const party = { characters: Array.from({ length: 4 }, () => wizard) };
     const selected = kaggleStep({ ...init(), redParty: party, blueParty: party });
     const actions = selected.state.battleState!.creatures.find(creature => creature.team === 'red')!.monsterData.actions;
     expect(actions.some(action => action.name === 'Ray of Frost')).toBe(true);
     expect(actions.some(action => action.name === 'Fire Bolt')).toBe(false);
-    expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...wizard, cantrips: ['Ray of Frost', 'Chill Touch'] })) }, blueParty: party })).toThrow(/cantrips/);
+    expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...wizard, cantrips: ['Ray of Frost', 'Chill Touch', 'Shocking Grasp', 'Fire Bolt'] })) }, blueParty: party })).toThrow(/cantrips/);
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...wizard, cantrips: ['Eldritch Blast'] })) }, blueParty: party })).toThrow(/cantrips/);
   });
 

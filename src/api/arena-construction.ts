@@ -33,6 +33,9 @@ const SKILLS = ['Acrobatics', 'Animal Handling', 'Arcana', 'Athletics', 'Decepti
 const TOOLS = ['Alchemist’s Supplies', 'Brewer’s Supplies', 'Calligrapher’s Supplies', 'Carpenter’s Tools', 'Cartographer’s Tools', 'Cobbler’s Tools', 'Cook’s Utensils', 'Disguise Kit', 'Forgery Kit', 'Gaming Set', 'Glassblower’s Tools', 'Herbalism Kit', 'Jeweler’s Tools', 'Leatherworker’s Tools', 'Mason’s Tools', 'Musical Instrument', 'Navigator’s Tools', 'Painter’s Supplies', 'Poisoner’s Kit', 'Potter’s Tools', 'Smith’s Tools', 'Thieves’ Tools', 'Tinker’s Tools', 'Weaver’s Tools', 'Woodcarver’s Tools'] as const;
 const LANGUAGES = ['Common Sign Language', 'Draconic', 'Dwarvish', 'Elvish', 'Giant', 'Gnomish', 'Goblin', 'Halfling', 'Orc', 'Abyssal', 'Celestial', 'Deep Speech', 'Druidic', 'Infernal', 'Primordial', 'Sylvan', 'Thieves’ Cant', 'Undercommon'] as const;
 const ALIGNMENTS = ['Lawful Good', 'Neutral Good', 'Chaotic Good', 'Lawful Neutral', 'Neutral', 'Chaotic Neutral', 'Lawful Evil', 'Neutral Evil', 'Chaotic Evil'] as const;
+const LEVEL_5_CLASS_CANTRIPS: Partial<Record<typeof HERO_CLASS_NAMES[number], number>> = {
+  Bard: 3, Cleric: 3, Druid: 3, Sorcerer: 4, Warlock: 3, Wizard: 3,
+};
 const ARMOR_TRAINING: Record<typeof HERO_CLASS_NAMES[number], readonly ('light' | 'medium' | 'heavy')[]> = {
   Barbarian: ['light', 'medium'], Bard: ['light'], Cleric: ['light', 'medium', 'heavy'], Druid: ['light', 'medium'], Fighter: ['light', 'medium', 'heavy'], Monk: [], Paladin: ['light', 'medium', 'heavy'], Ranger: ['light', 'medium'], Rogue: ['light'], Sorcerer: [], Warlock: ['light'], Wizard: [],
 };
@@ -123,8 +126,9 @@ function parseSpells(value: unknown, heroClass: typeof HERO_CLASS_NAMES[number],
 function parseCantrips(value: unknown, heroClass: typeof HERO_CLASS_NAMES[number], label: string): string[] | undefined {
   if (value === undefined) return undefined;
   const available = new Set(getAvailableSpells(heroClass, 5).filter(spell => spell.spellLevel === 0).map(spell => spell.name));
-  if (!available.size || !Array.isArray(value) || value.length !== 1 || typeof value[0] !== 'string' || !available.has(value[0])) {
-    throw new EncounterError(`${label}.cantrips must select exactly one engine-supported class cantrip.`);
+  const expected = LEVEL_5_CLASS_CANTRIPS[heroClass] ?? 0;
+  if (!expected || !available.size || !Array.isArray(value) || value.length !== expected || value.some(cantrip => typeof cantrip !== 'string') || new Set(value).size !== value.length || value.some(cantrip => !available.has(cantrip))) {
+    throw new EncounterError(`${label}.cantrips must select exactly ${expected} distinct engine-supported class cantrips.`);
   }
   return value as string[];
 }
