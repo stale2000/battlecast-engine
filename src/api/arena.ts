@@ -40,6 +40,13 @@ import { sameArenaAction, type ArenaAction } from './arena-actions.js';
 export { sameArenaAction, type ArenaAction } from './arena-actions.js';
 
 const slug = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const SIZE_STEPS = ['Tiny', 'Small', 'Medium', 'Large', 'Huge', 'Gargantuan'] as const;
+
+function canChangeSize(state: NonNullable<Encounter['state']>, target: Creature, direction: 'enlarge' | 'reduce'): boolean {
+  const index = SIZE_STEPS.indexOf((target.temporarySize ?? target.monsterData.size) as typeof SIZE_STEPS[number]);
+  const next = SIZE_STEPS[index + (direction === 'enlarge' ? 1 : -1)];
+  return next !== undefined && (direction !== 'enlarge' || !isPositionBlocked(target.position, next, state.creatures, target.id, state.terrainBlocked));
+}
 
 export function getActiveCreature(encounter: Encounter): Creature | undefined {
   const state = encounter.state;
@@ -324,6 +331,7 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
         if (action.sizeChangeChoice) {
           for (const target of spellTargets(active, state, action)) {
             for (const sizeChange of action.sizeChangeChoice.choices) {
+              if (!canChangeSize(state, target, sizeChange)) continue;
               actions.push({ id: `spell:${actionIndex}:${slug(action.name)}:${target.id}:${sizeChange}`, type: 'spell', actionName: action.name, actionIndex, targetId: target.id, sizeChange });
             }
           }
