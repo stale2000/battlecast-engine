@@ -530,6 +530,8 @@ export interface BuffTemplate {
   restrictActionBonusCombination?: boolean;
   /** Ability-specific saving throw Advantage, such as Haste's Dexterity saves. */
   saveAdvantageAbilities?: Array<keyof Abilities>;
+  /** Healing received by this creature uses the maximum result of its dice. */
+  maximizesHealing?: boolean;
   /** Condition-specific saving throw Advantage, such as Protection from Poison. */
   saveAdvantageConditions?: Condition[];
   /** Repeat this save at the specified point and remove the buff on success. */
@@ -980,6 +982,8 @@ export interface ActiveBuff {
   /** This effect prevents taking both an Action and a Bonus Action on a turn. */
   restrictActionBonusCombination?: boolean;
   saveAdvantageAbilities?: Array<keyof Abilities>;
+  /** Healing received by this creature uses the maximum result of its dice. */
+  maximizesHealing?: boolean;
   saveAdvantageConditions?: Condition[];
   /** Repeat this save at the specified point and remove the buff on success. */
   saveEnds?: { ability: keyof Abilities; dc: number; at: 'targetTurnEnd'; advantageOnDamage?: boolean };

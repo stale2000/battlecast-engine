@@ -43,7 +43,7 @@ import {
   blindnessDeafness, invisibility, mirrorImage, seeInvisibility, dispelMagic, haste, wallOfFire,
   aid, magicWeapon, shiningSmite,
   acidArrow, armsOfHadar, barkskin, bestowCurse, blur, colorSpray, darkness, divineFavor, enlargeReduce, expeditiousRetreat, faerieFire, falseLife, fear, fly, fogCloud, grease, gustOfWind, lesserRestoration, mistyStep,
-  armorOfAgathys, longstrider, mageArmor, passWithoutTrace, rayOfEnfeeblement, rayOfSickness, revivify, slow, tashasHideousLaughter,
+  armorOfAgathys, beaconOfHope, longstrider, mageArmor, passWithoutTrace, rayOfEnfeeblement, rayOfSickness, revivify, slow, tashasHideousLaughter,
   protectionFromPoison, shield, hellishRebuke,
   circleOfDeath, chainLightning, disintegrate, fingerOfDeath,
   befuddlement, powerWordHeal, powerWordKill, meteorSwarm,
@@ -2607,6 +2607,7 @@ export function getAvailableSpells(
       optional.push(blindnessDeafness(spellAbility, mod, pb));
       optional.push(lesserRestoration(spellAbility, mod, pb));
       optional.push(dispelMagic(spellAbility, mod, pb));
+      optional.push(beaconOfHope(spellAbility, mod, pb));
       optional.push(counterspell(spellAbility, mod, pb));
       optional.push(revivify(spellAbility, mod, pb));
       break;

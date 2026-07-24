@@ -13,7 +13,7 @@ import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
-import { acidArrow, armorOfAgathys, bane, barkskin, bestowCurse, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, cloudOfDaggers, command, counterspell, dissonantWhispers, dispelMagic, enlargeReduce, entangle, expeditiousRetreat, fireball, flamingSphere, fly, grease, gustOfWind, haste, hellishRebuke, heroism, inflictWounds, invisibility, lesserRestoration, mageArmor, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, seeInvisibility, shield, shiningSmite, slow, spikeGrowth, spiritualWeapon, tashasHideousLaughter, web, witchBolt } from '../src/data/spells.js';
+import { acidArrow, armorOfAgathys, bane, barkskin, beaconOfHope, bestowCurse, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, cloudOfDaggers, command, counterspell, cureWounds, dissonantWhispers, dispelMagic, enlargeReduce, entangle, expeditiousRetreat, fireball, flamingSphere, fly, grease, gustOfWind, haste, hellishRebuke, heroism, inflictWounds, invisibility, lesserRestoration, mageArmor, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, seeInvisibility, shield, shiningSmite, slow, spikeGrowth, spiritualWeapon, tashasHideousLaughter, web, witchBolt } from '../src/data/spells.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
@@ -276,6 +276,21 @@ describe('Kaggle arena bridge', () => {
     const target = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
     withRng({ next: () => 0 }, () => expect(executeSpell(encounter.state!, caster, slow('int', 3, 3), target, [target])).toBe(true));
     expect(target.activeBuffs.find(buff => buff.key === 'slow')).toMatchObject({ acBonus: -2, limitAttacksToOne: true, restrictActionBonusCombination: true });
+  });
+
+  it('maximizes spell healing for Beacon of Hope targets', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Cleric', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [beaconOfHope('wis', 3, 3), cureWounds('wis', 3, 3)], additionalResources: { 'slot-1': 1, 'slot-3': 1 } } });
+    encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'red', position: { x: 1, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 4, y: 0 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.monsterData.heroClass === 'Cleric')!;
+    const target = encounter.state!.creatures.find(creature => creature.monsterData.heroClass === 'Fighter')!;
+    target.currentHp -= 25;
+    expect(executeSpell(encounter.state!, caster, beaconOfHope('wis', 3, 3), caster, [caster, target])).toBe(true);
+    const before = target.currentHp;
+    expect(executeSpell(encounter.state!, caster, cureWounds('wis', 3, 3), target)).toBe(true);
+    expect(target.currentHp - before).toBe(23);
   });
 
   it('applies Heroism each turn and prevents frightened while concentration lasts', () => {

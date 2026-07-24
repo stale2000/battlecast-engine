@@ -1659,6 +1659,15 @@ export function slow(ability: SpellcastingAbility, mod: number, pb: number): Mon
   };
 }
 
+export function beaconOfHope(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Beacon of Hope', type: 'special', spellLevel: 3, spellSchool: 'abjuration', castingAbility: ability, concentration: true, durationRounds: 10,
+    description: 'Up to 6 creatures within 30 feet have Advantage on Wisdom saving throws and receive the maximum possible healing from spells. Concentration, 1 minute.',
+    range: { normal: 30, long: 30 }, targetScope: 'all_allies_in_area', multiTargetBuff: { maxTargets: 6 },
+    buff: { name: 'Beacon of Hope', key: 'beacon-of-hope', requiresConcentration: true, saveAdvantageAbilities: ['wis'], maximizesHealing: true },
+  };
+}
+
 export function wallOfFire(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
   return {
     name: 'Wall of Fire',
@@ -1723,6 +1732,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Spirit Guardians', spiritGuardians], ['Call Lightning', callLightning],
   ['Hypnotic Pattern', hypnoticPattern], ['Dispel Magic', dispelMagic], ['Haste', haste],
   ['Fear', fear], ['Fly', fly], ['Revivify', revivify],
+  ['Beacon of Hope', beaconOfHope],
   ['Slow', slow],
   ['Bestow Curse', bestowCurse],
   ['Ice Storm', iceStorm], ['Banishment', banishment], ['Blight', blight],

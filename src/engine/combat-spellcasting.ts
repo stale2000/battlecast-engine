@@ -54,8 +54,8 @@ function isLifeDomainCleric(caster: Creature, minLevel: number): boolean {
   return caster.monsterData.heroClass === 'Cleric' && (caster.monsterData.heroLevel ?? 0) >= minLevel;
 }
 
-function rollHealingTotal(caster: Creature, action: MonsterAction, slotLevelUsed: number | null): number {
-  const shouldMaximizeDice = isLifeDomainCleric(caster, 17);
+function rollHealingTotal(caster: Creature, action: MonsterAction, slotLevelUsed: number | null, target?: Creature): number {
+  const shouldMaximizeDice = isLifeDomainCleric(caster, 17) || target?.activeBuffs.some(buff => buff.maximizesHealing) === true;
   let amount = shouldMaximizeDice
     ? maxDiceTotal(action.heal!.dice)
     : rollDice(action.heal!.dice, caster.monsterData.healingRerollOnes === true).total;
@@ -527,6 +527,7 @@ export function applyBuffFromSpell(
     abilityCheckDisadvantageAbilities: tmpl.abilityCheckDisadvantageAbilities,
     forcedDodgeSave: tmpl.forcedDodgeSave,
     forcedFlee: tmpl.forcedFlee,
+    maximizesHealing: tmpl.maximizesHealing,
     speedPenalty: tmpl.speedPenalty,
     speedBonus: tmpl.speedBonus,
     stealthBonus: tmpl.stealthBonus,
@@ -1040,14 +1041,14 @@ export function executeSpell(
         .slice(0, 6);
       for (const t of targets) {
         const beforeHeal = t.currentHp;
-        const amount = capHealingTotalForAction(castAction, t, rollHealingTotal(caster, castAction, spellSlotUsedForThisCast));
+        const amount = capHealingTotalForAction(castAction, t, rollHealingTotal(caster, castAction, spellSlotUsedForThisCast, t));
         applyHealing(state, t, amount, caster, castAction.name);
         clearHealingSpellConditions(state, caster, t, castAction);
         if (t.id !== caster.id && t.currentHp > beforeHeal) healedAnotherCreature = true;
       }
     } else {
       const beforeHeal = primaryTarget.currentHp;
-      const amount = capHealingTotalForAction(castAction, primaryTarget, rollHealingTotal(caster, castAction, spellSlotUsedForThisCast));
+      const amount = capHealingTotalForAction(castAction, primaryTarget, rollHealingTotal(caster, castAction, spellSlotUsedForThisCast, primaryTarget));
       applyHealing(state, primaryTarget, amount, caster, castAction.name);
       clearHealingSpellConditions(state, caster, primaryTarget, castAction);
       if (primaryTarget.id !== caster.id && primaryTarget.currentHp > beforeHeal) healedAnotherCreature = true;
