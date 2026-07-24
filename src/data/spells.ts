@@ -1674,7 +1674,7 @@ export function stinkingCloud(ability: SpellcastingAbility, _mod: number, _pb: n
     description: 'A 20-foot-radius cloud is heavily obscured. A creature that starts its turn there makes a Constitution save or is Poisoned and cannot take Actions or Bonus Actions until the end of that turn.',
     range: { normal: 90, long: 90 }, targetScope: 'area_enemies',
     savingThrow: { ability: 'con', dc: 8, conditionOnFail: 'poisoned', conditionDuration: 'end_of_current_turn' },
-    persistentZone: { radiusFt: 20, durationRounds: 10, triggers: ['turnStart'], skipActionsOnFailedSave: true },
+    persistentZone: { radiusFt: 20, durationRounds: 10, triggers: ['turnStart'], skipActionsOnFailedSave: true, obscuresSight: true },
   };
 }
 

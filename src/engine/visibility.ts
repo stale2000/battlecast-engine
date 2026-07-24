@@ -1,4 +1,4 @@
-import type { Creature, DarknessZone } from '../types/monster.js';
+import type { Creature, DarknessZone, PersistentZone } from '../types/monster.js';
 import { bresenhamLine, footprintCenter, lineOfSightBlocked } from '../types/terrain.js';
 import { getFootprintSize } from './combat-geometry.js';
 import type { BattleState } from './combat.js';
@@ -27,10 +27,19 @@ export function magicalDarknessBlocksSight(
   ));
 }
 
+function obscuringZoneBlocksSight(zones: PersistentZone[] | undefined, round: number, observer: Creature, target: Creature | { position: { x: number; y: number }; monsterData?: { size?: string } }): boolean {
+  if (!zones?.length) return false;
+  const observerCenter = footprintCenter(observer.position, getFootprintSize(observer.wildShape?.size ?? observer.temporarySize ?? observer.monsterData.size));
+  const targetCenter = footprintCenter(target.position, getFootprintSize(target.monsterData?.size ?? 'Medium'));
+  const cells = bresenhamLine(observerCenter.x, observerCenter.y, targetCenter.x, targetCenter.y);
+  return zones.some(zone => zone.obscuresSight && zone.endRound > round && cells.some(([x, y]) => Math.max(Math.abs(x - zone.x), Math.abs(y - zone.y)) * 5 <= zone.radius));
+}
+
 /** Geometric visibility, intentionally ignoring an existing Hide result. */
 export function canSeeCreatureIgnoringHide(state: BattleState, observer: Creature, target: Creature): boolean {
   if (target.conditions.includes('invisible') && !(observer.activeBuffs ?? []).some(buff => buff.canSeeInvisible)) return false;
   if (magicalDarknessBlocksSight(state.darknessZones, state.round, observer, target)) return false;
+  if (obscuringZoneBlocksSight(state.persistentZones, state.round, observer, target)) return false;
   const sightBlocked = state.terrainSightBlocked;
   if (!sightBlocked?.size) return true;
   return !lineOfSightBlocked(
@@ -70,6 +79,7 @@ export function canSeePoint(
   point: { x: number; y: number },
 ): boolean {
   if (magicalDarknessBlocksSight(state.darknessZones, state.round, observer, { position: point })) return false;
+  if (obscuringZoneBlocksSight(state.persistentZones, state.round, observer, { position: point })) return false;
   const sightBlocked = state.terrainSightBlocked;
   if (!sightBlocked?.size) return true;
   return !lineOfSightBlocked(

@@ -3835,6 +3835,7 @@ export function createPersistentZone(state: BattleState, caster: Creature, actio
     difficultTerrain: config.difficultTerrain, difficultTerrainTowardSource: config.difficultTerrainTowardSource, damagePer5Ft: config.damagePer5Ft,
     shape: config.shape, origin: config.shape === 'line' ? { ...caster.position } : undefined, direction: config.shape === 'line' ? { ...center } : undefined, pushOnFailedSave: config.pushOnFailedSave,
     skipActionsOnFailedSave: config.skipActionsOnFailedSave,
+    obscuresSight: config.obscuresSight,
     requiresConcentration: action.concentration === true,
   });
 }
