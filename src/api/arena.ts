@@ -15,6 +15,7 @@ import {
   processTargetTurnEndOngoingEffects,
   pushLog,
   resolveAttack,
+  resolveAoE,
   tryUseBonusActionDamageBuff,
   useSpiritualWeaponAttack,
   escapeGrapple,
@@ -149,6 +150,19 @@ function originalArea(action: MonsterAction): string {
   return action.savingThrow?.area?.toLowerCase() ?? '';
 }
 
+function repeatAreaSpellActions(state: NonNullable<Encounter['state']>, active: Creature): ArenaAction[] {
+  const repeat = active.repeatableAreaSpell;
+  if (!repeat || repeat.endRound <= state.round || active.hasActed) return [];
+  const action: MonsterAction = {
+    name: repeat.name, type: 'special', description: `Repeat ${repeat.name}.`, damageType: repeat.damageType,
+    savingThrow: { ability: repeat.saveAbility, dc: repeat.saveDC, damageOnFail: repeat.damageDice, damageOnSuccess: 'half', area: repeat.area },
+    range: { normal: 120, long: 120 }, targetScope: 'area_enemies',
+  };
+  return areaSpellActions(state, active, action, -1).flatMap(choice => choice.type === 'spell'
+    ? [{ id: choice.id.replace('spell:-1:', 'repeat_area_spell:'), type: 'repeat_area_spell' as const, spellName: repeat.name, targetId: choice.targetId, targetIds: choice.targetIds ?? [], center: choice.center, areaShape: choice.areaShape }]
+    : []);
+}
+
 function hasOriginFeat(creature: Creature, feat: string): boolean {
   return creature.monsterData.originFeats?.includes(feat) || creature.monsterData.originFeat === feat;
 }
@@ -204,6 +218,7 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
       if (action.legendaryOnly || action.reactionOnly || action.type === 'multiattack') continue;
       if (isSpellAction(action)) {
         if (action.spiritualWeapon && active.spiritualWeapon && active.spiritualWeapon.endRound > state.round) continue;
+        if (action.repeatableAreaSpell && active.repeatableAreaSpell && active.repeatableAreaSpell.endRound > state.round) continue;
         if ((!action.replacesAttack && attackInProgress) || (action.replacesAttack && attacksUsed(active) >= attackRollBudget(active)) || !canCastArenaSpell(active, action)) continue;
         if (action.autoDarts) {
           actions.push(...autoDartSpellActions(active, state, action, actionIndex));
@@ -255,6 +270,7 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
       }
     }
   }
+  actions.push(...repeatAreaSpellActions(state, active));
   if (reachableMovementDestinations(active, state).length) actions.push({ id: 'move_to', type: 'move_to' });
   actions.push(...getClassFeatureLegalActions(active));
   if (!active.hasActed && !attackInProgress) {
@@ -411,6 +427,16 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
     } else if (legal.type === 'spiritual_weapon') {
       const target = state.creatures.find(creature => creature.id === legal.targetId);
       if (!target || !useSpiritualWeaponAttack(state, active, target)) throw new EncounterError(`Illegal or stale Spiritual Weapon action "${legal.id}".`);
+      checkBattleComplete(state);
+    } else if (legal.type === 'repeat_area_spell') {
+      const repeat = active.repeatableAreaSpell;
+      const targets = legal.targetIds.map(id => state.creatures.find(creature => creature.id === id)).filter((target): target is Creature => Boolean(target));
+      if (!repeat || repeat.name !== legal.spellName || !targets.length) throw new EncounterError(`Illegal or stale repeated area spell "${legal.id}".`);
+      resolveAoE(state, active, {
+        name: repeat.name, type: 'special', description: `Repeat ${repeat.name}.`, damageType: repeat.damageType,
+        savingThrow: { ability: repeat.saveAbility, dc: repeat.saveDC, damageOnFail: repeat.damageDice, damageOnSuccess: 'half', area: legal.areaShape },
+      }, targets, legal.center, undefined, true);
+      active.hasActed = true;
       checkBattleComplete(state);
     } else if (legal.type === 'move_to') {
       const destination = action.type === 'move_to' ? action.destination : undefined;

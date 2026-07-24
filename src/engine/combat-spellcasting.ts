@@ -864,6 +864,17 @@ export function executeSpell(
     return true;
   }
 
+  if (castAction.repeatableAreaSpell && castAction.savingThrow?.damageOnFail && primaryTarget && aoeTargets) {
+    caster.repeatableAreaSpell = {
+      name: castAction.name, endRound: state.round + (castAction.durationRounds ?? 10), damageType: castAction.damageType ?? 'untyped',
+      damageDice: castAction.savingThrow.damageOnFail, saveAbility: castAction.savingThrow.ability,
+      saveDC: castAction.savingThrow.dc + getSpellSaveDcBonus(caster, castAction), area: castAction.savingThrow.area ?? '5-foot cylinder',
+    };
+    caster.concentratingOn = castAction.name;
+    resolveAoE(state, caster, castAction, aoeTargets, aoeCenter, undefined, true);
+    return true;
+  }
+
   if (castAction.buffOnFailedSave?.requiresConcentration) {
     dropConcentratedBuffsFrom(state, caster.id);
     caster.concentratingOn = castAction.buffOnFailedSave.key;

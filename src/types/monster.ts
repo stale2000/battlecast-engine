@@ -353,6 +353,10 @@ export interface MonsterAction {
   teleport?: { distanceFt: number };
   /** Creates a persistent spiritual weapon that can make later bonus-action attacks. */
   spiritualWeapon?: { moveFt: number };
+  /** A damaging concentration area that remains after the initial cast. */
+  persistentAura?: { moveFt?: number };
+  /** Enables a later no-slot repeat of this concentration spell (Call Lightning). */
+  repeatableAreaSpell?: true;
   /** The spell cannot affect a target wearing Heavy armor (Barkskin). */
   requiresNoHeavyArmor?: boolean;
   /**
@@ -658,6 +662,7 @@ export interface Creature {
     saveDC: number;
     radiusFt: number;
     endRound: number;
+    moveFt?: number;
     origin: 'caster' | 'point';
     point?: { x: number; y: number };
   };
@@ -669,6 +674,16 @@ export interface Creature {
     attackBonus: number;
     damage: string;
     damageType: string;
+  };
+  /** State for a concentration spell that can be repeated as an action without another slot. */
+  repeatableAreaSpell?: {
+    name: string;
+    endRound: number;
+    damageType: string;
+    damageDice: string;
+    saveAbility: keyof Abilities;
+    saveDC: number;
+    area: string;
   };
   /** Active 2024 Wild Shape overlay. When present, the Druid fights as a beast:
    *  beast AC/speed/attacks/physical stats replace the Druid's, spellcasting

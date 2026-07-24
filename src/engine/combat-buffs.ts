@@ -280,6 +280,7 @@ export function dropConcentratedBuffsFrom(
     !(zone.requiresConcentration && zone.sourceId === casterId)
   );
   const caster = state.creatures.find(c => c.id === casterId);
+  if (caster) caster.repeatableAreaSpell = undefined;
   const preserveHuntersMark = options.preserveRelentlessHunter
     && caster?.monsterData.heroClass === 'Ranger'
     && (caster.monsterData.heroLevel ?? 0) >= 13;
@@ -300,7 +301,8 @@ export function dropConcentratedBuffsFrom(
   }
   const stillConcentrating = state.creatures.some(creature =>
     creature.activeBuffs?.some(buff => buff.requiresConcentration && buff.casterId === casterId)
-  ) || state.darknessZones?.some(zone => zone.requiresConcentration && zone.sourceId === casterId);
+  ) || state.darknessZones?.some(zone => zone.requiresConcentration && zone.sourceId === casterId)
+    || caster?.repeatableAreaSpell !== undefined;
   if (caster?.concentratingOn && !stillConcentrating) caster.concentratingOn = undefined;
   revealVisibleHiddenCreatures(state);
 }
@@ -349,7 +351,7 @@ export function resetTurnFlags(creature: Creature): void {
  * movement-entry checks can re-resolve damage.
  */
 export function attachConcentrationAura(state: BattleState, caster: Creature, action: MonsterAction, center?: { x: number; y: number }): void {
-  if (!action.concentration || !action.savingThrow?.damageOnFail || !(action.durationRounds && action.durationRounds > 0)) return;
+  if (!action.persistentAura || !action.concentration || !action.savingThrow?.damageOnFail || !(action.durationRounds && action.durationRounds > 0)) return;
   caster.concentratingOn = action.name;
   const area = action.savingThrow.area ?? '';
   const radiusMatch = area.match(/(\d+)[\s-]?foot/i);
@@ -363,7 +365,7 @@ export function attachConcentrationAura(state: BattleState, caster: Creature, ac
     damageType: action.damageType || 'untyped',
     saveAbility: action.savingThrow.ability,
     saveDC: action.savingThrow.dc + getSpellSaveDcBonus(caster, action),
-    radiusFt, endRound: state.round + action.durationRounds, origin, point,
+    radiusFt, endRound: state.round + action.durationRounds, moveFt: action.persistentAura.moveFt, origin, point,
   };
   state.events.push({
     kind: 'concentrationAura', creatureId: caster.id, active: true,

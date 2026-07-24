@@ -521,6 +521,7 @@ export function moonbeam(ability: SpellcastingAbility, mod: number, pb: number):
     spellLevel: 2,
     concentration: true,
     durationRounds: 10,
+    persistentAura: { moveFt: 60 },
     castingAbility: ability,
     damageType: 'radiant',
     savingThrow: {
@@ -746,6 +747,7 @@ export function spiritGuardians(ability: SpellcastingAbility, mod: number, pb: n
     spellLevel: 3,
     concentration: true,
     durationRounds: 10,
+    persistentAura: {},
     castingAbility: ability,
     damageType: 'radiant',
     savingThrow: {
@@ -761,10 +763,11 @@ export function callLightning(ability: SpellcastingAbility, mod: number, pb: num
   return {
     name: 'Call Lightning',
     type: 'special',
-    description: `5-foot cylinder within 120 ft. DEX save DC ${saveDC(mod, pb)}; 3d10 lightning damage on fail, half on success. Concentration.`,
+    description: `5-foot cylinder within 120 ft. DEX save DC ${saveDC(mod, pb)}; 3d10 lightning damage on fail, half on success. Concentration; repeat the bolt as an action on later turns.`,
     spellLevel: 3,
     concentration: true,
     durationRounds: 10,
+    repeatableAreaSpell: true,
     castingAbility: ability,
     damageType: 'lightning',
     savingThrow: {
@@ -1497,6 +1500,7 @@ export function wallOfFire(ability: SpellcastingAbility, mod: number, pb: number
     spellSchool: 'evocation',
     concentration: true,
     durationRounds: 10,
+    persistentAura: {},
     castingAbility: ability,
     damageType: 'fire',
     savingThrow: {
