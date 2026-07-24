@@ -268,6 +268,21 @@ export const monsters: MonsterData[] = [
     ]
   },
   {
+    name: "Octopus",
+    size: "Tiny", type: "Beast", alignment: "Unaligned",
+    ac: 12, hp: 3, hpFormula: "1d4+1", speed: { walk: 5, swim: 30 },
+    abilities: { str: 4, dex: 15, con: 11, int: 3, wis: 10, cha: 4 },
+    skills: { Perception: 2, Stealth: 4 },
+    senses: "Darkvision 30 ft., Passive Perception 12", languages: "None",
+    cr: "0", xp: 10, proficiencyBonus: 2,
+    traits: [
+      { name: "Water Breathing", description: "The octopus can breathe only underwater." }
+    ],
+    actions: [
+      { name: "Tentacles", type: "melee", attackBonus: 4, damage: "1", damageType: "bludgeoning", reach: 5, description: "Melee Attack Roll: +4, reach 5 ft. 1 Bludgeoning damage." }
+    ]
+  },
+  {
     name: "Piranha",
     size: "Tiny", type: "Beast", alignment: "Unaligned",
     ac: 13, hp: 1, hpFormula: "1d4-1", speed: { walk: 5, swim: 40 },

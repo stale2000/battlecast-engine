@@ -202,6 +202,12 @@ export interface MonsterAction {
   /** Uses one attack from an Attack action instead of consuming the whole action. */
   replacesAttack?: boolean;
   /**
+   * This spell is cast immediately after a qualifying hit.  Arena exposes it
+   * as a second, server-generated choice instead of allowing a client to cast
+   * it before the hit (SRD smites and strike riders).
+   */
+  postHit?: { trigger: 'weapon_hit' | 'melee_hit' };
+  /**
    * True if this action's damage counts as magical for the purposes of
    * resistance bypass. Set on inherently magical attacks (devas, planetars,
    * weapons with a "magical" trait) and on cantrips / spells that deal
@@ -330,6 +336,8 @@ export interface MonsterAction {
   multiTargetSave?: { maxTargets: number };
   /** A buff spell that selects up to this many allied targets. */
   multiTargetBuff?: { maxTargets: number };
+  /** A healing spell that selects up to this many allied targets. */
+  multiTargetHeal?: { maxTargets: number };
   /**
    * Which ability is used for spell attack bonus / save DC. Overrides
    * the creature's primary. Set per-action because one creature can

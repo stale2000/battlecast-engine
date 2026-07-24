@@ -14,7 +14,7 @@ import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildCustomHero, buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
-import { acidArrow, armorOfAgathys, bane, barkskin, beaconOfHope, bestowCurse, bladeWard, bless, blindingSmite, buildSpellAction, callLightning, chromaticOrb, cloudOfDaggers, command, conjureAnimals, counterspell, cureWounds, dissonantWhispers, dispelMagic, enlargeReduce, entangle, expeditiousRetreat, findSteed, fireball, flamingSphere, fly, grease, gustOfWind, haste, hellishRebuke, heroism, inflictWounds, invisibility, lesserRestoration, mageArmor, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, seeInvisibility, shield, shiningSmite, slow, spikeGrowth, spiritualWeapon, summonBeast, tashasHideousLaughter, web, witchBolt } from '../src/data/spells.js';
+import { acidArrow, armorOfAgathys, bane, barkskin, beaconOfHope, bestowCurse, bladeWard, bless, blindingSmite, buildSpellAction, callLightning, chromaticOrb, cloudOfDaggers, command, conjureAnimals, counterspell, cureWounds, dissonantWhispers, dispelMagic, enlargeReduce, entangle, expeditiousRetreat, findSteed, fireball, flamingSphere, fly, grease, gustOfWind, haste, hellishRebuke, heroism, inflictWounds, invisibility, lesserRestoration, mageArmor, magicWeapon, massHealingWord, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, seeInvisibility, shield, shiningSmite, slow, spikeGrowth, spiritualWeapon, summonBeast, tashasHideousLaughter, web, witchBolt } from '../src/data/spells.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
@@ -88,6 +88,24 @@ describe('Kaggle arena bridge', () => {
     const flight = getLegalActions(encounter, cleric.id).find(action => action.type === 'spell' && action.actionName === 'Fly' && action.targetId === ally.id)!;
     applyLegalAction(encounter, flight);
     expect(ally.temporaryFlightSpeed).toBe(60);
+  });
+
+  it('resolves Mass Healing Word through supported primitives', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Cleric', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [massHealingWord('wis', 3, 3)], additionalResources: { 'slot-3': 1 } } });
+    encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'red', position: { x: 1, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 1 } });
+    encounter.start();
+    const cleric = encounter.state!.creatures.find(creature => creature.monsterData.heroClass === 'Cleric')!;
+    const ally = encounter.state!.creatures.find(creature => creature.team === 'red' && creature.id !== cleric.id)!;
+    const enemy = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
+    encounter.state!.initiativeOrder = [cleric.id];
+    startArena(encounter);
+    ally.currentHp -= 12;
+    const mass = getLegalActions(encounter, cleric.id).find(action => action.type === 'spell' && action.actionName === 'Mass Healing Word')!;
+    applyLegalAction(encounter, mass);
+    expect(ally.currentHp).toBeGreaterThan(ally.maxHp - 12);
+
   });
 
   it('automatically resolves Shield only when its +5 AC changes a noncritical hit to a miss', () => {
@@ -992,6 +1010,17 @@ describe('Kaggle arena bridge', () => {
     expect(result.observations.red.publicCombatState.creatures.filter(c => c.team === 'blue').every(c => !('build' in c) && !('hp' in c) && 'creatureType' in c && 'visibleEquipment' in c)).toBe(true);
     expect(result.observations.red.publicCombatState.creatures.filter(c => c.team === 'red').every(c => 'build' in c && 'preparedSpells' in c.build && 'equipment' in c.build)).toBe(true);
     expect(() => kaggleStep({ ...init(), redParty: { characters: [{ heroClass: 'Fighter', abilities: { str: 15, dex: 15, con: 15, int: 15, wis: 15, cha: 15 } }] } })).toThrow(/exactly four/);
+  });
+
+  it('validates optional class cantrip selections without changing default builds', () => {
+    const wizard = { heroClass: 'Wizard', species: 'Dwarf', background: 'Soldier', abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 }, cantrips: ['Ray of Frost'], spells: getAvailableSpells('Wizard', 5).filter(spell => spell.spellLevel > 0).slice(0, 8).map(spell => spell.name) };
+    const party = { characters: Array.from({ length: 4 }, () => wizard) };
+    const selected = kaggleStep({ ...init(), redParty: party, blueParty: party });
+    const actions = selected.state.battleState!.creatures.find(creature => creature.team === 'red')!.monsterData.actions;
+    expect(actions.some(action => action.name === 'Ray of Frost')).toBe(true);
+    expect(actions.some(action => action.name === 'Fire Bolt')).toBe(false);
+    expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...wizard, cantrips: ['Ray of Frost', 'Chill Touch'] })) }, blueParty: party })).toThrow(/cantrips/);
+    expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...wizard, cantrips: ['Eldritch Blast'] })) }, blueParty: party })).toThrow(/cantrips/);
   });
 
   it('accepts only catalog weapons that the class is proficient with', () => {
@@ -2295,4 +2324,56 @@ describe('Kaggle arena bridge', () => {
     expect(validParty.status).toBe(0);
     expect(validParty.stdout).toBe('{"valid":true}\n');
   }, 15_000);
+});
+
+describe('arena immediate-after-hit spell phase', () => {
+  const makeEncounter = () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: {
+      additionalActions: [
+        { name: 'Test Strike', type: 'melee', description: 'test', attackBonus: 100, damage: '1d4', damageType: 'slashing', reach: 5 },
+        { name: 'Test Searing Smite', type: 'special', description: 'test post-hit spell', spellLevel: 1, isBonusAction: true, postHit: { trigger: 'melee_hit' }, damage: '1d6', damageType: 'fire', concentration: true, targetScope: 'one_enemy' },
+      ],
+      additionalResources: { 'slot-1': 1 },
+    } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
+    encounter.start();
+    const attacker = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    encounter.state!.initiativeOrder = [attacker.id];
+    startArena(encounter);
+    return { encounter, attacker, target: encounter.state!.creatures.find(creature => creature.team === 'blue')! };
+  };
+
+  it('pauses after a qualifying hit and exposes exact accept/decline choices', () => {
+    const { encounter, attacker, target } = makeEncounter();
+    const attack = getLegalActions(encounter, attacker.id).find(action => action.type === 'attack' && action.actionName === 'Test Strike')!;
+    applyLegalAction(encounter, attack);
+    const pending = getLegalActions(encounter, attacker.id).filter(action => action.type === 'post_hit');
+    expect(pending.map(action => action.decline)).toEqual([true, false]);
+    const before = target.currentHp;
+    const decline = pending.find(action => action.type === 'post_hit' && action.decline)!;
+    applyLegalAction(encounter, decline);
+    expect(attacker.resources['slot-1']).toBe(1);
+    expect(target.currentHp).toBe(before);
+    expect(getLegalActions(encounter, attacker.id).some(action => action.type === 'post_hit')).toBe(false);
+  });
+
+  it('consumes the slot only after accepting the authoritative post-hit spell', () => {
+    const { encounter, attacker, target } = makeEncounter();
+    applyLegalAction(encounter, getLegalActions(encounter, attacker.id).find(action => action.type === 'attack' && action.actionName === 'Test Strike')!);
+    const accept = getLegalActions(encounter, attacker.id).find(action => action.type === 'post_hit' && !action.decline)!;
+    const before = target.currentHp;
+    applyLegalAction(encounter, accept);
+    expect(attacker.resources['slot-1']).toBe(0);
+    expect(target.currentHp).toBeLessThan(before);
+    expect(attacker.concentratingOn).toBe('Test Searing Smite');
+  });
+
+  it('rejects a forged post-hit choice without mutating the pending state', () => {
+    const { encounter, attacker } = makeEncounter();
+    applyLegalAction(encounter, getLegalActions(encounter, attacker.id).find(action => action.type === 'attack' && action.actionName === 'Test Strike')!);
+    const before = JSON.stringify(encounter.toJSON());
+    expect(() => applyLegalAction(encounter, { id: 'post_hit:forged', type: 'post_hit', actionName: 'Test Searing Smite', actionIndex: 999, targetId: 'forged', decline: false })).toThrow(/Illegal or stale/);
+    expect(JSON.stringify(encounter.toJSON())).toBe(before);
+  });
 });

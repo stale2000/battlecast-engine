@@ -75,6 +75,13 @@ describe('buildCustomHero', () => {
     expect(custom.actions.some(a => a.name === 'Fire Bolt')).toBe(false);
   });
 
+  it('replaces the default cantrip with a selected supported class cantrip', () => {
+    const wizard = buildCustomHero('Wizard', 5, { cantrips: ['Ray of Frost'] });
+    const ray = wizard.actions.find(action => action.name === 'Ray of Frost');
+    expect(ray).toMatchObject({ damage: '2d8', buffOnHit: { speedPenalty: 10 } });
+    expect(wizard.actions.some(action => action.name === 'Fire Bolt')).toBe(false);
+  });
+
   it('custom abilities cascade to attack bonus', () => {
     const weak = buildCustomHero('Fighter', 5, {
       abilities: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
@@ -154,6 +161,28 @@ describe('getAvailableSpells', () => {
     expect(wizardSpells.length).toBeGreaterThan(3);
     expect(wizardSpells.some(s => s.name === 'Fireball')).toBe(true);
     expect(wizardSpells.some(s => s.name === 'Magic Missile')).toBe(true);
+  });
+
+  it('lists supported combat cantrips only for their SRD classes', () => {
+    for (const cls of ['Sorcerer', 'Wizard'] as const) {
+      const names = getAvailableSpells(cls, 5).map(spell => spell.name);
+      expect(names).toEqual(expect.arrayContaining(['Ray of Frost', 'Chill Touch', 'Shocking Grasp']));
+    }
+    const warlock = getAvailableSpells('Warlock', 5).map(spell => spell.name);
+    expect(warlock).toContain('Chill Touch');
+    expect(warlock).not.toContain('Ray of Frost');
+  });
+
+  it('keeps optional level-five spell lists aligned with the 2024 SRD classes', () => {
+    const names = (cls: Parameters<typeof getAvailableSpells>[0]) => new Set(getAvailableSpells(cls, 5).map(spell => spell.name));
+    for (const spell of ['Fog Cloud', 'Barkskin', 'Gust of Wind', 'Lesser Restoration']) expect(names('Ranger')).toContain(spell);
+    expect(names('Ranger')).not.toContain('Faerie Fire');
+    for (const spell of ['Protection from Poison', 'Flaming Sphere']) expect(names('Druid')).toContain(spell);
+    for (const spell of ['Fear', 'Fly']) expect(names('Druid')).not.toContain(spell);
+    expect(names('Paladin')).not.toContain('Hold Person');
+    for (const spell of ['Web']) expect(names('Sorcerer')).toContain(spell);
+    for (const spell of ["Tasha's Hideous Laughter", 'Cloud of Daggers', 'Acid Arrow']) expect(names('Sorcerer')).not.toContain(spell);
+    for (const spell of ['Counterspell', 'Cloud of Daggers']) expect(names('Warlock')).toContain(spell);
   });
 
   it('returns empty for martial classes', () => {

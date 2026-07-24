@@ -113,6 +113,13 @@ export interface BattleState {
    * Speed for creatures without a swim speed.
    */
   movementEnvironment?: 'land' | 'underwater';
+  /** Pending immediate-after-hit spell decision for the arena controller. */
+  pendingHit?: {
+    attackerId: string;
+    targetId: string;
+    actionIndexes: number[];
+    actionNames: string[];
+  };
 }
 
 export function pushLog(state: BattleState, entry: Omit<BattleLog, 'eventIndex'>): void {

@@ -1790,6 +1790,30 @@ export function beaconOfHope(ability: SpellcastingAbility, _mod: number, _pb: nu
   };
 }
 
+export function massHealingWord(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Mass Healing Word', type: 'special', spellLevel: 3, spellSchool: 'abjuration', castingAbility: ability, isBonusAction: true,
+    description: 'Up to six creatures within 60 feet regain 2d4 plus your spellcasting ability modifier Hit Points. Bonus action.',
+    range: { normal: 60, long: 60 }, targetScope: 'all_allies_in_area', multiTargetHeal: { maxTargets: 6 }, heal: { dice: '2d4', addCastingMod: true },
+  };
+}
+
+/**
+ * Sleet Storm creates a persistent, heavily obscured area. The generic zone
+ * resolver handles its difficult terrain and the Dexterity save made when a
+ * creature enters or starts its turn there.
+ */
+export function sleetStorm(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Sleet Storm', type: 'special', spellLevel: 3, spellSchool: 'conjuration',
+    castingAbility: ability, concentration: true, durationRounds: 10,
+    description: `A 20-foot-radius sphere within 150 feet is heavily obscured and difficult terrain. A creature that enters the area for the first time on a turn or starts its turn there makes a Dexterity save (DC ${saveDC(mod, pb)}) or falls Prone. Concentration, 1 minute.`,
+    range: { normal: 150, long: 150 }, targetScope: 'area_enemies',
+    savingThrow: { ability: 'dex', dc: saveDC(mod, pb), conditionOnFail: 'prone', conditionDuration: 'end_of_current_turn', area: '20-foot sphere' },
+    persistentZone: { radiusFt: 20, durationRounds: 10, triggers: ['entry', 'turnStart'], difficultTerrain: true, obscuresSight: true },
+  };
+}
+
 export function stinkingCloud(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
   return {
     name: 'Stinking Cloud', type: 'special', spellLevel: 3, spellSchool: 'conjuration', castingAbility: ability, concentration: true, durationRounds: 10,
@@ -1869,6 +1893,8 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Hypnotic Pattern', hypnoticPattern], ['Dispel Magic', dispelMagic], ['Haste', haste],
   ['Fear', fear], ['Fly', fly], ['Revivify', revivify],
   ['Beacon of Hope', beaconOfHope],
+  ['Mass Healing Word', massHealingWord],
+  ['Sleet Storm', sleetStorm],
   ['Stinking Cloud', stinkingCloud],
   ['Vampiric Touch', vampiricTouch],
   ['Slow', slow],

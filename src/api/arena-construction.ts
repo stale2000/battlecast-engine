@@ -14,6 +14,7 @@ import {
 } from '../data/arena-origins.js';
 import type { Abilities, MonsterAction } from '../types/monster.js';
 import { bless, burningHands, cureWounds, entangle, guidingBolt, healingWord, holdPerson, magicMissile, shieldOfFaith, sleep, thunderwave } from '../data/spells.js';
+import { arenaCombatCantrip, type ArenaCombatCantripName } from '../data/arena-combat-cantrips.js';
 
 type DragonAncestry = 'acid' | 'cold' | 'fire' | 'lightning' | 'poison';
 type CastingAbility = 'int' | 'wis' | 'cha';
@@ -21,7 +22,7 @@ type TieflingLegacy = 'Abyssal' | 'Chthonic' | 'Infernal';
 type ElfLineage = 'Drow' | 'High Elf' | 'Wood Elf';
 type GnomeLineage = 'Forest Gnome' | 'Rock Gnome';
 type GoliathAncestry = 'Cloud' | 'Fire' | 'Frost' | 'Hill' | 'Stone' | 'Storm';
-const FAMILIAR_FORMS = ['Bat', 'Cat', 'Frog', 'Hawk', 'Lizard', 'Owl', 'Rat', 'Raven', 'Spider', 'Weasel'] as const;
+const FAMILIAR_FORMS = ['Bat', 'Cat', 'Frog', 'Hawk', 'Lizard', 'Octopus', 'Owl', 'Rat', 'Raven', 'Spider', 'Weasel'] as const;
 const SRD_SUBCLASSES: Record<typeof HERO_CLASS_NAMES[number], readonly string[]> = {
   Barbarian: ['Path of the Berserker'], Bard: ['College of Lore'], Cleric: ['Life Domain'], Druid: ['Circle of the Land', 'Circle of the Moon'], Fighter: ['Champion'], Monk: ['Warrior of the Open Hand'], Paladin: ['Oath of Devotion'], Ranger: ['Hunter'], Rogue: ['Thief'], Sorcerer: ['Draconic Sorcery'], Warlock: ['Fiend Patron'], Wizard: ['Evoker'],
 };
@@ -119,6 +120,15 @@ function parseSpells(value: unknown, heroClass: typeof HERO_CLASS_NAMES[number],
   return value as string[];
 }
 
+function parseCantrips(value: unknown, heroClass: typeof HERO_CLASS_NAMES[number], label: string): string[] | undefined {
+  if (value === undefined) return undefined;
+  const available = new Set(getAvailableSpells(heroClass, 5).filter(spell => spell.spellLevel === 0).map(spell => spell.name));
+  if (!available.size || !Array.isArray(value) || value.length !== 1 || typeof value[0] !== 'string' || !available.has(value[0])) {
+    throw new EncounterError(`${label}.cantrips must select exactly one engine-supported class cantrip.`);
+  }
+  return value as string[];
+}
+
 function dragonbornBreath(ancestry: DragonAncestry, abilities: Abilities): MonsterAction {
   const dc = 8 + Math.floor((abilities.con - 10) / 2) + 3;
   return {
@@ -148,17 +158,16 @@ function lineageDarkness(resourceKey: string): MonsterAction {
   };
 }
 
-type SupportedDamageCantrip = 'Fire Bolt' | 'Ray of Frost' | 'Poison Spray' | 'Chill Touch' | 'Produce Flame' | 'Shocking Grasp';
+type SupportedDamageCantrip = 'Fire Bolt' | ArenaCombatCantripName | 'Poison Spray' | 'Produce Flame';
 
 function damagingCantrip(name: SupportedDamageCantrip, castingAbility: CastingAbility, abilities: Abilities): MonsterAction {
   const mod = Math.floor((abilities[castingAbility] - 10) / 2);
   const attackBonus = mod + 3;
+  if (name === 'Ray of Frost' || name === 'Chill Touch' || name === 'Shocking Grasp') return arenaCombatCantrip(name, castingAbility, mod, 3);
   if (name === 'Fire Bolt') return { name, type: 'ranged', description: 'Ranged spell attack, 2d10 fire damage.', spellLevel: 0, castingAbility, attackBonus, damage: '2d10', damageType: 'fire', range: { normal: 120, long: 120 }, magical: true, targetScope: 'one_enemy' };
-  if (name === 'Ray of Frost') return { name, type: 'ranged', description: 'Ranged spell attack, 2d8 cold damage and the target’s Speed is reduced by 10 feet until your next turn.', spellLevel: 0, castingAbility, attackBonus, damage: '2d8', damageType: 'cold', range: { normal: 60, long: 60 }, magical: true, targetScope: 'one_enemy', buffOnHit: { name: 'Ray of Frost', key: 'ray-of-frost', speedPenalty: 10, expiresOnSourceTurnStart: true } };
   if (name === 'Poison Spray') return { name, type: 'special', description: `CON save DC ${8 + attackBonus}; 2d12 poison damage.`, spellLevel: 0, castingAbility, damageType: 'poison', savingThrow: { ability: 'con', dc: 8 + attackBonus, damageOnFail: '2d12' }, range: { normal: 10, long: 10 }, targetScope: 'one_enemy' };
   if (name === 'Produce Flame') return { name, type: 'ranged', description: 'Ranged spell attack, 2d8 fire damage.', spellLevel: 0, castingAbility, attackBonus, damage: '2d8', damageType: 'fire', range: { normal: 60, long: 60 }, magical: true, targetScope: 'one_enemy' };
-  if (name === 'Shocking Grasp') return { name, type: 'melee', description: 'Melee spell attack, 2d8 lightning damage. The target cannot take Reactions until your next turn.', spellLevel: 0, castingAbility, attackBonus, damage: '2d8', damageType: 'lightning', reach: 5, magical: true, targetScope: 'one_enemy', buffOnHit: { name: 'Shocking Grasp', key: 'shocking-grasp', preventsReactions: true, expiresOnSourceTurnStart: true } };
-  return { name, type: 'ranged', description: 'Ranged spell attack, 2d8 necrotic damage. The target cannot regain HP until your next turn.', spellLevel: 0, castingAbility, attackBonus, damage: '2d8', damageType: 'necrotic', range: { normal: 120, long: 120 }, magical: true, targetScope: 'one_enemy', effects: [{ kind: 'blocksHealing', key: 'Chill Touch', tick: 'sourceTurnStart', expiresAfterRounds: 1 }] };
+  throw new Error(`Unknown supported damage cantrip: ${name}`);
 }
 
 function tieflingCantrip(legacy: TieflingLegacy, castingAbility: CastingAbility, abilities: Abilities): MonsterAction {
@@ -254,7 +263,7 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     if (typeof character.heroClass !== 'string' || !HERO_CLASS_NAMES.includes(character.heroClass as typeof HERO_CLASS_NAMES[number])) {
       throw new EncounterError(`${label}.heroClass must be a supported hero class.`);
     }
-    if (!Object.keys(character).every(key => ['heroClass', 'abilities', 'subclass', 'spells', 'weapons', 'armor', 'shield', 'species', 'background', 'abilityIncreases', 'alignment', 'dragonAncestry', 'elfLineage', 'highElfCantrip', 'gnomeLineage', 'goliathAncestry', 'tieflingLegacy', 'speciesCastingAbility', 'size', 'languages', 'elfKeenSense', 'humanSkill', 'originCantrips', 'originSpell', 'originCastingAbility', 'humanOriginFeat', 'humanOriginSkills', 'humanOriginTools', 'humanOriginCantrips', 'humanOriginSpell', 'humanOriginCastingAbility', 'familiar'].includes(key))) {
+    if (!Object.keys(character).every(key => ['heroClass', 'abilities', 'subclass', 'spells', 'cantrips', 'weapons', 'armor', 'shield', 'species', 'background', 'abilityIncreases', 'alignment', 'dragonAncestry', 'elfLineage', 'highElfCantrip', 'gnomeLineage', 'goliathAncestry', 'tieflingLegacy', 'speciesCastingAbility', 'size', 'languages', 'elfKeenSense', 'humanSkill', 'originCantrips', 'originSpell', 'originCastingAbility', 'humanOriginFeat', 'humanOriginSkills', 'humanOriginTools', 'humanOriginCantrips', 'humanOriginSpell', 'humanOriginCastingAbility', 'familiar'].includes(key))) {
       throw new EncounterError(`${label} contains unsupported build choices.`);
     }
     const baseAbilities = parseAbilities(character.abilities, `${label}.abilities`);
@@ -350,6 +359,7 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
       throw new EncounterError(`${label}.subclass is not an SRD subclass for ${heroClass}.`);
     }
     const spells = parseSpells(character.spells, heroClass, label);
+    const cantrips = parseCantrips(character.cantrips, heroClass, label);
     const hasOriginSpellChoice = character.originCantrips !== undefined || character.originSpell !== undefined || character.originCastingAbility !== undefined;
     if (hasOriginSpellChoice && (!background || !['Magic Initiate (Cleric)', 'Magic Initiate (Wizard)'].includes(BACKGROUNDS[background].originFeat))) {
       throw new EncounterError(`${label} origin spell choices require a Magic Initiate background.`);
@@ -367,7 +377,7 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     return {
       heroClass, heroLevel: 5, team, ...(familiar ? { familiarForm: familiar as typeof FAMILIAR_FORMS[number] } : {}),
       heroOverrides: {
-        abilities, subclass: character.subclass as HeroSubclassName | undefined, spells, weapons: toWeaponOverrides(weapons, character.shield === false), ...(armor ? { armorBaseOverride: ARENA_ARMOR[armor].armorBase, armorDexCapOverride: ARENA_ARMOR[armor].dexCap, wearingHeavyArmor: ARENA_ARMOR[armor].category === 'heavy', ...(ARENA_ARMOR[armor].minimumStrength && abilities.str < ARENA_ARMOR[armor].minimumStrength ? { speedPenaltyOverride: 10 } : {}) } : {}), ...(character.shield !== undefined ? { shieldOverride: character.shield as boolean } : {}),
+        abilities, subclass: character.subclass as HeroSubclassName | undefined, spells, cantrips, weapons: toWeaponOverrides(weapons, character.shield === false), ...(armor ? { armorBaseOverride: ARENA_ARMOR[armor].armorBase, armorDexCapOverride: ARENA_ARMOR[armor].dexCap, wearingHeavyArmor: ARENA_ARMOR[armor].category === 'heavy', ...(ARENA_ARMOR[armor].minimumStrength && abilities.str < ARENA_ARMOR[armor].minimumStrength ? { speedPenaltyOverride: 10 } : {}) } : {}), ...(character.shield !== undefined ? { shieldOverride: character.shield as boolean } : {}),
         ...(species && background ? {
           species, speciesChoice: elfLineage ?? gnomeLineage ?? goliathAncestry ?? tieflingLegacy ?? character.dragonAncestry as string | undefined, speciesCastingAbility, background, originFeat: BACKGROUNDS[background].originFeat, originFeats: [BACKGROUNDS[background].originFeat, ...(humanOriginFeat ? [humanOriginFeat] : [])], originSkills: [...new Set([...BACKGROUNDS[background].skills, ...(elfKeenSense ? [elfKeenSense] : []), ...(humanSkill ? [humanSkill] : []), ...selectedOriginSkills])], originTool: BACKGROUNDS[background].tool, originTools: [...new Set([BACKGROUNDS[background].tool, ...selectedOriginTools])],
           originEquipment: [...BACKGROUNDS[background].equipment], alignmentOverride: alignment, additionalSenses: speciesDarkvision(species, elfLineage), additionalLanguages: languages, speciesCantrips: lineageSpells(species, elfLineage ?? gnomeLineage ?? tieflingLegacy, selectedHighElfCantrip).cantrips, speciesPreparedSpells: lineageSpells(species, elfLineage ?? gnomeLineage ?? tieflingLegacy).prepared, sizeOverride: size ?? SPECIES[species].size, speedOverride: elfLineage === 'Wood Elf' ? 35 : SPECIES[species].speed,

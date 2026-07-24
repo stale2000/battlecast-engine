@@ -142,7 +142,7 @@ function canCastArenaSpell(active: Creature, action: MonsterAction): boolean {
 }
 
 function spellTargets(active: Creature, state: NonNullable<Encounter['state']>, action: MonsterAction): Creature[] {
-  if (action.autoDarts || action.savingThrow?.area || action.persistentZone || (action.targetScope === 'all_allies_in_area' && !action.multiTargetBuff)) return [];
+  if (action.autoDarts || action.savingThrow?.area || action.persistentZone || (action.targetScope === 'all_allies_in_area' && !action.multiTargetBuff && !action.multiTargetHeal)) return [];
   const living = action.revive
     ? state.creatures.filter(c => !c.isAlive && c.team === active.team && c.stats.deathRound !== undefined && state.round - c.stats.deathRound <= action.revive!.maxDeathRounds)
     : state.creatures.filter(c => c.isAlive && (!c.dying || action.heal !== undefined));
@@ -293,7 +293,7 @@ function multiTargetSaveSpellActions(active: Creature, state: NonNullable<Encoun
   const result: ArenaAction[] = [];
   const choose = (start: number, chosen: Creature[]): void => {
     if (chosen.length) result.push({ id: `spell:${actionIndex}:${slug(action.name)}:targets:${chosen.map(target => target.id).join(',')}`, type: 'spell', actionName: action.name, actionIndex, targetId: chosen[0]!.id, targetIds: chosen.map(target => target.id) });
-    if (chosen.length === (action.multiTargetSave?.maxTargets ?? action.multiTargetBuff?.maxTargets ?? 1)) return;
+    if (chosen.length === (action.multiTargetSave?.maxTargets ?? action.multiTargetBuff?.maxTargets ?? action.multiTargetHeal?.maxTargets ?? 1)) return;
     for (let index = start; index < targets.length; index++) choose(index + 1, [...chosen, targets[index]!]);
   };
   choose(0, []);
@@ -315,6 +315,17 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
   const state = encounter.state;
   const active = getActiveCreature(encounter);
   if (!state || !active || active.id !== creatureId) return [];
+  if (state.pendingHit) {
+    if (state.pendingHit.attackerId !== active.id) return [];
+    const pendingTarget = state.creatures.find(candidate => candidate.id === state.pendingHit!.targetId);
+    const pendingActions = state.pendingHit.actionIndexes.map(index => ({ index, action: getActiveActions(active)[index] })).filter(({ action }) => action?.postHit?.trigger === 'weapon_hit' || action?.postHit?.trigger === 'melee_hit');
+    if (!pendingTarget || !pendingTarget.isAlive || !pendingActions.length) return [{ id: `post_hit:${active.id}:decline`, type: 'post_hit', actionName: 'post-hit', actionIndex: -1, targetId: state.pendingHit.targetId, decline: true }];
+    const actions: ArenaAction[] = [{ id: `post_hit:${active.id}:decline`, type: 'post_hit', actionName: 'post-hit', actionIndex: -1, targetId: pendingTarget.id, decline: true }];
+    for (const { index, action } of pendingActions) if (action && canCastArenaSpell(active, action) && action.isBonusAction && !active.bonusActionUsed) {
+      actions.push({ id: `post_hit:${active.id}:${index}:${slug(action.name)}:${pendingTarget.id}`, type: 'post_hit', actionName: action.name, actionIndex: index, targetId: pendingTarget.id, decline: false });
+    }
+    return actions;
+  }
   const enemies = state.creatures.filter(c => c.team !== active.team && c.isAlive && !c.dying);
   const actions: ArenaAction[] = [];
   const rider = active.riderId ? state.creatures.find(candidate => candidate.id === active.riderId) : undefined;
@@ -332,6 +343,7 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
     for (const [actionIndex, action] of getActiveActions(active).entries()) {
       if (action.legendaryOnly || action.reactionOnly || action.type === 'multiattack') continue;
       if (isSpellAction(action)) {
+        if (action.postHit) continue;
         if (hasteOnly) continue;
         if (action.spiritualWeapon && active.spiritualWeapon && active.spiritualWeapon.endRound > state.round) continue;
         if (action.repeatableAreaSpell && active.repeatableAreaSpell && active.repeatableAreaSpell.endRound > state.round) continue;
@@ -340,7 +352,7 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
           actions.push(...autoDartSpellActions(active, state, action, actionIndex));
           continue;
         }
-        if (action.multiTargetSave || action.multiTargetBuff) {
+        if (action.multiTargetSave || action.multiTargetBuff || action.multiTargetHeal) {
           actions.push(...multiTargetSaveSpellActions(active, state, action, actionIndex));
           continue;
         }
@@ -570,7 +582,12 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       const attack = getActiveActions(active)[legal.actionIndex];
       if (!attack || attack.name !== legal.actionName) throw new EncounterError(`Stale arena attack "${legal.id}".`);
       const damageBefore = target.stats.damageTaken;
-      resolveAttack(state, active, target, attack);
+      const eventCountBefore = state.events.length;
+      // A post-hit spell is not legal before the hit and must not be consumed
+      // speculatively. Resolve the weapon attack first, then expose exactly
+      // one server-owned follow-up choice.
+      const attackToResolve = attack.postHit ? { ...attack, postHit: undefined } : attack;
+      resolveAttack(state, active, target, attackToResolve);
       if (attack.loading) active.turnFlags[`arena-loading-${legal.actionIndex}`] = true;
       if (legal.goliathFeature && target.stats.damageTaken > damageBefore) {
         try {
@@ -584,6 +601,22 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
         active.turnFlags[`arena-attack-${attacksUsed(active)}`] = true;
         active.hasActed = attacksUsed(active) >= attackRollBudget(active);
       }
+      if (target.isAlive && state.events.slice(eventCountBefore).some(event => event.kind === 'hit' && event.targetId === target.id)) {
+        const postHit = getActiveActions(active).map((candidate, index) => ({ candidate, index }))
+          .filter(({ candidate }) => (candidate.postHit?.trigger === 'weapon_hit' || (candidate.postHit?.trigger === 'melee_hit' && attack.type === 'melee')) && candidate.isBonusAction && canCastArenaSpell(active, candidate));
+        if (postHit.length) state.pendingHit = { attackerId: active.id, targetId: target.id, actionIndexes: postHit.map(({ index }) => index), actionNames: postHit.map(({ candidate }) => candidate.name) };
+      }
+      checkBattleComplete(state);
+    } else if (legal.type === 'post_hit') {
+      const pending = state.pendingHit;
+      if (!pending || pending.attackerId !== active.id || (legal.actionIndex >= 0 && !pending.actionIndexes.includes(legal.actionIndex)) || pending.targetId !== legal.targetId) throw new EncounterError(`Illegal or stale post-hit action "${legal.id}".`);
+      if (!legal.decline) {
+        const spell = getActiveActions(active)[legal.actionIndex];
+        const target = state.creatures.find(candidate => candidate.id === pending.targetId);
+        if (!spell || !target || !spell.postHit || !spell.isBonusAction || !canCastArenaSpell(active, spell) || !executeSpell(state, active, spell, target)) throw new EncounterError(`Illegal or stale post-hit spell "${legal.id}".`);
+        active.bonusActionUsed = true;
+      }
+      state.pendingHit = undefined;
       checkBattleComplete(state);
     } else if (legal.type === 'spell') {
       const targets = (legal.targetIds ?? [legal.targetId]).map(id => state.creatures.find(c => c.id === id)).filter((target): target is Creature => Boolean(target));
@@ -608,7 +641,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
               : baseSpell && legal.curseChoice ? withCurseChoice(baseSpell, legal.curseChoice)
           : baseSpell;
       if (!spell || spell.name !== legal.actionName || !isSpellAction(spell)) throw new EncounterError(`Stale arena spell "${legal.id}".`);
-      if (!target || !executeSpell(state, active, spell, target, spell.autoDarts || spell.multiTargetAttack || spell.multiTargetSave || spell.multiTargetBuff || spell.savingThrow?.area || spell.persistentZone ? targets : undefined, legal.center)) throw new EncounterError(`Illegal or stale arena spell "${legal.id}".`);
+      if (!target || !executeSpell(state, active, spell, target, spell.autoDarts || spell.multiTargetAttack || spell.multiTargetSave || spell.multiTargetBuff || spell.multiTargetHeal || spell.savingThrow?.area || spell.persistentZone ? targets : undefined, legal.center)) throw new EncounterError(`Illegal or stale arena spell "${legal.id}".`);
       if (spell.isBonusAction) active.bonusActionUsed = true;
       else if (spell.replacesAttack) {
         active.turnFlags[`arena-attack-${attacksUsed(active)}`] = true;

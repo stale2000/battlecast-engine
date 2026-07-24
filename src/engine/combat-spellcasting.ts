@@ -33,7 +33,7 @@ import {
 } from './combat-buffs.js';
 import { resolveAoE } from './combat-aoe.js';
 import {
-  applyDamage, gainHp, pushLog, resolveAttack, getAliveCreatures, createSummonedCreature,
+  applyDamage, applyCondition, gainHp, pushLog, resolveAttack, getAliveCreatures, createSummonedCreature,
   getEffectiveMoveSpeed, getEffectiveSaveModifier, resolveSpellReflection, createPersistentZone,
   type BattleState,
 } from './combat.js';
@@ -102,6 +102,40 @@ function clearHealingSpellConditions(
       type: 'condition',
     });
   }
+}
+
+/** Resolve a spell whose casting time is "immediately after you hit".
+ * The arena has already resolved the weapon hit; this applies only the
+ * spell's validated rider and never makes a second attack roll. */
+function executePostHitSpell(state: BattleState, caster: Creature, action: MonsterAction, target: Creature, slotLevelUsed: number): boolean {
+  if (!action.postHit || action.postHit.trigger !== 'melee_hit' || !target.isAlive || target.team === caster.team
+    || state.pendingHit?.attackerId !== caster.id || state.pendingHit.targetId !== target.id
+    || !state.pendingHit.actionNames.includes(action.name)) return false;
+  if (action.concentration) {
+    dropConcentratedBuffsFrom(state, caster.id);
+    caster.concentratingOn = action.name;
+  }
+  if (action.damage) {
+    const damage = applyDamageRollPenalty(caster, rollDice(action.damage).total);
+    const before = target.currentHp;
+    pushLog(state, { round: state.round, turn: state.turnIndex, actor: caster.displayName, action: action.name, details: `${caster.displayName} adds ${damage} ${action.damageType ?? 'untyped'} damage with ${action.name}.`, damage, type: 'damage' });
+    const event = { kind: 'hit' as const, targetId: target.id, damage, damageType: action.damageType ?? 'untyped', critical: false, targetHpBefore: before, targetHpAfter: before, durationMs: BASE_DURATIONS.hit };
+    state.events.push(event);
+    applyDamage(state, target, damage, action.damageType ?? 'untyped', caster, true, true, false);
+    event.targetHpAfter = target.currentHp;
+  }
+  if (action.savingThrow?.conditionOnFail && target.isAlive) {
+    const dc = action.savingThrow.dc + getSpellSaveDcBonus(caster, action);
+    const save = rollSaveWithBuffs(target, getEffectiveSaveModifier(target, action.savingThrow.ability, state), false, dc, action.savingThrow.ability);
+    const success = save.total >= dc;
+    state.events.push({ kind: 'save', targetId: target.id, success, durationMs: BASE_DURATIONS.save });
+    if (!success) {
+      applyCondition(state, target, action.savingThrow.conditionOnFail, caster, action.savingThrow.conditionDuration, dc, action.savingThrow.ability);
+    }
+    pushLog(state, { round: state.round, turn: state.turnIndex, actor: caster.displayName, action: action.name, details: success ? `${target.displayName} succeeds on the ${action.name} save.` : `${target.displayName} fails the ${action.name} save.`, type: 'save' });
+  }
+  void slotLevelUsed;
+  return true;
 }
 
 function applySteedLifeBond(state: BattleState, caster: Creature, amount: number): void {
@@ -915,6 +949,9 @@ export function executeSpell(
   }
   const castAction = scaleAttackSpellForSlot(action, slotLevelUsed);
   if (tryAutomaticCounterspell(state, caster, castAction)) return true;
+  if (castAction.postHit && primaryTarget) {
+    return executePostHitSpell(state, caster, castAction, primaryTarget, slotLevelUsed);
+  }
   if (castAction.dashOnCast) {
     caster.movementRemaining += getEffectiveMoveSpeed(caster, state);
     pushLog(state, { round: state.round, turn: state.turnIndex, actor: caster.displayName, action: 'Dash', details: `${caster.displayName} dashes while casting ${castAction.name}.`, type: 'move' });
@@ -1108,9 +1145,10 @@ export function executeSpell(
     let healedAnotherCreature = false;
     if (castAction.targetScope === 'all_allies_in_area') {
       const range = castAction.range?.normal ?? 30;
-      const targets = getAliveCreatures(state)
-        .filter(c => c.team === caster.team && creatureDistance(caster, c) <= range)
-        .slice(0, 6);
+      const targets = (aoeTargets?.length ? aoeTargets : getAliveCreatures(state)
+        .filter(c => c.team === caster.team && creatureDistance(caster, c) <= range))
+        .filter(c => c.isAlive && c.team === caster.team && creatureDistance(caster, c) <= range)
+        .slice(0, castAction.multiTargetHeal?.maxTargets ?? 6);
       for (const t of targets) {
         const beforeHeal = t.currentHp;
         const amount = capHealingTotalForAction(castAction, t, rollHealingTotal(caster, castAction, spellSlotUsedForThisCast, t));
