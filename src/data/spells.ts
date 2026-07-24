@@ -437,19 +437,15 @@ export function divineFavor(ability: SpellcastingAbility, _mod: number, _pb: num
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function scorchingRay(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
-  // SRD: three rays, each a separate ranged attack. We model as a single
-  // attack with bundled damage to match the engine's shape; damage dice
-  // reflect the "average" outcome of 3 rays each doing 2d6 fire on hit.
-  // Simplified but functionally similar for MC.
   return {
     name: 'Scorching Ray',
     type: 'ranged',
-    description: `Three rays of fire. Each is a ranged spell attack +${spellAttackBonus(mod, pb)}, range 120 ft, 2d6 fire damage per hit. (Modeled as a single 6d6 fire attack - roughly equivalent on average.)`,
+    description: `Three rays of fire. Each is a ranged spell attack +${spellAttackBonus(mod, pb)}, range 120 ft, 2d6 fire damage per hit.`,
     spellLevel: 2,
     spellSchool: 'evocation',
     castingAbility: ability,
     attackBonus: spellAttackBonus(mod, pb),
-    damage: '6d6', damageType: 'fire',
+    damage: '2d6', damageType: 'fire', multiTargetAttack: { count: 3 },
     range: { normal: 120, long: 120 },
     targetScope: 'one_enemy',
   };

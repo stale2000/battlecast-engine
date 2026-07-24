@@ -187,14 +187,15 @@ function autoDartSpellActions(active: Creature, state: NonNullable<Encounter['st
   const targets = state.creatures
     .filter(target => target.team !== active.team && target.isAlive && !target.dying && attackInRange(active, target, action) && (!action.range || canSee(state, active, target)))
     .sort((left, right) => left.id.localeCompare(right.id));
-  const darts = Math.max(1, action.autoDarts ?? 1);
+  const darts = Math.max(1, action.autoDarts ?? action.multiTargetAttack?.count ?? 1);
+  const kind = action.autoDarts ? 'darts' : 'rays';
   const result: ArenaAction[] = [];
   const counts = Array.from({ length: targets.length }, () => 0);
   const visit = (index: number, remaining: number): void => {
     if (index === targets.length - 1) {
       counts[index] = remaining;
       const targetIds = targets.flatMap((target, targetIndex) => Array.from({ length: counts[targetIndex] }, () => target.id));
-      if (targetIds.length) result.push({ id: `spell:${actionIndex}:${slug(action.name)}:darts:${targetIds.join(',')}`, type: 'spell', actionName: action.name, actionIndex, targetId: targetIds[0]!, targetIds });
+      if (targetIds.length) result.push({ id: `spell:${actionIndex}:${slug(action.name)}:${kind}:${targetIds.join(',')}`, type: 'spell', actionName: action.name, actionIndex, targetId: targetIds[0]!, targetIds });
       return;
     }
     for (let count = 0; count <= remaining; count++) {
@@ -233,7 +234,7 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
         if (action.spiritualWeapon && active.spiritualWeapon && active.spiritualWeapon.endRound > state.round) continue;
         if (action.repeatableAreaSpell && active.repeatableAreaSpell && active.repeatableAreaSpell.endRound > state.round) continue;
         if ((!action.replacesAttack && attackInProgress) || (action.replacesAttack && attacksUsed(active) >= attackRollBudget(active)) || !canCastArenaSpell(active, action)) continue;
-        if (action.autoDarts) {
+        if (action.autoDarts || action.multiTargetAttack) {
           actions.push(...autoDartSpellActions(active, state, action, actionIndex));
           continue;
         }
@@ -440,7 +441,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
           ? { ...baseSpell, dispelMagic: { ...baseSpell.dispelMagic, selectedKey: legal.effectKey } }
           : baseSpell;
       if (!spell || spell.name !== legal.actionName || !isSpellAction(spell)) throw new EncounterError(`Stale arena spell "${legal.id}".`);
-      if (!target || !executeSpell(state, active, spell, target, spell.autoDarts || spell.savingThrow?.area ? targets : undefined, legal.center)) throw new EncounterError(`Illegal or stale arena spell "${legal.id}".`);
+      if (!target || !executeSpell(state, active, spell, target, spell.autoDarts || spell.multiTargetAttack || spell.savingThrow?.area ? targets : undefined, legal.center)) throw new EncounterError(`Illegal or stale arena spell "${legal.id}".`);
       if (spell.isBonusAction) active.bonusActionUsed = true;
       else if (spell.replacesAttack) {
         active.turnFlags[`arena-attack-${attacksUsed(active)}`] = true;

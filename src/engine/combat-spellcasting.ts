@@ -943,6 +943,13 @@ export function executeSpell(
     return executePowerWord(state, caster, castAction, primaryTarget);
   }
 
+  if (castAction.multiTargetAttack && aoeTargets?.length) {
+    for (const target of aoeTargets.slice(0, castAction.multiTargetAttack.count)) {
+      if (target.isAlive) resolveAttack(state, caster, target, castAction);
+    }
+    return true;
+  }
+
   // Auto-hit darts (Magic Missile) - caller supplies dart targets
   if (castAction.autoDarts && aoeTargets && aoeTargets.length > 0) {
     applyAutoDarts(state, caster, castAction, aoeTargets.slice(0, castAction.autoDarts));

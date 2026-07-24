@@ -207,6 +207,7 @@ export function estimateDamage(action: MonsterAction, opts: DamageEstimateOption
     dmg = action.autoDarts * averageDamage(action.autoDartDamage);
   } else if (action.damage) {
     dmg = averageDamage(action.damage);
+    if (action.multiTargetAttack) dmg *= action.multiTargetAttack.count;
     if (action.additionalDamage) {
       const parts = action.additionalDamage.split(' ');
       dmg += averageDamage(parts[0]);

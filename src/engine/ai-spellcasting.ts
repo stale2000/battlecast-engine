@@ -764,6 +764,10 @@ export function trySpellcast(state: BattleState, creature: Creature, beforeOffen
       executeSpell(state, creature, spell, spellTarget, darts);
       return true;
     }
+    if (spell.multiTargetAttack) {
+      executeSpell(state, creature, spell, spellTarget, Array(spell.multiTargetAttack.count).fill(spellTarget));
+      return true;
+    }
     executeSpell(state, creature, spell, spellTarget);
     return true;
   }

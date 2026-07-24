@@ -13,7 +13,7 @@ import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
-import { barkskin, bladeWard, bless, blindingSmite, callLightning, dissonantWhispers, dispelMagic, fly, haste, hellishRebuke, heroism, invisibility, lesserRestoration, magicWeapon, mistyStep, moonbeam, resistance, revivify, shield, shiningSmite, spiritualWeapon, web, witchBolt } from '../src/data/spells.js';
+import { barkskin, bladeWard, bless, blindingSmite, callLightning, dissonantWhispers, dispelMagic, fly, haste, hellishRebuke, heroism, invisibility, lesserRestoration, magicWeapon, mistyStep, moonbeam, resistance, revivify, scorchingRay, shield, shiningSmite, spiritualWeapon, web, witchBolt } from '../src/data/spells.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
@@ -332,6 +332,20 @@ describe('Kaggle arena bridge', () => {
     applyLegalAction(encounter, action);
     expect(ally.isAlive).toBe(true);
     expect(ally.currentHp).toBe(1);
+  });
+
+  it('selects and resolves each Scorching Ray independently', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [scorchingRay('int', 3, 3)], additionalResources: { 'slot-2': 1 } } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 2, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 5, y: 0 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    encounter.state!.initiativeOrder = [caster.id];
+    startArena(encounter);
+    const rayChoice = getLegalActions(encounter, caster.id).find(action => action.type === 'spell' && action.actionName === 'Scorching Ray' && action.targetIds?.length === 3)!;
+    applyLegalAction(encounter, rayChoice);
+    expect(caster.stats.attacksMade).toBe(3);
   });
 
   it('repeats Call Lightning from authoritative concentration state without another slot', () => {

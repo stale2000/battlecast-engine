@@ -317,6 +317,8 @@ export interface MonsterAction {
   autoDarts?: number;
   autoDartDamage?: string;
   autoDartDamageType?: string;
+  /** Multiple independent spell attack rolls, e.g. Scorching Ray. */
+  multiTargetAttack?: { count: number };
   /**
    * Which ability is used for spell attack bonus / save DC. Overrides
    * the creature's primary. Set per-action because one creature can
