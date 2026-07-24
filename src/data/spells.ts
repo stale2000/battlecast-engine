@@ -13,7 +13,7 @@
  * is what shows in the stat block and the battle log.
  *
  */
-import type { MonsterAction, Abilities } from '../types/monster.js';
+import type { MonsterAction, MonsterData, Abilities } from '../types/monster.js';
 
 export type SpellcastingAbility = keyof Abilities;
 
@@ -517,6 +517,37 @@ export function divineFavor(ability: SpellcastingAbility, _mod: number, _pb: num
 // ─────────────────────────────────────────────────────────────────────────────
 // Level-2 spells
 // ─────────────────────────────────────────────────────────────────────────────
+
+function bestialSpirit(kind: 'air' | 'land' | 'water', mod: number, pb: number): MonsterData {
+  const air = kind === 'air';
+  const water = kind === 'water';
+  return {
+    name: `Bestial Spirit (${kind[0]!.toUpperCase()}${kind.slice(1)})`, size: 'Small', type: 'Beast', alignment: 'Unaligned',
+    ac: 13, hp: air ? 20 : 30, hpFormula: String(air ? 20 : 30),
+    speed: air ? { walk: 30, fly: 60 } : water ? { walk: 30, swim: 30 } : { walk: 30, climb: 30 },
+    abilities: { str: 18, dex: 11, con: 16, int: 4, wis: 14, cha: 5 },
+    senses: 'Darkvision 60 ft., Passive Perception 12', languages: 'Understands the languages you speak', cr: '0', xp: 0, proficiencyBonus: pb,
+    traits: air
+      ? [{ name: 'Flyby', description: "The spirit doesn't provoke Opportunity Attacks when it flies out of an enemy's reach." }]
+      : [{ name: 'Pack Tactics', description: "The spirit has Advantage on an attack roll against a creature if at least one of the spirit's allies is within 5 feet of the creature and isn't Incapacitated." }],
+    actions: [{ name: 'Maul', type: 'melee', attackBonus: spellAttackBonus(mod, pb), damage: '1d8+6', damageType: 'piercing', reach: 5, magical: true, description: 'Melee Spell Attack: your spell attack modifier to hit, reach 5 ft. Hit: 1d8 + 4 + the spell level piercing damage.' }],
+  };
+}
+
+export function summonBeast(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Summon Beast', type: 'special', spellLevel: 2, spellSchool: 'conjuration', castingAbility: ability, concentration: true, durationRounds: 600,
+    description: 'Summon a Bestial Spirit in an unoccupied space you can see within 90 feet. The spirit takes its turn immediately after yours and disappears when the spell ends or it drops to 0 Hit Points.',
+    targetScope: 'self',
+    summon: {
+      rangeFt: 90, durationRounds: 600,
+      variants: (['air', 'land', 'water'] as const).map(key => ({
+        key, monsterData: bestialSpirit(key, mod, pb), hpPerSlotLevel: 5, acPerSlotLevel: 1,
+        attack: { actionName: 'Maul', dice: '1d8', baseBonus: 4, baseSpellLevel: 2, attacksPerSpellLevels: 2 },
+      })),
+    },
+  };
+}
 
 export function scorchingRay(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
   return {

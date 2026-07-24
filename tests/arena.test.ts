@@ -4,6 +4,7 @@ import { Encounter } from '../src/api/encounter.js';
 import { getActiveCreature, getLegalActions, applyLegalAction, startArena } from '../src/api/arena.js';
 import { isFrightenedMoveLegal, moveToDestination, moveToward, reachableMovementDestinations } from '../src/engine/ai-movement.js';
 import { processTurnStart } from '../src/engine/ai-turn.js';
+import { trySpellcast } from '../src/engine/ai-spellcasting.js';
 import { applyDamage, applyDamageRollPenalty, executeSpell, getEffectiveMoveSpeed, hasDisadvantage, processTargetTurnEndOngoingEffects, processTargetTurnStartOngoingEffects, resolveAttack, rollAllInitiatives, runDeathSave, triggerPersistentZones } from '../src/engine/combat.js';
 import { dropConcentratedBuffsFrom } from '../src/engine/combat-buffs.js';
 import { canSee } from '../src/engine/ai-targeting.js';
@@ -11,9 +12,9 @@ import { rollSaveWithBuffs } from '../src/engine/combat-buffs.js';
 import { rollAttack } from '../src/engine/dice.js';
 import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
-import { buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
+import { buildCustomHero, buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
-import { acidArrow, armorOfAgathys, bane, barkskin, beaconOfHope, bestowCurse, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, cloudOfDaggers, command, counterspell, cureWounds, dissonantWhispers, dispelMagic, enlargeReduce, entangle, expeditiousRetreat, fireball, flamingSphere, fly, grease, gustOfWind, haste, hellishRebuke, heroism, inflictWounds, invisibility, lesserRestoration, mageArmor, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, seeInvisibility, shield, shiningSmite, slow, spikeGrowth, spiritualWeapon, tashasHideousLaughter, web, witchBolt } from '../src/data/spells.js';
+import { acidArrow, armorOfAgathys, bane, barkskin, beaconOfHope, bestowCurse, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, cloudOfDaggers, command, counterspell, cureWounds, dissonantWhispers, dispelMagic, enlargeReduce, entangle, expeditiousRetreat, fireball, flamingSphere, fly, grease, gustOfWind, haste, hellishRebuke, heroism, inflictWounds, invisibility, lesserRestoration, mageArmor, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, seeInvisibility, shield, shiningSmite, slow, spikeGrowth, spiritualWeapon, summonBeast, tashasHideousLaughter, web, witchBolt } from '../src/data/spells.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
@@ -1983,6 +1984,59 @@ describe('Kaggle arena bridge', () => {
         }
       }
     }
+  });
+
+  it('summons a controlled Bestial Spirit with validated placement and removes it on concentration loss or expiry', () => {
+    expect(buildCustomHero('Druid', 5, { spells: ['Summon Beast'] }).actions.some(action => action.name === 'Summon Beast')).toBe(true);
+    const encounter = new Encounter({ seed: 1, gridSize: 12 });
+    const [caster] = encounter.addCreature({
+      heroClass: 'Druid', heroLevel: 5, team: 'red', position: { x: 0, y: 0 },
+      heroOverrides: { additionalActions: [summonBeast('wis', 3, 3)], additionalResources: { 'slot-2': 1 } },
+    });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 8, y: 8 } });
+    encounter.start();
+    encounter.state!.initiativeOrder = [caster.id];
+    startArena(encounter);
+    const activeCaster = encounter.state!.creatures.find(creature => creature.id === caster.id)!;
+    const choices = getLegalActions(encounter, caster.id).filter((action): action is Extract<typeof action, { type: 'spell_summon' }> => action.type === 'spell_summon');
+    expect(choices.map(action => action.variantKey)).toEqual(['air', 'land', 'water']);
+    expect(choices).toHaveLength(3);
+    const beforeInvalidPlacement = JSON.stringify(encounter.state);
+    expect(() => applyLegalAction(encounter, { ...choices[0]!, destination: { x: 8, y: 8 } })).toThrow(/Illegal or stale arena summon/);
+    expect(JSON.stringify(encounter.state)).toBe(beforeInvalidPlacement);
+    applyLegalAction(encounter, { ...choices[0]!, destination: { x: 2, y: 2 } });
+    const summon = encounter.state!.creatures.find(creature => creature.summonedById === activeCaster.id)!;
+    expect(summon).toMatchObject({ team: 'red', position: { x: 2, y: 2 }, initiative: activeCaster.initiative });
+    expect(encounter.state!.initiativeOrder).toEqual([activeCaster.id, summon.id]);
+    expect(Encounter.fromJSON(encounter.toJSON()).state!.creatures.find(creature => creature.id === summon.id)).toMatchObject({ summonedById: activeCaster.id });
+    dropConcentratedBuffsFrom(encounter.state!, activeCaster.id);
+    expect(encounter.state!.creatures.some(creature => creature.id === summon.id)).toBe(false);
+    activeCaster.hasActed = false;
+    activeCaster.resources['slot-2'] = 1;
+    applyLegalAction(encounter, { ...getLegalActions(encounter, activeCaster.id).find(action => action.type === 'spell_summon')!, destination: { x: 2, y: 2 } } as Extract<ReturnType<typeof getLegalActions>[number], { type: 'spell_summon' }>);
+    const defeatedSummon = encounter.state!.creatures.find(creature => creature.summonedById === activeCaster.id)!;
+    applyDamage(encounter.state!, defeatedSummon, 999, 'force', null);
+    expect(encounter.state!.creatures.some(creature => creature.id === defeatedSummon.id)).toBe(false);
+
+    const recast = new Encounter({ seed: 1, gridSize: 12 });
+    const [secondCaster] = recast.addCreature({ heroClass: 'Druid', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [summonBeast('wis', 3, 3)], additionalResources: { 'slot-2': 1 } } });
+    recast.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 8, y: 8 } });
+    recast.start(); recast.state!.initiativeOrder = [secondCaster.id]; startArena(recast);
+    const activeSecondCaster = recast.state!.creatures.find(creature => creature.id === secondCaster.id)!;
+    applyLegalAction(recast, { ...getLegalActions(recast, secondCaster.id).find(action => action.type === 'spell_summon')!, destination: { x: 2, y: 2 } } as Extract<ReturnType<typeof getLegalActions>[number], { type: 'spell_summon' }>);
+    recast.state!.round = recast.state!.creatures.find(creature => creature.summonedById === activeSecondCaster.id)!.summonExpiresRound!;
+    processTurnStart(recast.state!, activeSecondCaster);
+    expect(recast.state!.creatures.some(creature => creature.summonedById === activeSecondCaster.id)).toBe(false);
+  });
+
+  it('uses the same summon resolver from the full-turn AI path', () => {
+    const encounter = new Encounter({ seed: 1, gridSize: 12 });
+    const [druid] = encounter.addCreature({ heroClass: 'Druid', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [summonBeast('wis', 3, 3)] } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 8, y: 8 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.id === druid.id)!;
+    expect(trySpellcast(encounter.state!, caster)).toBe(true);
+    expect(encounter.state!.creatures.some(creature => creature.summonedById === caster.id)).toBe(true);
   });
 
   it('ends at the configured round cap and keeps CLI protocol output on stdout', () => {

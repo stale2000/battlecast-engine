@@ -48,10 +48,12 @@ import {
   executeSpell, hasBuff, hasResource, addBuff,
   tryUseBonusActionDamageBuff, useSpiritualWeaponAttack,
   isInCone, isInLine, bestDirectionalTargets,
-  pushLog, getEffectiveMoveSpeed,
+  pushLog, getEffectiveMoveSpeed, isPositionBlocked,
 } from './combat.js';
 import { moveToward } from './ai-movement.js';
 import { averageDamage } from './dice.js';
+import { getFootprintSize } from './combat-geometry.js';
+import { canSeePoint } from './visibility.js';
 import {
   estimateDamage, estimateSpellDamage, inferSpellDamageType, adjustForResistance,
 } from './ai-targeting.js';
@@ -71,6 +73,24 @@ function getSpellActions(creature: Creature): MonsterAction[] {
     !a.legendaryOnly &&
     (a.spellLevel !== undefined || a.resourceCost !== undefined || a.layOnHands !== undefined)
   );
+}
+
+function summonSpellPosition(state: BattleState, caster: Creature, spell: MonsterAction, enemies: Creature[]): { spell: MonsterAction; position: { x: number; y: number } } | undefined {
+  const variants = spell.summon?.variants ?? [];
+  const gridSize = state.gridSize ?? 20;
+  for (const variant of variants) {
+    const size = getFootprintSize(variant.monsterData.size);
+    const cells: Array<{ x: number; y: number }> = [];
+    for (let y = 0; y <= gridSize - size; y++) for (let x = 0; x <= gridSize - size; x++) {
+      const position = { x, y };
+      if (Math.max(Math.abs(caster.position.x - x), Math.abs(caster.position.y - y)) * 5 <= spell.summon!.rangeFt
+        && canSeePoint(state, caster, position)
+        && !isPositionBlocked(position, variant.monsterData.size, state.creatures, undefined, state.terrainBlocked)) cells.push(position);
+    }
+    const position = cells.sort((left, right) => Math.min(...enemies.map(enemy => distance(left, enemy.position))) - Math.min(...enemies.map(enemy => distance(right, enemy.position))))[0];
+    if (position) return { spell: { ...spell, summon: { ...spell.summon!, variants: [variant] } }, position };
+  }
+  return undefined;
 }
 
 function tryInstinctivePounce(state: BattleState, creature: Creature, action: MonsterAction): void {
@@ -665,6 +685,12 @@ export function trySpellcast(state: BattleState, creature: Creature, beforeOffen
       executeSpell(state, creature, buff, target);
       return true;
     }
+  }
+
+  if (!alreadyConcentrating) {
+    const summon = spells.find(spell => !spell.isBonusAction && spell.summon && canCastSpell(creature, spell));
+    const choice = summon && summonSpellPosition(state, creature, summon, enemies);
+    if (choice && executeSpell(state, creature, choice.spell, creature, undefined, choice.position)) return true;
   }
 
   // ── Step 3: damage (main action only) ──────────────────────────────────

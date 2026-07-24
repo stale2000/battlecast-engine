@@ -62,7 +62,7 @@ function attackInRange(attacker: Creature, target: Creature, action: MonsterActi
 }
 
 function isSpellAction(action: MonsterAction): boolean {
-  return action.spellLevel !== undefined || action.layOnHands !== undefined || action.heal !== undefined || action.temporaryHp !== undefined || action.removesConditions !== undefined || action.grantsFlight !== undefined || action.buff !== undefined || action.savingThrow !== undefined || action.autoDarts !== undefined || action.powerWord !== undefined;
+  return action.spellLevel !== undefined || action.layOnHands !== undefined || action.heal !== undefined || action.temporaryHp !== undefined || action.removesConditions !== undefined || action.grantsFlight !== undefined || action.buff !== undefined || action.savingThrow !== undefined || action.autoDarts !== undefined || action.powerWord !== undefined || action.summon !== undefined;
 }
 
 function canHideFrom(state: NonNullable<Encounter['state']>, active: Creature, observer: Creature): boolean {
@@ -154,6 +154,23 @@ function darknessSpellActions(state: NonNullable<Encounter['state']>, active: Cr
     }
   }
   return actions;
+}
+
+function summonSpellActions(state: NonNullable<Encounter['state']>, active: Creature, action: MonsterAction, actionIndex: number): ArenaAction[] {
+  if (!action.summon) return [];
+  const gridSize = state.gridSize ?? 20;
+  return action.summon.variants.flatMap(({ key, monsterData }) => {
+      const size = getFootprintSize(monsterData.size);
+      for (let y = 0; y <= gridSize - size; y++) for (let x = 0; x <= gridSize - size; x++) {
+        const point = { x, y };
+        if (Math.max(Math.abs(active.position.x - x), Math.abs(active.position.y - y)) * 5 <= action.summon!.rangeFt
+          && canSeePoint(state, active, point)
+          && !isPositionBlocked(point, monsterData.size, state.creatures, undefined, state.terrainBlocked)) {
+          return [{ id: `spell:${actionIndex}:${slug(action.name)}:summon:${key}`, type: 'spell_summon' as const, actionName: action.name, actionIndex, variantKey: key, destination: point }];
+        }
+      }
+      return [];
+    });
 }
 
 function areaSpellAction(state: NonNullable<Encounter['state']>, active: Creature, action: MonsterAction, actionIndex: number, area: string): ArenaAction[] {
@@ -288,6 +305,10 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
         }
         if (action.teleport) {
           actions.push({ id: `spell:${actionIndex}:${slug(action.name)}:teleport`, type: 'spell_teleport', actionName: action.name, actionIndex });
+          continue;
+        }
+        if (action.summon) {
+          actions.push(...summonSpellActions(state, active, action, actionIndex));
           continue;
         }
         if (action.darkness) {
@@ -497,7 +518,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
   const active = getActiveCreature(encounter);
   if (!state || !active) throw new EncounterError('No active creature.');
   const legal = getLegalActions(encounter, active.id).find(candidate => candidate.id === action.id);
-  if (!legal || (legal.type !== 'move_to' && legal.type !== 'move_aura' && legal.type !== 'species_teleport' && legal.type !== 'spell_teleport' && !sameArenaAction(legal, action))) {
+  if (!legal || (legal.type !== 'move_to' && legal.type !== 'move_aura' && legal.type !== 'species_teleport' && legal.type !== 'spell_teleport' && legal.type !== 'spell_summon' && !sameArenaAction(legal, action))) {
     throw new EncounterError(`Illegal or stale arena action "${action.id}".`);
   }
   encounter.runWithRng(() => {
@@ -556,6 +577,17 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       const spell = getActiveActions(active)[legal.actionIndex];
       if (!destination || !Number.isInteger(destination.x) || !Number.isInteger(destination.y) || !spell || spell.name !== legal.actionName || !spell.teleport || !executeSpell(state, active, spell, active, undefined, destination)) {
         throw new EncounterError(`Illegal or stale arena spell "${legal.id}".`);
+      }
+      if (spell.isBonusAction) active.bonusActionUsed = true;
+      else active.hasActed = true;
+      checkBattleComplete(state);
+    } else if (legal.type === 'spell_summon') {
+      const destination = action.type === 'spell_summon' ? action.destination : undefined;
+      const baseSpell = getActiveActions(active)[legal.actionIndex];
+      const variant = baseSpell?.summon?.variants.find(candidate => candidate.key === legal.variantKey);
+      const spell = baseSpell && variant ? { ...baseSpell, summon: { ...baseSpell.summon!, variants: [variant] } } : undefined;
+      if (!destination || !Number.isInteger(destination.x) || !Number.isInteger(destination.y) || !spell || spell.name !== legal.actionName || !executeSpell(state, active, spell, active, undefined, destination)) {
+        throw new EncounterError(`Illegal or stale arena summon "${legal.id}".`);
       }
       if (spell.isBonusAction) active.bonusActionUsed = true;
       else active.hasActed = true;

@@ -237,8 +237,10 @@ export function createSummonedCreature(state: BattleState, source: Creature, mon
   summon.summonExpiresRound = state.round + durationRounds;
   summon.initiative = source.initiative;
   state.creatures.push(summon);
-  const sourceIndex = state.initiativeOrder.indexOf(source.id);
-  state.initiativeOrder.splice(Math.max(0, sourceIndex + 1), 0, summon.id);
+  if (state.initiativeOrder) {
+    const sourceIndex = state.initiativeOrder.indexOf(source.id);
+    state.initiativeOrder.splice(Math.max(0, sourceIndex + 1), 0, summon.id);
+  }
   return summon;
 }
 
@@ -2023,6 +2025,10 @@ function markPermanentlyDead(state: BattleState, target: Creature, attacker: Cre
     type: 'death'
   });
   state.events.push({ kind: 'death', creatureId: target.id, durationMs: BASE_DURATIONS.death });
+  if (target.summonedById) {
+    state.creatures = state.creatures.filter(creature => creature.id !== target.id);
+    if (state.initiativeOrder) state.initiativeOrder = state.initiativeOrder.filter(id => id !== target.id);
+  }
 }
 
 export interface RuntimeDamageSummary {

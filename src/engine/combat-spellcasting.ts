@@ -33,7 +33,7 @@ import {
 } from './combat-buffs.js';
 import { resolveAoE } from './combat-aoe.js';
 import {
-  applyDamage, gainHp, pushLog, resolveAttack, getAliveCreatures,
+  applyDamage, gainHp, pushLog, resolveAttack, getAliveCreatures, createSummonedCreature,
   getEffectiveMoveSpeed, getEffectiveSaveModifier, resolveSpellReflection, createPersistentZone,
   type BattleState,
 } from './combat.js';
@@ -835,6 +835,16 @@ export function executeSpell(
       || isPositionBlocked(aoeCenter, size, state.creatures, caster.id, state.terrainBlocked)
       || !canSeePoint(state, caster, aoeCenter)) return false;
   }
+  if (action.summon) {
+    const variant = action.summon.variants[0];
+    const size = variant && getFootprintSize(variant.monsterData.size);
+    const gridSize = state.gridSize ?? 20;
+    if (!variant || !aoeCenter || !Number.isInteger(aoeCenter.x) || !Number.isInteger(aoeCenter.y)
+      || Math.max(Math.abs(aoeCenter.x - caster.position.x), Math.abs(aoeCenter.y - caster.position.y)) * 5 > action.summon.rangeFt
+      || aoeCenter.x < 0 || aoeCenter.y < 0 || aoeCenter.x + size! > gridSize || aoeCenter.y + size! > gridSize
+      || isPositionBlocked(aoeCenter, variant.monsterData.size, state.creatures, undefined, state.terrainBlocked)
+      || !canSeePoint(state, caster, aoeCenter)) return false;
+  }
   if (action.revive) {
     const deathRound = primaryTarget?.stats.deathRound;
     if (!primaryTarget || primaryTarget.isAlive || primaryTarget.team !== caster.team || deathRound === undefined
@@ -942,6 +952,34 @@ export function executeSpell(
     caster.position = { ...aoeCenter };
     state.events.push({ kind: 'move', creatureId: caster.id, from, to: { ...aoeCenter }, durationMs: 0 });
     pushLog(state, { round: state.round, turn: state.turnIndex, actor: caster.displayName, action: castAction.name, details: `${caster.displayName} teleports to (${aoeCenter.x}, ${aoeCenter.y}).`, type: 'move' });
+    return true;
+  }
+
+  if (castAction.summon && aoeCenter) {
+    const variant = castAction.summon.variants[0];
+    if (!variant) return false;
+    if (castAction.concentration) {
+      dropConcentratedBuffsFrom(state, caster.id);
+      caster.concentratingOn = castAction.name;
+    }
+    const levelAboveBase = Math.max(0, slotLevelUsed - (variant.attack?.baseSpellLevel ?? castAction.spellLevel ?? 1));
+    const monsterData = {
+      ...variant.monsterData,
+      ac: variant.monsterData.ac + levelAboveBase * (variant.acPerSlotLevel ?? 0),
+      hp: variant.monsterData.hp + levelAboveBase * (variant.hpPerSlotLevel ?? 0),
+      hpFormula: String(variant.monsterData.hp + levelAboveBase * (variant.hpPerSlotLevel ?? 0)),
+      actions: variant.monsterData.actions.map(monsterAction => monsterAction.name !== variant.attack?.actionName ? monsterAction : {
+        ...monsterAction,
+        damage: `${variant.attack.dice}+${variant.attack.baseBonus + slotLevelUsed}`,
+      }),
+    };
+    if (variant.attack?.attacksPerSpellLevels) monsterData.actions = [
+      { name: 'Multiattack', type: 'multiattack', description: `The spirit makes ${Math.max(1, Math.floor(slotLevelUsed / variant.attack.attacksPerSpellLevels))} ${variant.attack.actionName} attack${slotLevelUsed >= variant.attack.attacksPerSpellLevels * 2 ? 's' : ''}.` },
+      ...monsterData.actions,
+    ];
+    const summon = createSummonedCreature(state, caster, monsterData, aoeCenter, castAction.summon.durationRounds);
+    if (!summon) return false;
+    pushLog(state, { round: state.round, turn: state.turnIndex, actor: caster.displayName, action: castAction.name, details: `${caster.displayName} summons ${summon.displayName}.`, type: 'special' });
     return true;
   }
 

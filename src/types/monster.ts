@@ -365,6 +365,19 @@ export interface MonsterAction {
   darkness?: { radius: number; durationRounds: number; requiresConcentration?: boolean };
   /** Server-validated teleport destination, used by spells such as Misty Step. */
   teleport?: { distanceFt: number };
+  /** Creates one controlled creature at a visible, unoccupied destination. */
+  summon?: {
+    rangeFt: number;
+    durationRounds: number;
+    variants: Array<{
+      key: string;
+      monsterData: MonsterData;
+      /** The summoned attack is scaled from the level of the slot actually spent. */
+      attack?: { actionName: string; dice: string; baseBonus: number; baseSpellLevel: number; attacksPerSpellLevels?: number };
+      hpPerSlotLevel?: number;
+      acPerSlotLevel?: number;
+    }>;
+  };
   /** Restores a recently dead creature to life. */
   revive?: { maxDeathRounds: number; hp: number };
   /** Chooses one server-validated damage resistance for a spell effect. */
