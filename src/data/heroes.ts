@@ -43,7 +43,7 @@ import {
   blindnessDeafness, invisibility, mirrorImage, seeInvisibility, dispelMagic, haste, wallOfFire,
   aid, magicWeapon, shiningSmite,
   acidArrow, armsOfHadar, barkskin, bestowCurse, blur, colorSpray, divineFavor, faerieFire, falseLife, fear, fly, fogCloud, grease, gustOfWind, lesserRestoration, mistyStep,
-  longstrider, rayOfSickness, revivify, tashasHideousLaughter,
+  longstrider, mageArmor, rayOfSickness, revivify, tashasHideousLaughter,
   protectionFromPoison, shield, hellishRebuke,
   circleOfDeath, chainLightning, disintegrate, fingerOfDeath,
   befuddlement, powerWordHeal, powerWordKill, meteorSwarm,
@@ -1678,7 +1678,7 @@ function buildOptionalSpells(
     case 'Wizard':
       pool.push(chromaticOrb(spellAbility, mod, pb), witchBolt(spellAbility, mod, pb));
       pool.push(shield(spellAbility, mod, pb), fogCloud(spellAbility, mod, pb));
-      pool.push(falseLife(spellAbility, mod, pb), grease(spellAbility, mod, pb), rayOfSickness(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
+      pool.push(falseLife(spellAbility, mod, pb), grease(spellAbility, mod, pb), mageArmor(spellAbility, mod, pb), rayOfSickness(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
       pool.push(blindnessDeafness(spellAbility, mod, pb), blur(spellAbility, mod, pb), cloudOfDaggers(spellAbility, mod, pb), flamingSphere(spellAbility, mod, pb), invisibility(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb), seeInvisibility(spellAbility, mod, pb));
       pool.push(acidArrow(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb));
       pool.push(mistyStep(spellAbility, mod, pb));
@@ -1691,7 +1691,7 @@ function buildOptionalSpells(
     case 'Sorcerer':
       pool.push(chromaticOrb(spellAbility, mod, pb), witchBolt(spellAbility, mod, pb));
       pool.push(shield(spellAbility, mod, pb), fogCloud(spellAbility, mod, pb));
-      pool.push(falseLife(spellAbility, mod, pb), grease(spellAbility, mod, pb), rayOfSickness(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
+      pool.push(falseLife(spellAbility, mod, pb), grease(spellAbility, mod, pb), mageArmor(spellAbility, mod, pb), rayOfSickness(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
       pool.push(blindnessDeafness(spellAbility, mod, pb), blur(spellAbility, mod, pb), cloudOfDaggers(spellAbility, mod, pb), flamingSphere(spellAbility, mod, pb), invisibility(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb), seeInvisibility(spellAbility, mod, pb));
       pool.push(acidArrow(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb));
       pool.push(mistyStep(spellAbility, mod, pb));
@@ -2575,7 +2575,7 @@ export function getAvailableSpells(
     case 'Wizard':
       optional.push(chromaticOrb(spellAbility, mod, pb), witchBolt(spellAbility, mod, pb));
       optional.push(shield(spellAbility, mod, pb), fogCloud(spellAbility, mod, pb));
-      optional.push(falseLife(spellAbility, mod, pb), grease(spellAbility, mod, pb), rayOfSickness(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
+      optional.push(falseLife(spellAbility, mod, pb), grease(spellAbility, mod, pb), mageArmor(spellAbility, mod, pb), rayOfSickness(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
       optional.push(blindnessDeafness(spellAbility, mod, pb), blur(spellAbility, mod, pb), cloudOfDaggers(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb));
       optional.push(acidArrow(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb));
       optional.push(mistyStep(spellAbility, mod, pb));
@@ -2587,7 +2587,7 @@ export function getAvailableSpells(
     case 'Sorcerer':
       optional.push(chromaticOrb(spellAbility, mod, pb), witchBolt(spellAbility, mod, pb));
       optional.push(shield(spellAbility, mod, pb), fogCloud(spellAbility, mod, pb));
-      optional.push(falseLife(spellAbility, mod, pb), grease(spellAbility, mod, pb), rayOfSickness(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
+      optional.push(falseLife(spellAbility, mod, pb), grease(spellAbility, mod, pb), mageArmor(spellAbility, mod, pb), rayOfSickness(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
       optional.push(blindnessDeafness(spellAbility, mod, pb), blur(spellAbility, mod, pb), cloudOfDaggers(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb));
       optional.push(acidArrow(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb));
       optional.push(mistyStep(spellAbility, mod, pb));

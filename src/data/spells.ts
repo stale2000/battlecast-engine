@@ -403,6 +403,14 @@ export function falseLife(ability: SpellcastingAbility, _mod: number, _pb: numbe
   };
 }
 
+export function mageArmor(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Mage Armor', type: 'special', spellLevel: 1, spellSchool: 'abjuration', castingAbility: ability, durationRounds: 4800,
+    description: 'One willing creature you touch has a base AC of 13 plus its Dexterity modifier for 8 hours.', range: { normal: 5, long: 5 }, targetScope: 'one_ally',
+    buff: { name: 'Mage Armor', key: 'mage-armor', acBaseFromDex: 13 },
+  };
+}
+
 export function longstrider(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
   return {
     name: 'Longstrider', type: 'special', spellLevel: 1, spellSchool: 'transmutation', castingAbility: ability, durationRounds: 600,
@@ -1632,6 +1640,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Inflict Wounds', inflictWounds], ['Witch Bolt', witchBolt],
   ['Arms of Hadar', armsOfHadar], ['Color Spray', colorSpray], ['Divine Favor', divineFavor],
   ['Faerie Fire', faerieFire], ['False Life', falseLife], ['Fog Cloud', fogCloud], ['Grease', grease], ['Longstrider', longstrider],
+  ['Mage Armor', mageArmor],
   ['Ray of Sickness', rayOfSickness], ["Tasha's Hideous Laughter", tashasHideousLaughter],
   ['Scorching Ray', scorchingRay], ['Web', web], ['Spike Growth', spikeGrowth], ['Hold Person', holdPerson],
   ['Flaming Sphere', flamingSphere], ['Cloud of Daggers', cloudOfDaggers],

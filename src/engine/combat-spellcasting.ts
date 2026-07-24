@@ -499,6 +499,7 @@ export function applyBuffFromSpell(
     saveBonusDice: tmpl.saveBonusDice,
     acBonus: tmpl.acBonus,
     acMinimum: tmpl.acMinimum,
+    acBaseFromDex: tmpl.acBaseFromDex,
     maxHpBonus: tmpl.maxHpBonus,
     damageRider: tmpl.damageRider,
     bonusActionDamage: tmpl.bonusActionDamage,

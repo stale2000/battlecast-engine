@@ -1799,6 +1799,7 @@ function getEffectiveAC(target: Creature): number {
   for (const b of target.activeBuffs ?? []) {
     if (b.acBonus) ac += b.acBonus;
     if (b.acMinimum) ac = Math.max(ac, b.acMinimum);
+    if (b.acBaseFromDex) ac = Math.max(ac, b.acBaseFromDex + abilityModifier(getEffectiveAbilityScore(target, 'dex')));
   }
   // Displacement trait gives effective AC boost (modeled as disadvantage on attacks, handled elsewhere)
   return ac;

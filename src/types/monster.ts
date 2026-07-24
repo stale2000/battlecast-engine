@@ -418,6 +418,7 @@ export interface BuffTemplate {
   saveBonusDice?: string;
   acBonus?: number;
   acMinimum?: number;
+  acBaseFromDex?: number;
   /** Aid-style increase to current and maximum HP for the encounter. */
   maxHpBonus?: number;
   damageRider?: string;
@@ -853,6 +854,7 @@ export interface ActiveBuff {
   /** Flat AC modifier while active. Shield of Faith: +2. */
   acBonus?: number;
   acMinimum?: number;
+  acBaseFromDex?: number;
   /** Aid-style increase to current and maximum HP for the encounter. */
   maxHpBonus?: number;
   /**
