@@ -383,7 +383,10 @@ export interface MonsterAction {
     durationRounds: number;
     triggers: Array<'entry' | 'turnStart' | 'turnEnd'>;
     difficultTerrain?: boolean;
+    difficultTerrainTowardSource?: boolean;
     damagePer5Ft?: { dice: string; type: string };
+    shape?: 'line';
+    pushOnFailedSave?: number;
   };
   /** Enables a later no-slot repeat of this concentration spell (Call Lightning). */
   repeatableAreaSpell?: true;
@@ -960,7 +963,12 @@ export interface PersistentZone {
   conditionDuration?: ConditionDuration;
   triggers: Array<'entry' | 'turnStart' | 'turnEnd'>;
   difficultTerrain?: boolean;
+  difficultTerrainTowardSource?: boolean;
   damagePer5Ft?: { dice: string; type: string };
+  shape?: 'line';
+  origin?: { x: number; y: number };
+  direction?: { x: number; y: number };
+  pushOnFailedSave?: number;
   requiresConcentration: boolean;
 }
 

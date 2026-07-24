@@ -6,10 +6,12 @@ import {
   creatureDistance,
   getAliveCreatures,
   executeSpell,
+  bestDirectionalTargets,
   getAoETargets,
   getEffectiveMoveSpeed,
   hasResource,
   isPositionBlocked,
+  isInLine,
   pickRangedSphereCenter,
   processHydraEndOfTurn,
   processTargetTurnEndOngoingEffects,
@@ -149,12 +151,13 @@ function areaSpellAction(state: NonNullable<Encounter['state']>, active: Creatur
   const rangedPointArea = Boolean(action.range && (area.includes('sphere') || area.includes('cylinder') || area.includes('radius')));
   const shapedAction = area === originalArea(action) ? action : { ...action, savingThrow: { ...action.savingThrow!, area } };
   const pick = rangedPointArea ? pickRangedSphereCenter(state, active, shapedAction, radius) : undefined;
-  const targets = pick?.targets ?? getAoETargets(state, active, shapedAction);
+  const directional = area.includes('line') ? bestDirectionalTargets(state, active, radius, isInLine) : undefined;
+  const targets = pick?.targets ?? directional?.targets ?? getAoETargets(state, active, shapedAction);
   if (!targets.length) return [];
   const targetIds = targets.map(target => target.id).sort();
   return [{
     id: `spell:${actionIndex}:${slug(action.name)}:area:${slug(area)}:${targetIds.join(',')}`,
-    type: 'spell', actionName: action.name, actionIndex, targetId: targetIds[0]!, targetIds, center: pick?.center, areaShape: area,
+    type: 'spell', actionName: action.name, actionIndex, targetId: targetIds[0]!, targetIds, center: pick?.center ?? directional?.direction, areaShape: area,
   }];
 }
 

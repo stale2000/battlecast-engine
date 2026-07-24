@@ -19,6 +19,7 @@ import {
   removeActiveBuff,
 } from './combat-buffs.js';
 import { applyHealing, applyTemporaryHp } from './combat-spellcasting.js';
+import { pushTargetAwayFromCaster } from './combat-aoe.js';
 
 export interface BattleLog {
   round: number;
@@ -3799,18 +3800,31 @@ export function createPersistentZone(state: BattleState, caster: Creature, actio
     sourceId: caster.id, name: action.name, x: center.x, y: center.y, radius: config.radiusFt,
     endRound: state.round + config.durationRounds, saveAbility: save?.ability, saveDC: save ? save.dc + getSpellSaveDcBonus(caster, action) : undefined,
     conditionOnFail: save?.conditionOnFail, conditionDuration: save?.conditionDuration ?? 'end_of_next_turn', triggers: config.triggers,
-    difficultTerrain: config.difficultTerrain, damagePer5Ft: config.damagePer5Ft,
+    difficultTerrain: config.difficultTerrain, difficultTerrainTowardSource: config.difficultTerrainTowardSource, damagePer5Ft: config.damagePer5Ft,
+    shape: config.shape, origin: config.shape === 'line' ? { ...caster.position } : undefined, direction: config.shape === 'line' ? { ...center } : undefined, pushOnFailedSave: config.pushOnFailedSave,
     requiresConcentration: action.concentration === true,
   });
 }
 
 function isInPersistentZone(zone: PersistentZone, position: { x: number; y: number }): boolean {
+  if (zone.shape === 'line' && zone.origin && zone.direction) {
+    const dx = position.x - zone.origin.x;
+    const dy = position.y - zone.origin.y;
+    const ddx = zone.direction.x - zone.origin.x;
+    const ddy = zone.direction.y - zone.origin.y;
+    const directionLength = Math.hypot(ddx, ddy);
+    const targetDistance = Math.hypot(dx, dy) * 5;
+    if (targetDistance <= 0 || targetDistance > zone.radius || directionLength === 0 || (dx * ddx + dy * ddy) < 0) return false;
+    return Math.abs(dx * ddy - dy * ddx) / directionLength <= 1.2;
+  }
   return distance(position, { x: zone.x, y: zone.y }) <= zone.radius;
 }
 
-export function persistentZoneMovementCost(state: BattleState, creature: Creature, position: { x: number; y: number }): number {
+export function persistentZoneMovementCost(state: BattleState, creature: Creature, from: { x: number; y: number }, position: { x: number; y: number }): number {
   if (creature.airborne) return 1;
-  return (state.persistentZones ?? []).some(zone => zone.endRound > state.round && zone.difficultTerrain && isInPersistentZone(zone, position)) ? 2 : 1;
+  return (state.persistentZones ?? []).some(zone => zone.endRound > state.round && isInPersistentZone(zone, position) && (
+    zone.difficultTerrain || (zone.difficultTerrainTowardSource && zone.origin && isInPersistentZone(zone, from) && distance(position, zone.origin) < distance(from, zone.origin))
+  )) ? 2 : 1;
 }
 
 export function applyPersistentZoneMovementEffects(state: BattleState, creature: Creature, path: Array<{ x: number; y: number }>, from: { x: number; y: number }): void {
@@ -3835,14 +3849,15 @@ export function applyPersistentZoneMovementEffects(state: BattleState, creature:
 export function triggerPersistentZones(state: BattleState, target: Creature, trigger: 'entry' | 'turnStart' | 'turnEnd'): void {
   state.persistentZones = (state.persistentZones ?? []).filter(zone => zone.endRound > state.round);
   for (const zone of state.persistentZones ?? []) {
-    if (!zone.triggers.includes(trigger) || !zone.conditionOnFail || zone.saveAbility === undefined || zone.saveDC === undefined || !isInPersistentZone(zone, target.position)) continue;
+    if (!zone.triggers.includes(trigger) || zone.saveAbility === undefined || zone.saveDC === undefined || !isInPersistentZone(zone, target.position)) continue;
     const source = getCreatureById(state, zone.sourceId);
     if (!source) continue;
     const save = rollSaveWithBuffs(target, getEffectiveSaveModifier(target, zone.saveAbility, state), hasActiveTrait(target, 'Magic Resistance'), zone.saveDC, zone.saveAbility, zone.conditionOnFail);
     const passed = save.total >= zone.saveDC;
     state.events.push({ kind: 'save', targetId: target.id, success: passed, durationMs: BASE_DURATIONS.save });
     if (passed) continue;
-    applyCondition(state, target, zone.conditionOnFail, source, zone.conditionDuration, zone.saveDC, zone.saveAbility);
+    if (zone.conditionOnFail) applyCondition(state, target, zone.conditionOnFail, source, zone.conditionDuration, zone.saveDC, zone.saveAbility);
+    if (zone.pushOnFailedSave) pushTargetAwayFromCaster(state, source, target, zone.pushOnFailedSave, zone.name);
   }
 }
 

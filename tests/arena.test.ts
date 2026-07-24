@@ -13,7 +13,7 @@ import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
-import { acidArrow, bane, barkskin, bestowCurse, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, cloudOfDaggers, command, dissonantWhispers, dispelMagic, entangle, flamingSphere, fly, grease, haste, hellishRebuke, heroism, inflictWounds, invisibility, lesserRestoration, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, seeInvisibility, shield, shiningSmite, spikeGrowth, spiritualWeapon, tashasHideousLaughter, web, witchBolt } from '../src/data/spells.js';
+import { acidArrow, bane, barkskin, bestowCurse, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, cloudOfDaggers, command, dissonantWhispers, dispelMagic, entangle, flamingSphere, fly, grease, gustOfWind, haste, hellishRebuke, heroism, inflictWounds, invisibility, lesserRestoration, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, seeInvisibility, shield, shiningSmite, spikeGrowth, spiritualWeapon, tashasHideousLaughter, web, witchBolt } from '../src/data/spells.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
@@ -605,6 +605,37 @@ describe('Kaggle arena bridge', () => {
     expect(action.center).toBeTruthy();
     applyLegalAction(encounter, action);
     expect(encounter.state!.persistentZones?.[0]).toMatchObject({ name: 'Spike Growth', difficultTerrain: true, damagePer5Ft: { dice: '2d4', type: 'piercing' } });
+  });
+
+  it('persists Gust of Wind direction, end-turn pushes, and against-wind movement cost', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Druid', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [gustOfWind('wis', 3, 3)], additionalResources: { 'slot-2': 1 } } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 3, y: 0 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    const target = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
+    withRng({ next: () => 0 }, () => expect(executeSpell(encounter.state!, caster, gustOfWind('wis', 3, 3), target, [target], target.position)).toBe(true));
+    expect(encounter.state!.persistentZones?.[0]).toMatchObject({ name: 'Gust of Wind', shape: 'line', origin: { x: 0, y: 0 }, direction: { x: 3, y: 0 } });
+    target.position = { x: 3, y: 0 };
+    target.movementRemaining = 10;
+    target.movementRemaining = 5;
+    expect(reachableMovementDestinations(target, encounter.state!).some(destination => destination.x === 2 && destination.y === 0)).toBe(false);
+    withRng({ next: () => 0 }, () => processTargetTurnEndOngoingEffects(encounter.state!, target));
+    expect(target.position).toEqual({ x: 6, y: 0 });
+  });
+
+  it('offers Gust of Wind with its server-selected line direction', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Druid', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [gustOfWind('wis', 3, 3)], additionalResources: { 'slot-2': 1 } } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 3, y: 0 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    encounter.state!.initiativeOrder = [caster.id];
+    startArena(encounter);
+    const action = getLegalActions(encounter, caster.id).find(choice => choice.type === 'spell' && choice.actionName === 'Gust of Wind')!;
+    expect(action.center).toEqual({ x: 3, y: 0 });
+    applyLegalAction(encounter, action);
+    expect(encounter.state!.persistentZones?.[0]).toMatchObject({ name: 'Gust of Wind', shape: 'line', direction: { x: 3, y: 0 } });
   });
 
   it('protects a target from attacks by the listed creature types', () => {

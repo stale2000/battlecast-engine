@@ -1069,7 +1069,7 @@ export function executeSpell(
       resolveAoE(state, caster, castAction, aoeTargets, aoeCenter, undefined, true);
     }
     attachConcentrationAura(state, caster, castAction, aoeCenter);
-    createPersistentZone(state, caster, castAction, aoeCenter);
+    createPersistentZone(state, caster, castAction, aoeCenter ?? primaryTarget?.position);
     applyLandAidHeal(state, caster, castAction);
     return true;
   }
@@ -1080,7 +1080,7 @@ export function executeSpell(
       resolveAoE(state, caster, castAction, [primaryTarget], aoeCenter, undefined, true);
     }
     attachConcentrationAura(state, caster, castAction, aoeCenter);
-    createPersistentZone(state, caster, castAction, aoeCenter);
+    createPersistentZone(state, caster, castAction, aoeCenter ?? primaryTarget?.position);
     return true;
   }
 
@@ -1098,7 +1098,7 @@ export function executeSpell(
       dropConcentratedBuffsFrom(state, caster.id);
       caster.concentratingOn = castAction.name;
     }
-    createPersistentZone(state, caster, castAction, aoeCenter);
+    createPersistentZone(state, caster, castAction, aoeCenter ?? primaryTarget?.position);
     pushLog(state, { round: state.round, turn: state.turnIndex, actor: caster.displayName, action: castAction.name, details: `${caster.displayName} creates ${castAction.name}.`, type: 'special' });
     return true;
   }

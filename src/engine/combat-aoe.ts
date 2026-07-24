@@ -222,7 +222,7 @@ function tryCountercharm(
   return { total: reroll.total, passed };
 }
 
-function pushTargetAwayFromCaster(state: BattleState, attacker: Creature, target: Creature, feet: number, actionName: string = 'Thunderwave Push'): { x: number; y: number } | undefined {
+export function pushTargetAwayFromCaster(state: BattleState, attacker: Creature, target: Creature, feet: number, actionName: string = 'Thunderwave Push'): { x: number; y: number } | undefined {
   if (!target.isAlive || feet <= 0) return undefined;
   const dx = Math.sign(target.position.x - attacker.position.x);
   const dy = Math.sign(target.position.y - attacker.position.y);

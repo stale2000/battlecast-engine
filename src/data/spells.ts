@@ -721,8 +721,9 @@ export function protectionFromPoison(ability: SpellcastingAbility, _mod: number,
 export function gustOfWind(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
   return {
     name: 'Gust of Wind', type: 'special', spellLevel: 2, spellSchool: 'evocation', castingAbility: ability, concentration: true, durationRounds: 10,
-    description: `60-foot line. STR save DC ${saveDC(mod, pb)}; failed creatures take 2d8 thunder damage and are pushed 15 feet.`,
-    damageType: 'thunder', savingThrow: { ability: 'str', dc: saveDC(mod, pb), damageOnFail: '2d8', area: '60-foot line' }, pushOnFailedSave: 15, targetScope: 'area_enemies',
+    description: `A 60-foot-long, 10-foot-wide line of wind. STR save DC ${saveDC(mod, pb)} or be pushed 15 feet away; creatures ending turns in the line repeat the save. Moving closer to you in the line costs double movement.`,
+    savingThrow: { ability: 'str', dc: saveDC(mod, pb), area: '60-foot line' }, pushOnFailedSave: 15, targetScope: 'area_enemies',
+    persistentZone: { radiusFt: 60, durationRounds: 10, triggers: ['turnEnd'], shape: 'line', pushOnFailedSave: 15, difficultTerrainTowardSource: true },
   };
 }
 
