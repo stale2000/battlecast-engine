@@ -644,6 +644,27 @@ export function spiritualWeapon(ability: SpellcastingAbility, mod: number, pb: n
   };
 }
 
+export function cloudOfDaggers(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Cloud of Daggers',
+    type: 'special',
+    description: '5-foot cube within 60 ft. Creatures in the cube take 4d4 slashing damage when entering it or starting their turns there. Concentration, 1 minute.',
+    spellLevel: 2,
+    spellSchool: 'conjuration',
+    concentration: true,
+    durationRounds: 10,
+    persistentAura: { automaticDamage: true, damageOnInitialCast: false },
+    castingAbility: ability,
+    damageType: 'slashing',
+    savingThrow: {
+      // The aura infrastructure shares the normal area payload. This spell's
+      // persistentAura marker makes this metadata rather than a real save.
+      ability: 'dex', dc: saveDC(mod, pb), damageOnFail: '4d4', area: '5-foot cube',
+    },
+    targetScope: 'area_enemies',
+  };
+}
+
 export function flamingSphere(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
   return {
     name: 'Flaming Sphere', type: 'special', spellLevel: 2, spellSchool: 'conjuration', castingAbility: ability,
@@ -1601,7 +1622,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Faerie Fire', faerieFire], ['False Life', falseLife], ['Fog Cloud', fogCloud], ['Grease', grease], ['Longstrider', longstrider],
   ['Ray of Sickness', rayOfSickness], ["Tasha's Hideous Laughter", tashasHideousLaughter],
   ['Scorching Ray', scorchingRay], ['Web', web], ['Hold Person', holdPerson],
-  ['Flaming Sphere', flamingSphere],
+  ['Flaming Sphere', flamingSphere], ['Cloud of Daggers', cloudOfDaggers],
   ['Shatter', shatter], ['Moonbeam', moonbeam], ['Spiritual Weapon', spiritualWeapon],
   ['Aid', aid], ['Magic Weapon', magicWeapon], ['Shining Smite', shiningSmite],
   ['Blindness/Deafness', blindnessDeafness], ['Mirror Image', mirrorImage],

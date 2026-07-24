@@ -31,7 +31,7 @@ import { monsters } from './monsters.js';
 import {
   FULL_CASTER_SLOTS, HALF_CASTER_SLOTS, WARLOCK_SLOTS, slotsToResources,
   magicMissile, burningHands, thunderwave, sleep,
-  scorchingRay, web, flamingSphere, shatter, moonbeam, holdPerson, spiritualWeapon,
+  scorchingRay, web, flamingSphere, cloudOfDaggers, shatter, moonbeam, holdPerson, spiritualWeapon,
   fireball, lightningBolt, spiritGuardians, callLightning, hypnoticPattern,
   bless, bane, cureWounds, healingWord, heroism, protectionFromEvilAndGood, sanctuary, shieldOfFaith, guidingBolt,
   hex, huntersMark, dissonantWhispers, entangle,
@@ -1679,7 +1679,7 @@ function buildOptionalSpells(
       pool.push(chromaticOrb(spellAbility, mod, pb), witchBolt(spellAbility, mod, pb));
       pool.push(shield(spellAbility, mod, pb), fogCloud(spellAbility, mod, pb));
       pool.push(falseLife(spellAbility, mod, pb), grease(spellAbility, mod, pb), rayOfSickness(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
-      pool.push(blindnessDeafness(spellAbility, mod, pb), blur(spellAbility, mod, pb), flamingSphere(spellAbility, mod, pb), invisibility(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb), seeInvisibility(spellAbility, mod, pb));
+      pool.push(blindnessDeafness(spellAbility, mod, pb), blur(spellAbility, mod, pb), cloudOfDaggers(spellAbility, mod, pb), flamingSphere(spellAbility, mod, pb), invisibility(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb), seeInvisibility(spellAbility, mod, pb));
       pool.push(acidArrow(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb));
       pool.push(mistyStep(spellAbility, mod, pb));
       pool.push(dispelMagic(spellAbility, mod, pb), haste(spellAbility, mod, pb));
@@ -1691,7 +1691,7 @@ function buildOptionalSpells(
       pool.push(chromaticOrb(spellAbility, mod, pb), witchBolt(spellAbility, mod, pb));
       pool.push(shield(spellAbility, mod, pb), fogCloud(spellAbility, mod, pb));
       pool.push(falseLife(spellAbility, mod, pb), grease(spellAbility, mod, pb), rayOfSickness(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
-      pool.push(blindnessDeafness(spellAbility, mod, pb), blur(spellAbility, mod, pb), flamingSphere(spellAbility, mod, pb), invisibility(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb), seeInvisibility(spellAbility, mod, pb));
+      pool.push(blindnessDeafness(spellAbility, mod, pb), blur(spellAbility, mod, pb), cloudOfDaggers(spellAbility, mod, pb), flamingSphere(spellAbility, mod, pb), invisibility(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb), seeInvisibility(spellAbility, mod, pb));
       pool.push(acidArrow(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb));
       pool.push(mistyStep(spellAbility, mod, pb));
       pool.push(dispelMagic(spellAbility, mod, pb), haste(spellAbility, mod, pb));
@@ -2572,7 +2572,7 @@ export function getAvailableSpells(
       optional.push(chromaticOrb(spellAbility, mod, pb), witchBolt(spellAbility, mod, pb));
       optional.push(shield(spellAbility, mod, pb), fogCloud(spellAbility, mod, pb));
       optional.push(falseLife(spellAbility, mod, pb), grease(spellAbility, mod, pb), rayOfSickness(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
-      optional.push(blindnessDeafness(spellAbility, mod, pb), blur(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb));
+      optional.push(blindnessDeafness(spellAbility, mod, pb), blur(spellAbility, mod, pb), cloudOfDaggers(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb));
       optional.push(acidArrow(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb));
       optional.push(mistyStep(spellAbility, mod, pb));
       optional.push(dispelMagic(spellAbility, mod, pb), haste(spellAbility, mod, pb));
@@ -2583,7 +2583,7 @@ export function getAvailableSpells(
       optional.push(chromaticOrb(spellAbility, mod, pb), witchBolt(spellAbility, mod, pb));
       optional.push(shield(spellAbility, mod, pb), fogCloud(spellAbility, mod, pb));
       optional.push(falseLife(spellAbility, mod, pb), grease(spellAbility, mod, pb), rayOfSickness(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
-      optional.push(blindnessDeafness(spellAbility, mod, pb), blur(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb));
+      optional.push(blindnessDeafness(spellAbility, mod, pb), blur(spellAbility, mod, pb), cloudOfDaggers(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb));
       optional.push(acidArrow(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb));
       optional.push(mistyStep(spellAbility, mod, pb));
       optional.push(dispelMagic(spellAbility, mod, pb), haste(spellAbility, mod, pb));
@@ -2614,7 +2614,7 @@ export function getAvailableSpells(
       optional.push(heroism(spellAbility, mod, pb));
       optional.push(faerieFire(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
       optional.push(command(spellAbility, mod, pb));
-      optional.push(blindnessDeafness(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb));
+      optional.push(blindnessDeafness(spellAbility, mod, pb), cloudOfDaggers(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb));
       optional.push(dispelMagic(spellAbility, mod, pb), haste(spellAbility, mod, pb));
       optional.push(bestowCurse(spellAbility, mod, pb), fear(spellAbility, mod, pb), fly(spellAbility, mod, pb));
       break;

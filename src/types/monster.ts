@@ -373,7 +373,7 @@ export interface MonsterAction {
   /** Creates a persistent spiritual weapon that can make later bonus-action attacks. */
   spiritualWeapon?: { moveFt: number };
   /** A damaging concentration area that remains after the initial cast. */
-  persistentAura?: { moveFt?: number };
+  persistentAura?: { moveFt?: number; automaticDamage?: boolean; damageOnInitialCast?: boolean };
   /** Enables a later no-slot repeat of this concentration spell (Call Lightning). */
   repeatableAreaSpell?: true;
   /** The spell cannot affect a target wearing Heavy armor (Barkskin). */
@@ -701,6 +701,8 @@ export interface Creature {
     radiusFt: number;
     endRound: number;
     moveFt?: number;
+    /** The area deals its full damage without a saving throw (Cloud of Daggers). */
+    automaticDamage?: boolean;
     origin: 'caster' | 'point';
     point?: { x: number; y: number };
   };

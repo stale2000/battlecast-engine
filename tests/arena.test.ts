@@ -13,7 +13,7 @@ import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
-import { bane, barkskin, bestowCurse, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, dissonantWhispers, dispelMagic, flamingSphere, fly, haste, hellishRebuke, heroism, invisibility, lesserRestoration, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, resistance, revivify, sanctuary, scorchingRay, seeInvisibility, shield, shiningSmite, spiritualWeapon, web, witchBolt } from '../src/data/spells.js';
+import { bane, barkskin, bestowCurse, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, cloudOfDaggers, dissonantWhispers, dispelMagic, flamingSphere, fly, haste, hellishRebuke, heroism, invisibility, lesserRestoration, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, resistance, revivify, sanctuary, scorchingRay, seeInvisibility, shield, shiningSmite, spiritualWeapon, web, witchBolt } from '../src/data/spells.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
@@ -513,6 +513,23 @@ describe('Kaggle arena bridge', () => {
     const target = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
     expect(executeSpell(encounter.state!, caster, flamingSphere('int', 3, 3), target, [target], target.position)).toBe(true);
     expect(caster.concentrationAura).toMatchObject({ spellName: 'Flaming Sphere', moveFt: 30, origin: 'point' });
+  });
+
+  it('resolves Cloud of Daggers without a saving throw when a creature starts in it', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [cloudOfDaggers('int', 3, 3)], additionalResources: { 'slot-2': 1 } } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 2, y: 0 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    const target = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
+    const initialHp = target.currentHp;
+    withRng({ next: () => 0 }, () => expect(executeSpell(encounter.state!, caster, cloudOfDaggers('int', 3, 3), target, [target], target.position)).toBe(true));
+    expect(target.currentHp).toBe(initialHp);
+    expect(caster.concentrationAura).toMatchObject({ spellName: 'Cloud of Daggers', automaticDamage: true, origin: 'point' });
+    const hpBeforeTurn = target.currentHp;
+    withRng({ next: () => 0 }, () => processTurnStart(encounter.state!, target));
+    expect(target.currentHp).toBe(hpBeforeTurn - 4);
+    expect(encounter.state!.events.some(event => event.kind === 'save' && event.targetId === target.id)).toBe(false);
   });
 
   it('repeats Call Lightning from authoritative concentration state without another slot', () => {

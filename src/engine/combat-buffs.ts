@@ -388,7 +388,8 @@ export function attachConcentrationAura(state: BattleState, caster: Creature, ac
     damageType: action.damageType || 'untyped',
     saveAbility: action.savingThrow.ability,
     saveDC: action.savingThrow.dc + getSpellSaveDcBonus(caster, action),
-    radiusFt, endRound: state.round + action.durationRounds, moveFt: action.persistentAura.moveFt, origin, point,
+    radiusFt, endRound: state.round + action.durationRounds, moveFt: action.persistentAura.moveFt,
+    automaticDamage: action.persistentAura.automaticDamage, origin, point,
   };
   state.events.push({
     kind: 'concentrationAura', creatureId: caster.id, active: true,
@@ -411,20 +412,19 @@ export function processConcentrationAuras(state: BattleState, creature: Creature
     const dist = distance(creature.position, center);
     if (dist > aura.radiusFt) continue;
 
-    const saveMod = getEffectiveSaveModifier(creature, aura.saveAbility, state);
-    const hasMR = hasActiveTrait(creature, 'Magic Resistance');
-    const save = rollSaveWithBuffs(creature, saveMod, hasMR, aura.saveDC, aura.saveAbility);
-    const passed = save.total >= aura.saveDC;
-
-    state.events.push({ kind: 'save', targetId: creature.id, success: passed, durationMs: BASE_DURATIONS.save });
-
     const dmg = rollDice(aura.damageDice).total;
+    const automatic = aura.automaticDamage === true;
+    const save = automatic ? undefined : rollSaveWithBuffs(creature, getEffectiveSaveModifier(creature, aura.saveAbility, state), hasActiveTrait(creature, 'Magic Resistance'), aura.saveDC, aura.saveAbility);
+    const passed = !automatic && save!.total >= aura.saveDC;
+    if (!automatic) state.events.push({ kind: 'save', targetId: creature.id, success: passed, durationMs: BASE_DURATIONS.save });
     const actualDmg = passed ? Math.floor(dmg / 2) : dmg;
 
     pushLog(state, {
       round: state.round, turn: state.turnIndex,
       actor: creature.displayName, action: aura.spellName,
-      details: `${creature.displayName} ${passed ? 'resists' : 'fails against'} ${other.displayName}'s ${aura.spellName}! (${save.total} vs DC ${aura.saveDC}) Takes ${actualDmg} ${aura.damageType} damage${passed ? ' (half)' : ''}!`,
+      details: automatic
+        ? `${creature.displayName} is cut by ${other.displayName}'s ${aura.spellName}! Takes ${actualDmg} ${aura.damageType} damage!`
+        : `${creature.displayName} ${passed ? 'resists' : 'fails against'} ${other.displayName}'s ${aura.spellName}! (${save!.total} vs DC ${aura.saveDC}) Takes ${actualDmg} ${aura.damageType} damage${passed ? ' (half)' : ''}!`,
       damage: actualDmg,
       type: 'damage'
     });
@@ -453,11 +453,12 @@ export function moveConcentrationAura(state: BattleState, caster: Creature, dest
   });
   for (const target of state.creatures) {
     if (!target.isAlive || target.team === caster.team || distance(target.position, oldPoint) <= aura.radiusFt || distance(target.position, destination) > aura.radiusFt) continue;
-    const save = rollSaveWithBuffs(target, getEffectiveSaveModifier(target, aura.saveAbility, state), hasActiveTrait(target, 'Magic Resistance'), aura.saveDC, aura.saveAbility);
-    const passed = save.total >= aura.saveDC;
-    state.events.push({ kind: 'save', targetId: target.id, success: passed, durationMs: BASE_DURATIONS.save });
-    const damage = passed ? Math.floor(rollDice(aura.damageDice).total / 2) : rollDice(aura.damageDice).total;
-    pushLog(state, { round: state.round, turn: state.turnIndex, actor: target.displayName, action: aura.spellName, details: `${target.displayName} ${passed ? 'resists' : 'fails against'} moved ${aura.spellName} (${save.total} vs DC ${aura.saveDC}) and takes ${damage} ${aura.damageType} damage.`, damage, type: 'damage' });
+    const automatic = aura.automaticDamage === true;
+    const save = automatic ? undefined : rollSaveWithBuffs(target, getEffectiveSaveModifier(target, aura.saveAbility, state), hasActiveTrait(target, 'Magic Resistance'), aura.saveDC, aura.saveAbility);
+    const passed = !automatic && save!.total >= aura.saveDC;
+    if (!automatic) state.events.push({ kind: 'save', targetId: target.id, success: passed, durationMs: BASE_DURATIONS.save });
+    const damage = automatic ? rollDice(aura.damageDice).total : (passed ? Math.floor(rollDice(aura.damageDice).total / 2) : rollDice(aura.damageDice).total);
+    pushLog(state, { round: state.round, turn: state.turnIndex, actor: target.displayName, action: aura.spellName, details: automatic ? `${target.displayName} enters moved ${aura.spellName} and takes ${damage} ${aura.damageType} damage.` : `${target.displayName} ${passed ? 'resists' : 'fails against'} moved ${aura.spellName} (${save!.total} vs DC ${aura.saveDC}) and takes ${damage} ${aura.damageType} damage.`, damage, type: 'damage' });
     const hpBefore = target.currentHp;
     state.events.push({ kind: 'hit', targetId: target.id, damage, damageType: aura.damageType, critical: false, targetHpBefore: hpBefore, targetHpAfter: hpBefore, durationMs: BASE_DURATIONS.hit });
     applyDamage(state, target, damage, aura.damageType, caster, false, true);
@@ -486,17 +487,18 @@ export function checkAuraEntry(
     const distNow = distance(creature.position, center);
     const distBefore = distance(oldPos, center);
     if (distNow <= aura.radiusFt && distBefore > aura.radiusFt) {
-      const saveMod = getEffectiveSaveModifier(creature, aura.saveAbility, state);
-      const hasMR = hasActiveTrait(creature, 'Magic Resistance');
-      const save = rollSaveWithBuffs(creature, saveMod, hasMR, aura.saveDC, aura.saveAbility);
-      const passed = save.total >= aura.saveDC;
-      state.events.push({ kind: 'save', targetId: creature.id, success: passed, durationMs: BASE_DURATIONS.save });
       const dmg = rollDice(aura.damageDice).total;
+      const automatic = aura.automaticDamage === true;
+      const save = automatic ? undefined : rollSaveWithBuffs(creature, getEffectiveSaveModifier(creature, aura.saveAbility, state), hasActiveTrait(creature, 'Magic Resistance'), aura.saveDC, aura.saveAbility);
+      const passed = !automatic && save!.total >= aura.saveDC;
+      if (!automatic) state.events.push({ kind: 'save', targetId: creature.id, success: passed, durationMs: BASE_DURATIONS.save });
       const actualDmg = passed ? Math.floor(dmg / 2) : dmg;
       pushLog(state, {
         round: state.round, turn: state.turnIndex,
         actor: creature.displayName, action: aura.spellName,
-        details: `${creature.displayName} enters ${other.displayName}'s ${aura.spellName}! ${passed ? 'Resists' : 'Fails'} (${save.total} vs DC ${aura.saveDC}) Takes ${actualDmg} ${aura.damageType} damage${passed ? ' (half)' : ''}!`,
+        details: automatic
+          ? `${creature.displayName} enters ${other.displayName}'s ${aura.spellName} and takes ${actualDmg} ${aura.damageType} damage!`
+          : `${creature.displayName} enters ${other.displayName}'s ${aura.spellName}! ${passed ? 'Resists' : 'Fails'} (${save!.total} vs DC ${aura.saveDC}) Takes ${actualDmg} ${aura.damageType} damage${passed ? ' (half)' : ''}!`,
         damage: actualDmg, type: 'damage'
       });
       const hpBefore = creature.currentHp;
@@ -514,17 +516,18 @@ export function checkAuraEntry(
       const distBefore = distance(enemy.position, oldPos);
       if (distNow <= creature.concentrationAura.radiusFt && distBefore > creature.concentrationAura.radiusFt) {
         const aura = creature.concentrationAura;
-        const saveMod = getEffectiveSaveModifier(enemy, aura.saveAbility, state);
-        const hasMR = hasActiveTrait(enemy, 'Magic Resistance');
-        const save = rollSaveWithBuffs(enemy, saveMod, hasMR, aura.saveDC, aura.saveAbility);
-        const passed = save.total >= aura.saveDC;
-        state.events.push({ kind: 'save', targetId: enemy.id, success: passed, durationMs: BASE_DURATIONS.save });
         const dmg = rollDice(aura.damageDice).total;
+        const automatic = aura.automaticDamage === true;
+        const save = automatic ? undefined : rollSaveWithBuffs(enemy, getEffectiveSaveModifier(enemy, aura.saveAbility, state), hasActiveTrait(enemy, 'Magic Resistance'), aura.saveDC, aura.saveAbility);
+        const passed = !automatic && save!.total >= aura.saveDC;
+        if (!automatic) state.events.push({ kind: 'save', targetId: enemy.id, success: passed, durationMs: BASE_DURATIONS.save });
         const actualDmg = passed ? Math.floor(dmg / 2) : dmg;
         pushLog(state, {
           round: state.round, turn: state.turnIndex,
           actor: enemy.displayName, action: aura.spellName,
-          details: `${enemy.displayName} enters ${creature.displayName}'s ${aura.spellName}! ${passed ? 'Resists' : 'Fails'} (${save.total} vs DC ${aura.saveDC}) Takes ${actualDmg} ${aura.damageType} damage${passed ? ' (half)' : ''}!`,
+          details: automatic
+            ? `${enemy.displayName} enters ${creature.displayName}'s ${aura.spellName} and takes ${actualDmg} ${aura.damageType} damage!`
+            : `${enemy.displayName} enters ${creature.displayName}'s ${aura.spellName}! ${passed ? 'Resists' : 'Fails'} (${save!.total} vs DC ${aura.saveDC}) Takes ${actualDmg} ${aura.damageType} damage${passed ? ' (half)' : ''}!`,
           damage: actualDmg, type: 'damage'
         });
         const hpBefore = enemy.currentHp;

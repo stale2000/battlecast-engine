@@ -1064,7 +1064,9 @@ export function executeSpell(
 
   // Area save spell (Fireball, Thunderwave, Sacred Flame if save-type)
   if (castAction.savingThrow && aoeTargets) {
-    resolveAoE(state, caster, castAction, aoeTargets, aoeCenter, undefined, true);
+    if (castAction.persistentAura?.damageOnInitialCast !== false) {
+      resolveAoE(state, caster, castAction, aoeTargets, aoeCenter, undefined, true);
+    }
     attachConcentrationAura(state, caster, castAction, aoeCenter);
     applyLandAidHeal(state, caster, castAction);
     return true;
@@ -1072,7 +1074,9 @@ export function executeSpell(
 
   // Single-target save spell with no AoE array (e.g., Sacred Flame)
   if (castAction.savingThrow && primaryTarget) {
-    resolveAoE(state, caster, castAction, [primaryTarget], aoeCenter, undefined, true);
+    if (castAction.persistentAura?.damageOnInitialCast !== false) {
+      resolveAoE(state, caster, castAction, [primaryTarget], aoeCenter, undefined, true);
+    }
     attachConcentrationAura(state, caster, castAction, aoeCenter);
     return true;
   }

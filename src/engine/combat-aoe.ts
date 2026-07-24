@@ -516,6 +516,7 @@ export function resolveAoE(
   if (!action.savingThrow) return;
 
   const { ability, damageOnFail, damageOnSuccess, area, hpPoolDice } = action.savingThrow;
+  const automaticDamage = action.persistentAura?.automaticDamage === true;
   const dc = action.savingThrow.dc + getSpellSaveDcBonus(attacker, action);
 
   // HP-pool spells (2024 Sleep)
@@ -556,7 +557,7 @@ export function resolveAoE(
   pushLog(state, {
     round: state.round, turn: state.turnIndex,
     actor: attacker.displayName, action: action.name,
-    details: `${attacker.displayName} uses ${action.name}! (${area || ''}, DC ${dc} ${ability.toUpperCase()} save)`,
+    details: automaticDamage ? `${attacker.displayName} uses ${action.name}! (${area || ''}, no save)` : `${attacker.displayName} uses ${action.name}! (${area || ''}, DC ${dc} ${ability.toUpperCase()} save)`,
     type: 'special'
   });
   emitAoEEvent(state, attacker, area, center, direction, targets, action.name);
@@ -594,10 +595,10 @@ export function resolveAoE(
     const saveMod = getEffectiveSaveModifier(target, ability, state);
 
     const hasMR = hasActiveTrait(target, 'Magic Resistance');
-    const save = rollSaveWithBuffs(target, saveMod, hasMR, dc, ability, conditionOnFail);
-    let passed = save.total >= dc;
+    const save = automaticDamage ? { total: Number.NEGATIVE_INFINITY } : rollSaveWithBuffs(target, saveMod, hasMR, dc, ability, conditionOnFail);
+    let passed = !automaticDamage && save.total >= dc;
 
-    if (!passed) {
+    if (!automaticDamage && !passed) {
       const countercharm = tryCountercharm(state, target, conditionOnFail, saveMod, dc, ability);
       if (countercharm) {
         save.total = countercharm.total;
@@ -605,7 +606,7 @@ export function resolveAoE(
       }
     }
 
-    if (!passed && hasResource(target, 'legendary-resistance')) {
+    if (!automaticDamage && !passed && hasResource(target, 'legendary-resistance')) {
       consumeResource(target, 'legendary-resistance');
       passed = true;
       pushLog(state, {
@@ -639,7 +640,7 @@ export function resolveAoE(
         aoeDamageTargets.push(visualTarget);
         continue;
       }
-      const halfDamage = (passed && damageOnSuccess === 'half') || (!passed && hasEvasion && ability === 'dex');
+      const halfDamage = !automaticDamage && ((passed && damageOnSuccess === 'half') || (!passed && hasEvasion && ability === 'dex'));
       const draconicBonus = draconicElementalAffinityBonus(attacker, action, aoeDmgType);
       const evocationBonus = wizardEvocationBonus(attacker, action);
       const rolledParts = damageParts.map(part => {
@@ -686,11 +687,19 @@ export function resolveAoE(
           });
         }
         // Evasion on fail: half damage instead of full (DEX saves only)
-        if (hasEvasion && ability === 'dex') {
+        if (!automaticDamage && hasEvasion && ability === 'dex') {
           pushLog(state, {
             round: state.round, turn: state.turnIndex,
             actor: target.displayName, action: 'Evasion (partial)',
             details: `${target.displayName} partially evades! (${save.total} vs DC ${dc}) Takes ${rawDamageTotal} damage (half via Evasion).`,
+            damage: rawDamageTotal,
+            type: 'damage'
+          });
+        } else if (automaticDamage) {
+          pushLog(state, {
+            round: state.round, turn: state.turnIndex,
+            actor: target.displayName, action: action.name,
+            details: `${target.displayName} takes ${rawDamageTotal} ${aoeDmgType} damage!`,
             damage: rawDamageTotal,
             type: 'damage'
           });
