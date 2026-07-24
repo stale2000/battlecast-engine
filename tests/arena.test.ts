@@ -1829,6 +1829,11 @@ describe('Kaggle arena bridge', () => {
     expect(encounter.state!.creatures.find(creature => creature.id === guard.id)!.reactionUsed).toBe(true);
   });
 
+  it('offers Pass without Trace to level-five Druids and Rangers', () => {
+    expect(getAvailableSpells('Druid', 5).map(action => action.name)).toContain('Pass without Trace');
+    expect(getAvailableSpells('Ranger', 5).map(action => action.name)).toContain('Pass without Trace');
+  });
+
   it('offers and resolves supported resource actions without trusting client parameters', () => {
     const encounter = new Encounter({ seed: 1 });
     const [fighter] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'red', position: { x: 0, y: 0 } });

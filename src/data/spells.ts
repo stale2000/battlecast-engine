@@ -404,6 +404,15 @@ export function darkness(ability: SpellcastingAbility, _mod: number, _pb: number
   };
 }
 
+export function passWithoutTrace(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Pass without Trace', type: 'special', spellLevel: 2, spellSchool: 'abjuration', castingAbility: ability, concentration: true, durationRounds: 600,
+    description: 'You and allies within 30 feet gain +10 to Dexterity (Stealth) checks for 1 hour. Concentration.',
+    range: { normal: 30, long: 30 }, targetScope: 'all_allies_in_area',
+    buff: { name: 'Pass without Trace', key: 'pass-without-trace', requiresConcentration: true, stealthBonus: 10 },
+  };
+}
+
 export function falseLife(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
   return {
     name: 'False Life', type: 'special', spellLevel: 1, spellSchool: 'necromancy', castingAbility: ability,
@@ -1677,6 +1686,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Armor of Agathys', armorOfAgathys], ['Faerie Fire', faerieFire], ['False Life', falseLife], ['Fog Cloud', fogCloud], ['Grease', grease], ['Longstrider', longstrider],
   ['Expeditious Retreat', expeditiousRetreat],
   ['Darkness', darkness],
+  ['Pass without Trace', passWithoutTrace],
   ['Mage Armor', mageArmor],
   ['Ray of Enfeeblement', rayOfEnfeeblement], ['Ray of Sickness', rayOfSickness], ["Tasha's Hideous Laughter", tashasHideousLaughter],
   ['Scorching Ray', scorchingRay], ['Web', web], ['Spike Growth', spikeGrowth], ['Hold Person', holdPerson],

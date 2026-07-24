@@ -43,7 +43,7 @@ import {
   blindnessDeafness, invisibility, mirrorImage, seeInvisibility, dispelMagic, haste, wallOfFire,
   aid, magicWeapon, shiningSmite,
   acidArrow, armsOfHadar, barkskin, bestowCurse, blur, colorSpray, darkness, divineFavor, expeditiousRetreat, faerieFire, falseLife, fear, fly, fogCloud, grease, gustOfWind, lesserRestoration, mistyStep,
-  armorOfAgathys, longstrider, mageArmor, rayOfEnfeeblement, rayOfSickness, revivify, tashasHideousLaughter,
+  armorOfAgathys, longstrider, mageArmor, passWithoutTrace, rayOfEnfeeblement, rayOfSickness, revivify, tashasHideousLaughter,
   protectionFromPoison, shield, hellishRebuke,
   circleOfDeath, chainLightning, disintegrate, fingerOfDeath,
   befuddlement, powerWordHeal, powerWordKill, meteorSwarm,
@@ -2612,7 +2612,7 @@ export function getAvailableSpells(
       break;
     case 'Druid':
       optional.push(barkskin(spellAbility, mod, pb), faerieFire(spellAbility, mod, pb), fogCloud(spellAbility, mod, pb), longstrider(spellAbility, mod, pb));
-      optional.push(lesserRestoration(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb), spikeGrowth(spellAbility, mod, pb));
+      optional.push(lesserRestoration(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb), passWithoutTrace(spellAbility, mod, pb), spikeGrowth(spellAbility, mod, pb));
       optional.push(dispelMagic(spellAbility, mod, pb));
       optional.push(fear(spellAbility, mod, pb), fly(spellAbility, mod, pb), revivify(spellAbility, mod, pb));
       optional.push(wallOfFire(spellAbility, mod, pb));
@@ -2635,7 +2635,7 @@ export function getAvailableSpells(
       break;
     case 'Ranger':
       optional.push(faerieFire(spellAbility, mod, pb), longstrider(spellAbility, mod, pb));
-      optional.push(protectionFromPoison(spellAbility, mod, pb), spikeGrowth(spellAbility, mod, pb));
+      optional.push(passWithoutTrace(spellAbility, mod, pb), protectionFromPoison(spellAbility, mod, pb), spikeGrowth(spellAbility, mod, pb));
       optional.push(dispelMagic(spellAbility, mod, pb));
       break;
   }
