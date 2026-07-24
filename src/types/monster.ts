@@ -351,6 +351,8 @@ export interface MonsterAction {
   darkness?: { radius: number; durationRounds: number; requiresConcentration?: boolean };
   /** Server-validated teleport destination, used by spells such as Misty Step. */
   teleport?: { distanceFt: number };
+  /** Failed targets use their Reaction to flee directly away, provoking opportunity attacks. */
+  fleeOnFailedSave?: boolean;
   /** Creates a persistent spiritual weapon that can make later bonus-action attacks. */
   spiritualWeapon?: { moveFt: number };
   /** A damaging concentration area that remains after the initial cast. */

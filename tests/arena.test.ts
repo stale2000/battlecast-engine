@@ -13,7 +13,7 @@ import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
-import { barkskin, bladeWard, blindingSmite, callLightning, fly, hellishRebuke, heroism, lesserRestoration, magicWeapon, mistyStep, moonbeam, resistance, shield, shiningSmite, spiritualWeapon, web, witchBolt } from '../src/data/spells.js';
+import { barkskin, bladeWard, blindingSmite, callLightning, dissonantWhispers, fly, hellishRebuke, heroism, lesserRestoration, magicWeapon, mistyStep, moonbeam, resistance, shield, shiningSmite, spiritualWeapon, web, witchBolt } from '../src/data/spells.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
@@ -300,6 +300,18 @@ describe('Kaggle arena bridge', () => {
     applyLegalAction(encounter, { ...move, destination: { ...second.position } });
     expect(caster.concentrationAura?.point).toEqual(second.position);
     expect(second.currentHp).toBeLessThan(hp);
+  });
+
+  it('resolves Dissonant Whispers flee through the target reaction', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Bard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [dissonantWhispers('cha', 3, 3)], additionalResources: { 'slot-1': 1 } } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 2, y: 0 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    const target = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
+    withRng({ next: () => 0 }, () => expect(executeSpell(encounter.state!, caster, dissonantWhispers('cha', 3, 3), target)).toBe(true));
+    expect(target.reactionUsed).toBe(true);
+    expect(target.position.x).toBeGreaterThan(2);
   });
 
   it('rejects a restored arena state with a changed round cap', () => {

@@ -40,6 +40,7 @@ import {
   isImmuneToDamageType,
   type BattleState,
 } from './combat.js';
+import { runOpportunityAttacks } from './ai-turn.js';
 
 // ─────────────────────────────────────────────────────────────────────
 // Single-target visual categorization
@@ -219,8 +220,8 @@ function tryCountercharm(
   return { total: reroll.total, passed };
 }
 
-function pushTargetAwayFromCaster(state: BattleState, attacker: Creature, target: Creature, feet: number): void {
-  if (!target.isAlive || feet <= 0) return;
+function pushTargetAwayFromCaster(state: BattleState, attacker: Creature, target: Creature, feet: number, actionName: string = 'Thunderwave Push'): { x: number; y: number } | undefined {
+  if (!target.isAlive || feet <= 0) return undefined;
   const dx = Math.sign(target.position.x - attacker.position.x);
   const dy = Math.sign(target.position.y - attacker.position.y);
   const stepX = dx === 0 && dy === 0 ? 0 : dx;
@@ -238,16 +239,27 @@ function pushTargetAwayFromCaster(state: BattleState, attacker: Creature, target
     best = candidate;
     break;
   }
-  if (best.x === target.position.x && best.y === target.position.y) return;
+  if (best.x === target.position.x && best.y === target.position.y) return undefined;
   const from = { ...target.position };
   target.position = best;
   state.events.push({ kind: 'move', creatureId: target.id, from, to: best, durationMs: BASE_DURATIONS.move });
   pushLog(state, {
     round: state.round, turn: state.turnIndex,
-    actor: attacker.displayName, action: 'Thunderwave Push',
+    actor: attacker.displayName, action: actionName,
     details: `${target.displayName} is pushed ${distance(from, best)} ft away.`,
     type: 'move'
   });
+  return from;
+}
+
+function fleeFromCaster(state: BattleState, attacker: Creature, target: Creature, actionName: string): void {
+  if (target.reactionUsed || target.conditions.some(condition => ['incapacitated', 'paralyzed', 'stunned', 'unconscious'].includes(condition))) return;
+  const speed = target.movementRemaining > 0 ? target.movementRemaining : (target.monsterData.speed.walk ?? 0);
+  const from = pushTargetAwayFromCaster(state, attacker, target, speed, actionName);
+  if (!from) return;
+  target.reactionUsed = true;
+  target.reactionsUsed = (target.reactionsUsed ?? 0) + 1;
+  runOpportunityAttacks(state, target, from);
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -402,6 +414,7 @@ export function resolveSingleTargetSave(
   if (!passed) {
     if (action.buffOnFailedSave) applySaveBuff(state, attacker, target, action, action.buffOnFailedSave);
     if (action.pushOnFailedSave) pushTargetAwayFromCaster(state, attacker, target, action.pushOnFailedSave);
+    if (action.fleeOnFailedSave) fleeFromCaster(state, attacker, target, action.name);
   } else if (action.buffOnSuccessfulSave) {
     applySaveBuff(state, attacker, target, action, action.buffOnSuccessfulSave);
   }
@@ -749,6 +762,7 @@ export function resolveAoE(
       const emittedStart = state.events.length;
       if (action.buffOnFailedSave) applySaveBuff(state, attacker, target, action, action.buffOnFailedSave);
       if (action.pushOnFailedSave) pushTargetAwayFromCaster(state, attacker, target, action.pushOnFailedSave);
+      if (action.fleeOnFailedSave) fleeFromCaster(state, attacker, target, action.name);
       followUpEvents.push(...state.events.splice(emittedStart));
     } else if (action.buffOnSuccessfulSave) {
       const emittedStart = state.events.length;

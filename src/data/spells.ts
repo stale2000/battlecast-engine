@@ -288,7 +288,7 @@ export function dissonantWhispers(ability: SpellcastingAbility, mod: number, pb:
   return {
     name: 'Dissonant Whispers',
     type: 'special',
-    description: `One creature within 60 ft. WIS save DC ${saveDC(mod, pb)}; 3d6 psychic damage on fail, half on success. (Fleeing rider not simulated.)`,
+    description: `One creature within 60 ft. WIS save DC ${saveDC(mod, pb)}; 3d6 psychic damage on fail, half on success. On failure it uses its Reaction to flee directly away, provoking opportunity attacks.`,
     spellLevel: 1,
     castingAbility: ability,
     damageType: 'psychic',
@@ -296,6 +296,7 @@ export function dissonantWhispers(ability: SpellcastingAbility, mod: number, pb:
       ability: 'wis', dc: saveDC(mod, pb),
       damageOnFail: '3d6', damageOnSuccess: 'half',
     },
+    fleeOnFailedSave: true,
     range: { normal: 60, long: 60 },
     targetScope: 'one_enemy',
   };
