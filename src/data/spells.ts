@@ -444,6 +444,16 @@ export function silence(ability: SpellcastingAbility, _mod: number, _pb: number)
   };
 }
 
+export function compelledDuel(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Compelled Duel', type: 'special', spellLevel: 1, spellSchool: 'enchantment', castingAbility: ability,
+    description: `One creature within 30 feet makes a WIS save (DC ${saveDC(mod, pb)}). On a failure, it has Disadvantage on attacks against creatures other than you and cannot willingly move more than 30 feet from you while you concentrate.`,
+    concentration: true, durationRounds: 10, range: { normal: 30, long: 30 }, targetScope: 'one_enemy',
+    savingThrow: { ability: 'wis', dc: saveDC(mod, pb) },
+    buffOnFailedSave: { name: 'Compelled Duel', key: 'compelled-duel', requiresConcentration: true, attackersHaveDisadvantageExceptCaster: true, cannotMoveAwayFromCaster: true },
+  };
+}
+
 export function lightningArrow(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
   const dc = saveDC(mod, pb);
   return {
@@ -2125,7 +2135,7 @@ export function wallOfFire(ability: SpellcastingAbility, mod: number, pb: number
 
 type SpellFactory = (ability: SpellcastingAbility, mod: number, pb: number) => MonsterAction;
 const SPELL_FACTORIES: [string, SpellFactory][] = [
-  ['Magic Missile', () => magicMissile()], ['Lightning Arrow', lightningArrow], ['Silence', silence],
+  ['Magic Missile', () => magicMissile()], ['Lightning Arrow', lightningArrow], ['Silence', silence], ['Compelled Duel', compelledDuel],
   ['Blade Ward', bladeWard], ['Resistance', resistance], ['Shillelagh', shillelagh], ['Sorcerous Burst', sorcerousBurst], ['Poison Spray', poisonSpray], ['Produce Flame', produceFlame], ['Thorn Whip', thornWhip], ['Acid Splash', acidSplash], ['Starry Wisp', starryWisp], ['Thunderclap', thunderclap], ['Toll the Dead', tollTheDead], ['True Strike', trueStrike],
   ['Shield', shield], ['Hail of Thorns', hailOfThorns],
   ['Hellish Rebuke', hellishRebuke],

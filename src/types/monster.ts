@@ -524,6 +524,8 @@ export interface BuffTemplate {
   attackDisadvantageAgainstCaster?: boolean;
   /** Attackers have Disadvantage against this creature, e.g. Blur. */
   attackersHaveDisadvantage?: boolean;
+  /** Attackers have Disadvantage against this creature except its caster. */
+  attackersHaveDisadvantageExceptCaster?: boolean;
   /** One-shot rider such as Barbarian Staggering Blow: next save has Disadvantage. */
   saveDisadvantage?: boolean;
   saveDisadvantageAbilities?: Array<keyof Abilities>;
@@ -531,6 +533,8 @@ export interface BuffTemplate {
   forcedDodgeSave?: { ability: keyof Abilities; dc: number };
   /** The target must use its action to Dash away from the caster each turn. */
   forcedFlee?: boolean;
+  /** The creature cannot willingly move beyond 30 feet from its caster. */
+  cannotMoveAwayFromCaster?: boolean;
   /** Weapon Mastery: Slow reduces this creature's speed while active. */
   speedPenalty?: number;
   /** Longstrider-style increase to all movement speeds. */
@@ -1035,12 +1039,14 @@ export interface ActiveBuff {
   attackDisadvantage?: boolean;
   attackDisadvantageAgainstCaster?: boolean;
   attackersHaveDisadvantage?: boolean;
+  attackersHaveDisadvantageExceptCaster?: boolean;
   /** One-shot rider such as Barbarian Staggering Blow: next save has Disadvantage. */
   saveDisadvantage?: boolean;
   saveDisadvantageAbilities?: Array<keyof Abilities>;
   abilityCheckDisadvantageAbilities?: Array<keyof Abilities>;
   forcedDodgeSave?: { ability: keyof Abilities; dc: number };
   forcedFlee?: boolean;
+  cannotMoveAwayFromCaster?: boolean;
   /** Weapon Mastery: Slow reduces this creature's speed while active. */
   speedPenalty?: number;
   /** Longstrider-style increase to all movement speeds. */

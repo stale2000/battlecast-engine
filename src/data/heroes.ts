@@ -46,7 +46,7 @@ import {
   aid, magicWeapon, shiningSmite,
   acidArrow, acidSplash, armsOfHadar, barkskin, bestowCurse, bladeWard, blur, colorSpray, darkness, divineFavor, enlargeReduce, expeditiousRetreat, faerieFire, falseLife, fear, flameBlade, fly, fogCloud, grease, gustOfWind, heatMetal, iceKnife, lesserRestoration, mistyStep,
   armorOfAgathys, beaconOfHope, longstrider, mageArmor, massHealingWord, passWithoutTrace, poisonSpray, produceFlame, rayOfEnfeeblement, rayOfSickness, revivify, slow, starryWisp, stinkingCloud, tashasHideousLaughter, thunderclap, thornWhip, tollTheDead, trueStrike, vampiricTouch,
-  protectionFromPoison, resistance, shillelagh, sorcerousBurst, shield, hellishRebuke, sleetStorm, hungerOfHadar, windWall, brandingSmite, ensnaringStrike, hailOfThorns, lightningArrow, silence, searingSmite, thunderousSmite, wrathfulSmite,
+  protectionFromPoison, resistance, shillelagh, sorcerousBurst, shield, hellishRebuke, sleetStorm, hungerOfHadar, windWall, brandingSmite, compelledDuel, ensnaringStrike, hailOfThorns, lightningArrow, silence, searingSmite, thunderousSmite, wrathfulSmite,
   circleOfDeath, chainLightning, disintegrate, fingerOfDeath,
   befuddlement, powerWordHeal, powerWordKill, meteorSwarm,
 } from './spells.js';
@@ -1747,7 +1747,7 @@ function buildOptionalSpells(
       pool.push(bestowCurse(spellAbility, mod, pb), fear(spellAbility, mod, pb), fly(spellAbility, mod, pb));
       break;
     case 'Paladin':
-      pool.push(heroism(spellAbility, mod, pb), wardingBond());
+      pool.push(heroism(spellAbility, mod, pb), wardingBond(), compelledDuel(spellAbility, mod, pb));
       pool.push(protectionFromEvilAndGood(spellAbility, mod, pb));
       pool.push(divineFavor(spellAbility, mod, pb), brandingSmite(spellAbility, mod, pb), searingSmite(spellAbility, mod, pb), thunderousSmite(spellAbility, mod, pb), wrathfulSmite(spellAbility, mod, pb));
       pool.push(command(spellAbility, mod, pb));
@@ -2664,6 +2664,7 @@ export function getAvailableSpells(
       break;
     case 'Paladin':
       optional.push(heroism(spellAbility, mod, pb));
+      optional.push(compelledDuel(spellAbility, mod, pb));
       optional.push(wardingBond());
       optional.push(protectionFromEvilAndGood(spellAbility, mod, pb));
       optional.push(divineFavor(spellAbility, mod, pb), brandingSmite(spellAbility, mod, pb), searingSmite(spellAbility, mod, pb), thunderousSmite(spellAbility, mod, pb), wrathfulSmite(spellAbility, mod, pb));

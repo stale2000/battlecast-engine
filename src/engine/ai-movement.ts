@@ -109,7 +109,13 @@ export function isFrightenedMoveLegal(
     .filter(buff => (buff.appliedConditions ?? (buff.appliedCondition ? [buff.appliedCondition] : [])).includes('frightened'))
     .map(buff => state.creatures.find(candidate => candidate.id === buff.casterId))
     .filter((source): source is Creature => Boolean(source?.isAlive));
-  return sources.every(source => chebyshev(destination, source.position) >= chebyshev(creature.position, source.position));
+  const fearLegal = sources.every(source => chebyshev(destination, source.position) >= chebyshev(creature.position, source.position));
+  const duelLegal = (creature.activeBuffs ?? [])
+    .filter(buff => buff.cannotMoveAwayFromCaster)
+    .map(buff => state.creatures.find(candidate => candidate.id === buff.casterId))
+    .filter((source): source is Creature => Boolean(source?.isAlive))
+    .every(source => chebyshev(destination, source.position) <= 6);
+  return fearLegal && duelLegal;
 }
 
 /**
