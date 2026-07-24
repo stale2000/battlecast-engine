@@ -1668,6 +1668,16 @@ export function beaconOfHope(ability: SpellcastingAbility, _mod: number, _pb: nu
   };
 }
 
+export function stinkingCloud(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Stinking Cloud', type: 'special', spellLevel: 3, spellSchool: 'conjuration', castingAbility: ability, concentration: true, durationRounds: 10,
+    description: 'A 20-foot-radius cloud is heavily obscured. A creature that starts its turn there makes a Constitution save or is Poisoned and cannot take Actions or Bonus Actions until the end of that turn.',
+    range: { normal: 90, long: 90 }, targetScope: 'area_enemies',
+    savingThrow: { ability: 'con', dc: 8, conditionOnFail: 'poisoned', conditionDuration: 'end_of_current_turn' },
+    persistentZone: { radiusFt: 20, durationRounds: 10, triggers: ['turnStart'], skipActionsOnFailedSave: true },
+  };
+}
+
 export function wallOfFire(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
   return {
     name: 'Wall of Fire',
@@ -1733,6 +1743,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Hypnotic Pattern', hypnoticPattern], ['Dispel Magic', dispelMagic], ['Haste', haste],
   ['Fear', fear], ['Fly', fly], ['Revivify', revivify],
   ['Beacon of Hope', beaconOfHope],
+  ['Stinking Cloud', stinkingCloud],
   ['Slow', slow],
   ['Bestow Curse', bestowCurse],
   ['Ice Storm', iceStorm], ['Banishment', banishment], ['Blight', blight],

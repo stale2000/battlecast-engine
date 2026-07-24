@@ -43,7 +43,7 @@ import {
   blindnessDeafness, invisibility, mirrorImage, seeInvisibility, dispelMagic, haste, wallOfFire,
   aid, magicWeapon, shiningSmite,
   acidArrow, armsOfHadar, barkskin, bestowCurse, blur, colorSpray, darkness, divineFavor, enlargeReduce, expeditiousRetreat, faerieFire, falseLife, fear, fly, fogCloud, grease, gustOfWind, lesserRestoration, mistyStep,
-  armorOfAgathys, beaconOfHope, longstrider, mageArmor, passWithoutTrace, rayOfEnfeeblement, rayOfSickness, revivify, slow, tashasHideousLaughter,
+  armorOfAgathys, beaconOfHope, longstrider, mageArmor, passWithoutTrace, rayOfEnfeeblement, rayOfSickness, revivify, slow, stinkingCloud, tashasHideousLaughter,
   protectionFromPoison, shield, hellishRebuke,
   circleOfDeath, chainLightning, disintegrate, fingerOfDeath,
   befuddlement, powerWordHeal, powerWordKill, meteorSwarm,
@@ -2580,6 +2580,7 @@ export function getAvailableSpells(
       optional.push(acidArrow(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb));
       optional.push(mistyStep(spellAbility, mod, pb));
       optional.push(dispelMagic(spellAbility, mod, pb), haste(spellAbility, mod, pb), slow(spellAbility, mod, pb));
+      optional.push(stinkingCloud(spellAbility, mod, pb));
       optional.push(counterspell(spellAbility, mod, pb));
       optional.push(bestowCurse(spellAbility, mod, pb), fear(spellAbility, mod, pb), fly(spellAbility, mod, pb));
       optional.push(wallOfFire(spellAbility, mod, pb));
@@ -2592,6 +2593,7 @@ export function getAvailableSpells(
       optional.push(acidArrow(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb));
       optional.push(mistyStep(spellAbility, mod, pb));
       optional.push(dispelMagic(spellAbility, mod, pb), haste(spellAbility, mod, pb), slow(spellAbility, mod, pb));
+      optional.push(stinkingCloud(spellAbility, mod, pb));
       optional.push(counterspell(spellAbility, mod, pb));
       optional.push(fear(spellAbility, mod, pb), fly(spellAbility, mod, pb));
       optional.push(wallOfFire(spellAbility, mod, pb));
@@ -2622,6 +2624,7 @@ export function getAvailableSpells(
       optional.push(heroism(spellAbility, mod, pb));
       optional.push(faerieFire(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
       optional.push(command(spellAbility, mod, pb));
+      optional.push(stinkingCloud(spellAbility, mod, pb));
       optional.push(blindnessDeafness(spellAbility, mod, pb), cloudOfDaggers(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb));
       optional.push(dispelMagic(spellAbility, mod, pb), haste(spellAbility, mod, pb));
       optional.push(bestowCurse(spellAbility, mod, pb), fear(spellAbility, mod, pb), fly(spellAbility, mod, pb));

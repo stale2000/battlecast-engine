@@ -2522,6 +2522,10 @@ export function processTargetTurnEndOngoingEffects(state: BattleState, target: C
   if (!target.isAlive) return;
   triggerPersistentZones(state, target, 'turnEnd');
   if (!target.isAlive) return;
+  for (const timer of target.conditionTimers.filter(candidate => candidate.duration === 'end_of_current_turn')) {
+    target.conditionTimers = target.conditionTimers.filter(candidate => candidate !== timer);
+    if (!target.conditionTimers.some(candidate => candidate.condition === timer.condition)) target.conditions = target.conditions.filter(condition => condition !== timer.condition);
+  }
   for (const buff of [...(target.activeBuffs ?? [])]) {
     if (buff.saveEnds?.at !== 'targetTurnEnd') continue;
     const save = rollSaveWithBuffs(target, getEffectiveSaveModifier(target, buff.saveEnds.ability, state), buff.saveAdvantageOnNextSave === true, buff.saveEnds.dc, buff.saveEnds.ability);
@@ -3830,6 +3834,7 @@ export function createPersistentZone(state: BattleState, caster: Creature, actio
     conditionOnFail: save?.conditionOnFail, conditionDuration: save?.conditionDuration ?? 'end_of_next_turn', triggers: config.triggers,
     difficultTerrain: config.difficultTerrain, difficultTerrainTowardSource: config.difficultTerrainTowardSource, damagePer5Ft: config.damagePer5Ft,
     shape: config.shape, origin: config.shape === 'line' ? { ...caster.position } : undefined, direction: config.shape === 'line' ? { ...center } : undefined, pushOnFailedSave: config.pushOnFailedSave,
+    skipActionsOnFailedSave: config.skipActionsOnFailedSave,
     requiresConcentration: action.concentration === true,
   });
 }
@@ -3885,6 +3890,10 @@ export function triggerPersistentZones(state: BattleState, target: Creature, tri
     state.events.push({ kind: 'save', targetId: target.id, success: passed, durationMs: BASE_DURATIONS.save });
     if (passed) continue;
     if (zone.conditionOnFail) applyCondition(state, target, zone.conditionOnFail, source, zone.conditionDuration, zone.saveDC, zone.saveAbility);
+    if (zone.skipActionsOnFailedSave) {
+      target.hasActed = true;
+      target.bonusActionUsed = true;
+    }
     if (zone.pushOnFailedSave) pushTargetAwayFromCaster(state, source, target, zone.pushOnFailedSave, zone.name);
   }
 }

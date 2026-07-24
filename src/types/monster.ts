@@ -391,6 +391,8 @@ export interface MonsterAction {
     damagePer5Ft?: { dice: string; type: string };
     shape?: 'line';
     pushOnFailedSave?: number;
+    /** A failed zone save consumes the target's Action and Bonus Action for this turn. */
+    skipActionsOnFailedSave?: boolean;
   };
   /** Enables a later no-slot repeat of this concentration spell (Call Lightning). */
   repeatableAreaSpell?: true;
@@ -1022,6 +1024,7 @@ export interface PersistentZone {
   origin?: { x: number; y: number };
   direction?: { x: number; y: number };
   pushOnFailedSave?: number;
+  skipActionsOnFailedSave?: boolean;
   requiresConcentration: boolean;
 }
 
@@ -1078,7 +1081,7 @@ export type Condition =
   | 'stunned'
   | 'unconscious';
 
-export type ConditionDuration = 'end_of_next_turn' | '1_minute' | 'permanent' | 'start_of_next_turn';
+export type ConditionDuration = 'end_of_current_turn' | 'end_of_next_turn' | '1_minute' | 'permanent' | 'start_of_next_turn';
 
 export interface ConditionTimer {
   condition: Condition;
