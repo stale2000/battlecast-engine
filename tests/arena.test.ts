@@ -14,7 +14,7 @@ import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildCustomHero, buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
-import { acidArrow, armorOfAgathys, bane, barkskin, beaconOfHope, bestowCurse, bladeWard, bless, blindingSmite, buildSpellAction, callLightning, chromaticOrb, cloudOfDaggers, command, conjureAnimals, counterspell, cureWounds, dissonantWhispers, dispelMagic, enlargeReduce, entangle, expeditiousRetreat, findSteed, fireball, flamingSphere, fly, grease, gustOfWind, haste, hellishRebuke, heroism, inflictWounds, invisibility, lesserRestoration, mageArmor, magicWeapon, massHealingWord, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, seeInvisibility, shield, shiningSmite, slow, spikeGrowth, spiritualWeapon, summonBeast, tashasHideousLaughter, web, witchBolt } from '../src/data/spells.js';
+import { acidArrow, armorOfAgathys, bane, barkskin, beaconOfHope, bestowCurse, bladeWard, bless, blindingSmite, buildSpellAction, callLightning, chromaticOrb, cloudOfDaggers, command, conjureAnimals, counterspell, cureWounds, dissonantWhispers, dispelMagic, enlargeReduce, entangle, ensnaringStrike, expeditiousRetreat, findSteed, fireball, flamingSphere, fly, grease, gustOfWind, haste, hellishRebuke, heroism, hungerOfHadar, inflictWounds, invisibility, lesserRestoration, mageArmor, magicWeapon, massHealingWord, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, searingSmite, seeInvisibility, shield, shiningSmite, slow, spikeGrowth, spiritualWeapon, summonBeast, tashasHideousLaughter, thunderousSmite, web, witchBolt, wrathfulSmite } from '../src/data/spells.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
@@ -2073,7 +2073,7 @@ describe('Kaggle arena bridge', () => {
   });
 
   it('resolves a legal representative of every selectable level-5 spell', () => {
-    const noTurnChoice = new Set(['Shield', 'Hellish Rebuke', 'Counterspell', 'Dispel Magic']);
+    const noTurnChoice = new Set(['Shield', 'Hellish Rebuke', 'Counterspell', 'Dispel Magic', 'Ensnaring Strike', 'Searing Smite', 'Thunderous Smite', 'Wrathful Smite']);
     for (const heroClass of HERO_CLASS_NAMES) {
       const spells = getAvailableSpells(heroClass, 5).filter(spell => spell.spellLevel > 0).map(spell => spell.name);
       if (!spells.length) continue;
@@ -2375,5 +2375,26 @@ describe('arena immediate-after-hit spell phase', () => {
     const before = JSON.stringify(encounter.toJSON());
     expect(() => applyLegalAction(encounter, { id: 'post_hit:forged', type: 'post_hit', actionName: 'Test Searing Smite', actionIndex: 999, targetId: 'forged', decline: false })).toThrow(/Illegal or stale/);
     expect(JSON.stringify(encounter.toJSON())).toBe(before);
+  });
+
+  it('resolves the SRD smite riders through the same pending-hit path', () => {
+    for (const rider of [searingSmite('cha', 3, 3), ensnaringStrike('wis', 3, 3), thunderousSmite('cha', 3, 3), wrathfulSmite('cha', 3, 3)]) {
+      const encounter = new Encounter({ seed: 1 });
+      encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: {
+        additionalActions: [{ name: 'Test Strike', type: 'melee', description: 'test', attackBonus: 100, damage: '1d4', damageType: 'slashing', reach: 5 }, rider],
+        additionalResources: { 'slot-1': 1 },
+      } });
+      encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
+      encounter.start();
+      const attacker = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+      encounter.state!.initiativeOrder = [attacker.id];
+      startArena(encounter);
+      const attack = getLegalActions(encounter, attacker.id).find(action => action.actionName === 'Test Strike')!;
+      applyLegalAction(encounter, attack);
+      const choice = getLegalActions(encounter, attacker.id).find(action => action.type === 'post_hit' && !action.decline && action.actionName === rider.name)!;
+      applyLegalAction(encounter, choice);
+      expect(attacker.resources['slot-1']).toBe(0);
+      if (rider.effects) expect(encounter.state!.creatures.some(creature => creature.ongoingEffects?.some(effect => effect.key === rider.name))).toBe(true);
+    }
   });
 });

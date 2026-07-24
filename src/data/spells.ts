@@ -827,6 +827,43 @@ export function spiritualWeapon(ability: SpellcastingAbility, mod: number, pb: n
   };
 }
 
+export function ensnaringStrike(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Ensnaring Strike', type: 'special', spellLevel: 1, spellSchool: 'conjuration', castingAbility: ability,
+    description: `Bonus action immediately after a weapon hit. The target makes a Strength save (DC ${saveDC(mod, pb)}) or is Restrained; while restrained it takes 1d6 piercing damage at the start of each of its turns. Concentration.`,
+    isBonusAction: true, concentration: true, postHit: { trigger: 'weapon_hit' }, targetScope: 'one_enemy',
+    savingThrow: { ability: 'str', dc: saveDC(mod, pb), conditionOnFail: 'restrained', conditionDuration: '1_minute' },
+    effects: [{ kind: 'ongoingDamage', key: 'Ensnaring Strike', damage: '1d6', damageType: 'piercing', tick: 'targetTurnStart', condition: 'restrained' }],
+  };
+}
+
+export function searingSmite(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Searing Smite', type: 'special', spellLevel: 1, spellSchool: 'evocation', castingAbility: ability,
+    description: `Bonus action immediately after a melee or unarmed hit. The hit deals 1d6 extra fire damage; the target takes 1d6 fire damage at the start of each turn until it succeeds on a Constitution save (DC ${saveDC(mod, pb)}). Concentration.`,
+    isBonusAction: true, concentration: true, postHit: { trigger: 'melee_hit' }, targetScope: 'one_enemy', damage: '1d6', damageType: 'fire',
+    effects: [{ kind: 'ongoingDamage', key: 'Searing Smite', damage: '1d6', damageType: 'fire', tick: 'targetTurnStart', saveEnds: { ability: 'con', dc: saveDC(mod, pb), at: 'targetTurnStart' }, maxTicks: 10 }],
+  };
+}
+
+export function wrathfulSmite(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Wrathful Smite', type: 'special', spellLevel: 1, spellSchool: 'necromancy', castingAbility: ability,
+    description: `Bonus action immediately after a melee or unarmed hit. The hit deals 1d6 psychic damage and the target makes a Wisdom save (DC ${saveDC(mod, pb)}) or is Frightened until the end of your next turn.`,
+    isBonusAction: true, postHit: { trigger: 'melee_hit' }, targetScope: 'one_enemy', damage: '1d6', damageType: 'psychic',
+    savingThrow: { ability: 'wis', dc: saveDC(mod, pb), conditionOnFail: 'frightened', conditionDuration: 'end_of_next_turn' },
+  };
+}
+
+export function thunderousSmite(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Thunderous Smite', type: 'special', spellLevel: 1, spellSchool: 'evocation', castingAbility: ability,
+    description: `Bonus action immediately after a melee or unarmed hit. The hit deals 2d6 thunder damage and the target makes a Strength save (DC ${saveDC(mod, pb)}) or is pushed 10 feet away.`,
+    isBonusAction: true, postHit: { trigger: 'melee_hit' }, targetScope: 'one_enemy', damage: '2d6', damageType: 'thunder',
+    savingThrow: { ability: 'str', dc: saveDC(mod, pb) }, pushOnFailedSave: 10,
+  };
+}
+
 export function spikeGrowth(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
   return {
     name: 'Spike Growth', type: 'special', spellLevel: 2, spellSchool: 'transmutation', castingAbility: ability, concentration: true, durationRounds: 100,
@@ -1814,6 +1851,17 @@ export function sleetStorm(ability: SpellcastingAbility, mod: number, pb: number
   };
 }
 
+export function hungerOfHadar(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Hunger of Hadar', type: 'special', spellLevel: 3, spellSchool: 'conjuration', castingAbility: ability,
+    concentration: true, durationRounds: 10,
+    description: `A 20-foot-radius sphere within 150 feet is difficult terrain and heavily obscured. Creatures in the area make a Constitution save (DC ${saveDC(mod, pb)}) or take 2d6 cold damage; the area damages creatures at the start and end of their turns. Concentration, 1 minute.`,
+    range: { normal: 150, long: 150 }, targetScope: 'area_enemies', damageType: 'cold',
+    savingThrow: { ability: 'con', dc: saveDC(mod, pb), damageOnFail: '2d6', damageOnSuccess: 'half', area: '20-foot sphere' },
+    persistentAura: { automaticDamage: true, damageOnInitialCast: true, triggers: ['turnStart', 'turnEnd'] },
+  };
+}
+
 export function stinkingCloud(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
   return {
     name: 'Stinking Cloud', type: 'special', spellLevel: 3, spellSchool: 'conjuration', castingAbility: ability, concentration: true, durationRounds: 10,
@@ -1880,6 +1928,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Flaming Sphere', flamingSphere], ['Cloud of Daggers', cloudOfDaggers],
   ['Shatter', shatter], ['Moonbeam', moonbeam], ['Spiritual Weapon', spiritualWeapon],
   ['Aid', aid], ['Magic Weapon', magicWeapon], ['Shining Smite', shiningSmite],
+  ['Ensnaring Strike', ensnaringStrike], ['Searing Smite', searingSmite], ['Thunderous Smite', thunderousSmite], ['Wrathful Smite', wrathfulSmite],
   ['Blindness/Deafness', blindnessDeafness], ['Mirror Image', mirrorImage],
   ['Invisibility', invisibility],
   ['Counterspell', counterspell],
@@ -1895,6 +1944,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Beacon of Hope', beaconOfHope],
   ['Mass Healing Word', massHealingWord],
   ['Sleet Storm', sleetStorm],
+  ['Hunger of Hadar', hungerOfHadar],
   ['Stinking Cloud', stinkingCloud],
   ['Vampiric Touch', vampiricTouch],
   ['Slow', slow],

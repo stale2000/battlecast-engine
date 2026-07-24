@@ -31,9 +31,9 @@ import {
   hasResource, consumeResource,
   attachConcentrationAura, rollSaveWithBuffs, getSpellSaveDcBonus, applyDamageRollPenalty,
 } from './combat-buffs.js';
-import { resolveAoE } from './combat-aoe.js';
+import { pushTargetAwayFromCaster, resolveAoE } from './combat-aoe.js';
 import {
-  applyDamage, applyCondition, gainHp, pushLog, resolveAttack, getAliveCreatures, createSummonedCreature,
+  applyDamage, applyCondition, applyActionRuntimeEffects, gainHp, pushLog, resolveAttack, getAliveCreatures, createSummonedCreature,
   getEffectiveMoveSpeed, getEffectiveSaveModifier, resolveSpellReflection, createPersistentZone,
   type BattleState,
 } from './combat.js';
@@ -108,7 +108,7 @@ function clearHealingSpellConditions(
  * The arena has already resolved the weapon hit; this applies only the
  * spell's validated rider and never makes a second attack roll. */
 function executePostHitSpell(state: BattleState, caster: Creature, action: MonsterAction, target: Creature, slotLevelUsed: number): boolean {
-  if (!action.postHit || action.postHit.trigger !== 'melee_hit' || !target.isAlive || target.team === caster.team
+  if (!action.postHit || !['melee_hit', 'weapon_hit'].includes(action.postHit.trigger) || !target.isAlive || target.team === caster.team
     || state.pendingHit?.attackerId !== caster.id || state.pendingHit.targetId !== target.id
     || !state.pendingHit.actionNames.includes(action.name)) return false;
   if (action.concentration) {
@@ -124,16 +124,18 @@ function executePostHitSpell(state: BattleState, caster: Creature, action: Monst
     applyDamage(state, target, damage, action.damageType ?? 'untyped', caster, true, true, false);
     event.targetHpAfter = target.currentHp;
   }
-  if (action.savingThrow?.conditionOnFail && target.isAlive) {
+  if (action.savingThrow && target.isAlive) {
     const dc = action.savingThrow.dc + getSpellSaveDcBonus(caster, action);
     const save = rollSaveWithBuffs(target, getEffectiveSaveModifier(target, action.savingThrow.ability, state), false, dc, action.savingThrow.ability);
     const success = save.total >= dc;
     state.events.push({ kind: 'save', targetId: target.id, success, durationMs: BASE_DURATIONS.save });
     if (!success) {
-      applyCondition(state, target, action.savingThrow.conditionOnFail, caster, action.savingThrow.conditionDuration, dc, action.savingThrow.ability);
+      if (action.savingThrow.conditionOnFail) applyCondition(state, target, action.savingThrow.conditionOnFail, caster, action.savingThrow.conditionDuration, dc, action.savingThrow.ability);
+      if (action.pushOnFailedSave) pushTargetAwayFromCaster(state, caster, target, action.pushOnFailedSave, action.name);
     }
     pushLog(state, { round: state.round, turn: state.turnIndex, actor: caster.displayName, action: action.name, details: success ? `${target.displayName} succeeds on the ${action.name} save.` : `${target.displayName} fails the ${action.name} save.`, type: 'save' });
   }
+  applyActionRuntimeEffects(state, caster, target, action);
   void slotLevelUsed;
   return true;
 }
