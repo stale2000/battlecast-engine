@@ -171,6 +171,8 @@ describe('getAvailableSpells', () => {
     const warlock = getAvailableSpells('Warlock', 5).map(spell => spell.name);
     expect(warlock).toContain('Chill Touch');
     expect(warlock).not.toContain('Ray of Frost');
+    expect(getAvailableSpells('Cleric', 5).map(spell => spell.name)).toContain('Toll the Dead');
+    expect(getAvailableSpells('Wizard', 5).map(spell => spell.name)).toContain('Ice Knife');
   });
 
   it('keeps optional level-five spell lists aligned with the 2024 SRD classes', () => {
@@ -183,6 +185,9 @@ describe('getAvailableSpells', () => {
     for (const spell of ['Web']) expect(names('Sorcerer')).toContain(spell);
     for (const spell of ["Tasha's Hideous Laughter", 'Cloud of Daggers', 'Acid Arrow']) expect(names('Sorcerer')).not.toContain(spell);
     for (const spell of ['Counterspell', 'Cloud of Daggers']) expect(names('Warlock')).toContain(spell);
+    for (const spell of ['Branding Smite', 'Searing Smite', 'Thunderous Smite', 'Wrathful Smite']) expect(names('Paladin')).toContain(spell);
+    expect(names('Ranger')).toContain('Ensnaring Strike');
+    expect(names('Warlock')).toContain('Hunger of Hadar');
   });
 
   it('returns empty for martial classes', () => {
