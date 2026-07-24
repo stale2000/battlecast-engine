@@ -1,5 +1,5 @@
 import { engineRandom } from './rng.js';
-import { ActiveBuff, Creature, Condition, ConditionDuration, DarknessZone, MonsterAction, MonsterData, RuntimeTraitEffect } from '../types/monster.js';
+import { ActiveBuff, Creature, Condition, ConditionDuration, DarknessZone, MonsterAction, MonsterData, PersistentZone, RuntimeTraitEffect } from '../types/monster.js';
 import { AnimationEvent, BASE_DURATIONS, OA_ATTACK_DURATIONS } from '../types/animation.js';
 import { rollAttack, rollDamage, rollDice, rollInitiative, abilityModifier, rollSave, rollD20, maxDiceTotal } from './dice.js';
 import { lineOfSightBlocked } from '../types/terrain.js';
@@ -11,6 +11,7 @@ import {
 import {
   rollAttackBuffBonus, getRageDamageBonus,
   rollSaveWithBuffs, applyBuffDamageResistance, applyDamageRollPenalty,
+  getSpellSaveDcBonus,
   hasResource, consumeResource,
   lowestAvailableSlot,
   addBuff,
@@ -102,6 +103,8 @@ export interface BattleState {
   terrainSightBlocked?: Set<string>;
   /** Temporary magical-darkness areas, serialized with the encounter. */
   darknessZones?: DarknessZone[];
+  /** Static control terrain such as Grease. */
+  persistentZones?: PersistentZone[];
   /**
    * Optional environment override for research/special encounters. Land is
    * the default. Underwater uses Swim Speed when available, or half Walk
@@ -467,6 +470,7 @@ export function initBattle(creatures: Creature[], gridSize?: number): BattleStat
     gridSize,
     teamTactics: DEFAULT_TACTICS,
     darknessZones: [],
+    persistentZones: [],
   };
 }
 
@@ -2489,6 +2493,8 @@ export function processSourceTurnStartOngoingEffects(state: BattleState, source:
 
 export function processTargetTurnEndOngoingEffects(state: BattleState, target: Creature): void {
   if (!target.isAlive) return;
+  triggerPersistentZones(state, target, 'turnEnd');
+  if (!target.isAlive) return;
   for (const buff of [...(target.activeBuffs ?? [])]) {
     if (buff.saveEnds?.at !== 'targetTurnEnd') continue;
     const save = rollSaveWithBuffs(target, getEffectiveSaveModifier(target, buff.saveEnds.ability, state), buff.saveAdvantageOnNextSave === true, buff.saveEnds.dc, buff.saveEnds.ability);
@@ -3780,6 +3786,32 @@ export function passesSanctuary(state: BattleState, attacker: Creature, target: 
     details: `${attacker.displayName} cannot bring itself to attack ${target.displayName} (${save.total} vs DC ${sanctuaryDc}).`, type: 'save',
   });
   return false;
+}
+
+export function createPersistentZone(state: BattleState, caster: Creature, action: MonsterAction, center: { x: number; y: number } | undefined): void {
+  const config = action.persistentZone;
+  const save = action.savingThrow;
+  if (!config || !save?.conditionOnFail || !center) return;
+  state.persistentZones = (state.persistentZones ?? []).filter(zone => !(zone.sourceId === caster.id && zone.name === action.name));
+  state.persistentZones.push({
+    sourceId: caster.id, name: action.name, x: center.x, y: center.y, radius: config.radiusFt,
+    endRound: state.round + config.durationRounds, saveAbility: save.ability, saveDC: save.dc + getSpellSaveDcBonus(caster, action),
+    conditionOnFail: save.conditionOnFail, conditionDuration: save.conditionDuration ?? 'end_of_next_turn', triggers: config.triggers,
+  });
+}
+
+export function triggerPersistentZones(state: BattleState, target: Creature, trigger: 'entry' | 'turnEnd'): void {
+  state.persistentZones = (state.persistentZones ?? []).filter(zone => zone.endRound > state.round);
+  for (const zone of state.persistentZones ?? []) {
+    if (!zone.triggers.includes(trigger) || distance(target.position, { x: zone.x, y: zone.y }) > zone.radius) continue;
+    const source = getCreatureById(state, zone.sourceId);
+    if (!source?.isAlive) continue;
+    const save = rollSaveWithBuffs(target, getEffectiveSaveModifier(target, zone.saveAbility, state), hasActiveTrait(target, 'Magic Resistance'), zone.saveDC, zone.saveAbility, zone.conditionOnFail);
+    const passed = save.total >= zone.saveDC;
+    state.events.push({ kind: 'save', targetId: target.id, success: passed, durationMs: BASE_DURATIONS.save });
+    if (passed) continue;
+    applyCondition(state, target, zone.conditionOnFail, source, zone.conditionDuration, zone.saveDC, zone.saveAbility);
+  }
 }
 
 function resolveAttack(

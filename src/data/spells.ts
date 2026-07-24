@@ -369,13 +369,13 @@ export function hellishRebuke(ability: SpellcastingAbility, mod: number, pb: num
   };
 }
 
-/** 2024 SRD - prone battlefield control with no persistent terrain state. */
 export function grease(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
   return {
     name: 'Grease', type: 'special', spellLevel: 1, spellSchool: 'conjuration', castingAbility: ability,
-    description: `10-foot square within 60 ft. DEX save DC ${saveDC(mod, pb)} or Prone.`,
+    description: `10-foot square within 60 ft. Difficult Terrain for 1 minute. DEX save DC ${saveDC(mod, pb)} or Prone when it appears, when a creature enters, or when it ends a turn there.`,
     savingThrow: { ability: 'dex', dc: saveDC(mod, pb), conditionOnFail: 'prone', conditionDuration: 'end_of_next_turn', area: '10-foot square' },
     range: { normal: 60, long: 60 }, targetScope: 'area_enemies',
+    persistentZone: { radiusFt: 10, durationRounds: 10, triggers: ['entry', 'turnEnd'] },
   };
 }
 

@@ -34,7 +34,7 @@ import {
 import { resolveAoE } from './combat-aoe.js';
 import {
   applyDamage, gainHp, pushLog, resolveAttack, getAliveCreatures,
-  getEffectiveSaveModifier, resolveSpellReflection,
+  getEffectiveSaveModifier, resolveSpellReflection, createPersistentZone,
   type BattleState,
 } from './combat.js';
 
@@ -1069,6 +1069,7 @@ export function executeSpell(
       resolveAoE(state, caster, castAction, aoeTargets, aoeCenter, undefined, true);
     }
     attachConcentrationAura(state, caster, castAction, aoeCenter);
+    createPersistentZone(state, caster, castAction, aoeCenter);
     applyLandAidHeal(state, caster, castAction);
     return true;
   }
@@ -1079,6 +1080,7 @@ export function executeSpell(
       resolveAoE(state, caster, castAction, [primaryTarget], aoeCenter, undefined, true);
     }
     attachConcentrationAura(state, caster, castAction, aoeCenter);
+    createPersistentZone(state, caster, castAction, aoeCenter);
     return true;
   }
 

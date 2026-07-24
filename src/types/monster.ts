@@ -377,6 +377,8 @@ export interface MonsterAction {
   spiritualWeapon?: { moveFt: number };
   /** A damaging concentration area that remains after the initial cast. */
   persistentAura?: { moveFt?: number; automaticDamage?: boolean; damageOnInitialCast?: boolean };
+  /** Creates a static control zone whose triggers are resolved by the engine. */
+  persistentZone?: { radiusFt: number; durationRounds: number; triggers: Array<'entry' | 'turnEnd'> };
   /** Enables a later no-slot repeat of this concentration spell (Call Lightning). */
   repeatableAreaSpell?: true;
   /** The spell cannot affect a target wearing Heavy armor (Barkskin). */
@@ -936,6 +938,21 @@ export interface DarknessZone {
   radius: number;
   endRound: number;
   requiresConcentration: boolean;
+}
+
+/** A serialized battlefield zone that can impose a saving throw on entry or turn end. */
+export interface PersistentZone {
+  sourceId: string;
+  name: string;
+  x: number;
+  y: number;
+  radius: number;
+  endRound: number;
+  saveAbility: keyof Abilities;
+  saveDC: number;
+  conditionOnFail: Condition;
+  conditionDuration: ConditionDuration;
+  triggers: Array<'entry' | 'turnEnd'>;
 }
 
 export interface CreatureStats {

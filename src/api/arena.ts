@@ -16,6 +16,7 @@ import {
   pushLog,
   resolveAttack,
   resolveAoE,
+  triggerPersistentZones,
   moveConcentrationAura,
   tryUseBonusActionDamageBuff,
   useSpiritualWeaponAttack,
@@ -531,6 +532,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       if (!reachableMovementDestinations(active, state).some(cell => cell.x === destination.x && cell.y === destination.y)) throw new EncounterError('Illegal or stale move destination.');
       const oldPosition = { ...active.position };
       moveToDestination(active, destination, state);
+      if (active.position.x !== oldPosition.x || active.position.y !== oldPosition.y) triggerPersistentZones(state, active, 'entry');
       revealVisibleHiddenCreatures(state);
       active.hasMovedThisTurn = active.position.x !== oldPosition.x || active.position.y !== oldPosition.y;
       if ((active.position.x !== oldPosition.x || active.position.y !== oldPosition.y) && !active.turnFlags.arenaDisengaged && runOpportunityAttacks(state, active, oldPosition)) {

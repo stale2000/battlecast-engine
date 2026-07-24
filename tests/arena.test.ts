@@ -13,7 +13,7 @@ import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
-import { acidArrow, bane, barkskin, bestowCurse, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, cloudOfDaggers, command, dissonantWhispers, dispelMagic, flamingSphere, fly, haste, hellishRebuke, heroism, inflictWounds, invisibility, lesserRestoration, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, seeInvisibility, shield, shiningSmite, spiritualWeapon, tashasHideousLaughter, web, witchBolt } from '../src/data/spells.js';
+import { acidArrow, bane, barkskin, bestowCurse, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, cloudOfDaggers, command, dissonantWhispers, dispelMagic, flamingSphere, fly, grease, haste, hellishRebuke, heroism, inflictWounds, invisibility, lesserRestoration, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, seeInvisibility, shield, shiningSmite, spiritualWeapon, tashasHideousLaughter, web, witchBolt } from '../src/data/spells.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
@@ -531,6 +531,21 @@ describe('Kaggle arena bridge', () => {
     const rolls = [0, 0.99];
     withRng({ next: () => rolls.shift()! }, () => processTargetTurnEndOngoingEffects(encounter.state!, target));
     expect(target.activeBuffs.some(buff => buff.key === 'hideous-laughter')).toBe(false);
+  });
+
+  it('keeps Grease active for end-of-turn control saves', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [grease('int', 3, 3)], additionalResources: { 'slot-1': 1 } } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 2, y: 0 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    const target = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
+    withRng({ next: () => 0 }, () => expect(executeSpell(encounter.state!, caster, grease('int', 3, 3), target, [target], target.position)).toBe(true));
+    expect(encounter.state!.persistentZones).toHaveLength(1);
+    target.conditions = [];
+    target.conditionTimers = [];
+    withRng({ next: () => 0 }, () => processTargetTurnEndOngoingEffects(encounter.state!, target));
+    expect(target.conditions).toContain('prone');
   });
 
   it('protects a target from attacks by the listed creature types', () => {

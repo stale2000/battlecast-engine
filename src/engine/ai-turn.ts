@@ -9,7 +9,7 @@ import {
   processRegeneration, processRecharges, checkBattleComplete, applyDamage, applyCondition, applyTemporaryHp, pushLog,
   type TacticType,
   hasBuff, hasResource, consumeResource, addBuff,
-  processConcentrationAuras, checkAuraEntry, expireBuffsForCreature, expireSourceTurnBuffs, dropConcentratedBuffsFrom,
+  processConcentrationAuras, checkAuraEntry, triggerPersistentZones, expireBuffsForCreature, expireSourceTurnBuffs, dropConcentratedBuffsFrom,
   runDeathSave, stabiliseDyingAlly,
   getActiveSize, getActiveSpeed, getActiveTraits, hasActiveTrait,
   getEffectiveMoveSpeed, getEffectiveSaveModifier, getHydraHeadCount, canTakeReactions,
@@ -1607,6 +1607,7 @@ export function executeTurn(state: BattleState, creature: Creature): void {
         });
         // Aura-entry damage for moving into an enemy concentration aura.
         checkAuraEntry(state, creature, oldPosBeforeRepo);
+        triggerPersistentZones(state, creature, 'entry');
         if (!creature.isAlive || state.isComplete) return;
       }
       const reTargets = getAoETargets(state, creature, special);
@@ -1895,6 +1896,7 @@ export function executeTurn(state: BattleState, creature: Creature): void {
   // Check if movement caused any creature to enter a concentration aura
   if (didMove) {
     checkAuraEntry(state, creature, oldPosBeforeMove);
+    triggerPersistentZones(state, creature, 'entry');
     if (!creature.isAlive || state.isComplete) return;
   }
 
