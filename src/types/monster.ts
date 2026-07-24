@@ -356,6 +356,8 @@ export interface MonsterAction {
   teleport?: { distanceFt: number };
   /** Restores a recently dead creature to life. */
   revive?: { maxDeathRounds: number; hp: number };
+  /** Chooses one server-validated damage resistance for a spell effect. */
+  damageResistanceChoice?: { choices: string[]; selected?: string };
   /** Ends one selected spell effect on a target. The selected key is server-owned. */
   dispelMagic?: { maxSpellLevel: number; selectedKey?: string };
   /** Failed targets use their Reaction to flee directly away, provoking opportunity attacks. */

@@ -784,6 +784,7 @@ export function executeSpell(
     if (!primaryTarget || primaryTarget.isAlive || primaryTarget.team !== caster.team || deathRound === undefined
       || state.round - deathRound > action.revive.maxDeathRounds) return false;
   }
+  if (action.damageResistanceChoice && !action.damageResistanceChoice.choices.includes(action.damageResistanceChoice.selected ?? '')) return false;
   const level = action.spellLevel ?? 0;
   let slotLevelUsed = level;
   let spellSlotUsedForThisCast: number | null = null;

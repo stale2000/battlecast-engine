@@ -264,6 +264,14 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
           }
           continue;
         }
+        if (action.damageResistanceChoice) {
+          for (const target of spellTargets(active, state, action)) {
+            for (const damageResistance of action.damageResistanceChoice.choices) {
+              actions.push({ id: `spell:${actionIndex}:${slug(action.name)}:${target.id}:${damageResistance}`, type: 'spell', actionName: action.name, actionIndex, targetId: target.id, damageResistance });
+            }
+          }
+          continue;
+        }
         for (const target of spellTargets(active, state, action)) {
           actions.push({ id: `spell:${actionIndex}:${slug(action.name)}:${target.id}`, type: 'spell', actionName: action.name, actionIndex, targetId: target.id });
         }
@@ -439,6 +447,8 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
         ? { ...baseSpell, savingThrow: { ...baseSpell.savingThrow!, area: legal.areaShape } }
         : baseSpell && legal.effectKey && baseSpell.dispelMagic
           ? { ...baseSpell, dispelMagic: { ...baseSpell.dispelMagic, selectedKey: legal.effectKey } }
+          : baseSpell && legal.damageResistance && baseSpell.damageResistanceChoice && baseSpell.buff
+            ? { ...baseSpell, damageResistanceChoice: { ...baseSpell.damageResistanceChoice, selected: legal.damageResistance }, buff: { ...baseSpell.buff, resistDamageTypes: [legal.damageResistance] } }
           : baseSpell;
       if (!spell || spell.name !== legal.actionName || !isSpellAction(spell)) throw new EncounterError(`Stale arena spell "${legal.id}".`);
       if (!target || !executeSpell(state, active, spell, target, spell.autoDarts || spell.multiTargetAttack || spell.savingThrow?.area ? targets : undefined, legal.center)) throw new EncounterError(`Illegal or stale arena spell "${legal.id}".`);

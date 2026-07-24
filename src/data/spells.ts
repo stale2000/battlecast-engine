@@ -862,6 +862,7 @@ export function protectionFromEnergy(ability: SpellcastingAbility, _mod: number,
       name: 'Protection from Energy', key: 'protection-energy',
       requiresConcentration: true,
     },
+    damageResistanceChoice: { choices: ['acid', 'cold', 'fire', 'lightning', 'thunder'] },
     targetScope: 'one_ally',
   };
 }

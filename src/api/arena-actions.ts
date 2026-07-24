@@ -10,7 +10,7 @@ export type ClassFeatureArenaAction =
  */
 export type ArenaAction =
   | { id: string; type: 'attack'; actionName: string; actionIndex: number; targetId: string; goliathFeature?: GoliathAttackFeature; hasteAction?: boolean }
-  | { id: string; type: 'spell'; actionName: string; actionIndex: number; targetId: string; targetIds?: string[]; center?: { x: number; y: number }; areaShape?: string; effectKey?: string }
+  | { id: string; type: 'spell'; actionName: string; actionIndex: number; targetId: string; targetIds?: string[]; center?: { x: number; y: number }; areaShape?: string; effectKey?: string; damageResistance?: string }
   | { id: string; type: 'spell_teleport'; actionName: string; actionIndex: number; destination?: { x: number; y: number } }
   | { id: string; type: 'repeat_spell'; buffKey: string; targetId: string }
   | { id: string; type: 'spiritual_weapon'; targetId: string }
