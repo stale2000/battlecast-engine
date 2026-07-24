@@ -46,7 +46,7 @@ import {
   aid, magicWeapon, shiningSmite,
   acidArrow, acidSplash, armsOfHadar, barkskin, bestowCurse, bladeWard, blur, colorSpray, darkness, divineFavor, enlargeReduce, expeditiousRetreat, faerieFire, falseLife, fear, flameBlade, fly, fogCloud, grease, gustOfWind, heatMetal, iceKnife, lesserRestoration, mistyStep,
   armorOfAgathys, beaconOfHope, longstrider, mageArmor, massHealingWord, passWithoutTrace, poisonSpray, produceFlame, rayOfEnfeeblement, rayOfSickness, revivify, slow, starryWisp, stinkingCloud, tashasHideousLaughter, thunderclap, thornWhip, tollTheDead, trueStrike, vampiricTouch,
-  protectionFromPoison, resistance, shillelagh, sorcerousBurst, shield, hellishRebuke, sleetStorm, hungerOfHadar, windWall, brandingSmite, ensnaringStrike, searingSmite, thunderousSmite, wrathfulSmite,
+  protectionFromPoison, resistance, shillelagh, sorcerousBurst, shield, hellishRebuke, sleetStorm, hungerOfHadar, windWall, brandingSmite, ensnaringStrike, hailOfThorns, searingSmite, thunderousSmite, wrathfulSmite,
   circleOfDeath, chainLightning, disintegrate, fingerOfDeath,
   befuddlement, powerWordHeal, powerWordKill, meteorSwarm,
 } from './spells.js';
@@ -1655,6 +1655,7 @@ function buildClassSpells(
         repertoire.push(mark, cureWounds(spellAbility, mod, pb), entangle(spellAbility, mod, pb));
       }
       repertoire.push(aid(spellAbility, mod, pb), conjureBarrage(spellAbility, mod, pb), magicWeapon(spellAbility, mod, pb), protectionFromEnergy(spellAbility, mod, pb), stoneskin(spellAbility, mod, pb));
+      repertoire.push(hailOfThorns(spellAbility, mod, pb));
       break;
   }
 
@@ -1753,7 +1754,7 @@ function buildOptionalSpells(
       pool.push(dispelMagic(spellAbility, mod, pb));
       break;
     case 'Ranger':
-      pool.push(summonBeast(spellAbility, mod, pb), ensnaringStrike(spellAbility, mod, pb), windWall(spellAbility, mod, pb));
+      pool.push(summonBeast(spellAbility, mod, pb), ensnaringStrike(spellAbility, mod, pb), hailOfThorns(spellAbility, mod, pb), windWall(spellAbility, mod, pb));
       pool.push(fogCloud(spellAbility, mod, pb), barkskin(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb), lesserRestoration(spellAbility, mod, pb), longstrider(spellAbility, mod, pb), passWithoutTrace(spellAbility, mod, pb), protectionFromPoison(spellAbility, mod, pb));
       pool.push(spikeGrowth(spellAbility, mod, pb));
       pool.push(dispelMagic(spellAbility, mod, pb));
@@ -2582,6 +2583,7 @@ export function getAvailableSpells(
     case 'Ranger':
       repertoire.push(huntersMark(spellAbility, mod, pb), cureWounds(spellAbility, mod, pb), entangle(spellAbility, mod, pb));
       repertoire.push(aid(spellAbility, mod, pb), conjureBarrage(spellAbility, mod, pb), magicWeapon(spellAbility, mod, pb), protectionFromEnergy(spellAbility, mod, pb));
+      repertoire.push(hailOfThorns(spellAbility, mod, pb));
       break;
   }
 
@@ -2668,7 +2670,7 @@ export function getAvailableSpells(
       optional.push(dispelMagic(spellAbility, mod, pb));
       break;
     case 'Ranger':
-      optional.push(summonBeast(spellAbility, mod, pb), ensnaringStrike(spellAbility, mod, pb), windWall(spellAbility, mod, pb));
+      optional.push(summonBeast(spellAbility, mod, pb), ensnaringStrike(spellAbility, mod, pb), hailOfThorns(spellAbility, mod, pb), windWall(spellAbility, mod, pb));
       optional.push(fogCloud(spellAbility, mod, pb), barkskin(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb), lesserRestoration(spellAbility, mod, pb), longstrider(spellAbility, mod, pb));
       optional.push(passWithoutTrace(spellAbility, mod, pb), protectionFromPoison(spellAbility, mod, pb), spikeGrowth(spellAbility, mod, pb));
       optional.push(dispelMagic(spellAbility, mod, pb));

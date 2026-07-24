@@ -20,7 +20,7 @@ import {
   processConcentrationAuras,
 } from './combat-buffs.js';
 import { applyHealing, applyTemporaryHp } from './combat-spellcasting.js';
-import { pushTargetAwayFromCaster } from './combat-aoe.js';
+import { pushTargetAwayFromCaster, resolveAoE } from './combat-aoe.js';
 
 export interface BattleLog {
   round: number;
@@ -4466,6 +4466,30 @@ function resolveAttack(
         }
       }
       if (b.endsOnWeaponHit) dropConcentratedBuffsFrom(state, attacker.id);
+    }
+
+    // Hail of Thorns and similar effects burst around the target of the next
+    // ranged weapon hit, then consume their concentration-bound rider.
+    if (action.type === 'ranged' && action.spellLevel === undefined) {
+      const burst = attacker.activeBuffs.find(buff => buff.weaponHitArea);
+      if (burst?.weaponHitArea) {
+        const config = burst.weaponHitArea;
+        const areaTargets = state.creatures.filter(creature => creature.isAlive && creatureDistance(target, creature) <= config.radiusFt);
+        resolveAoE(state, attacker, {
+          name: burst.name,
+          type: 'special',
+          description: `${burst.name} burst`,
+          damageType: config.damageType,
+          savingThrow: {
+            ability: config.saveAbility,
+            dc: config.saveDc,
+            damageOnFail: config.damage,
+            damageOnSuccess: 'half',
+            area: `${config.radiusFt}-foot sphere`,
+          },
+        }, areaTargets, target.position, undefined, true);
+        dropConcentratedBuffsFrom(state, attacker.id);
+      }
     }
 
     // Sneak Attack / additional damage

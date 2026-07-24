@@ -564,6 +564,8 @@ export interface BuffTemplate {
   weaponAttacksMagical?: boolean;
   /** Extra magical damage on this creature's next weapon hit. */
   weaponDamageRider?: string;
+  /** Save-based burst on the next ranged weapon hit, centered on its target. */
+  weaponHitArea?: { damage: string; damageType: string; radiusFt: number; saveAbility: keyof Abilities; saveDc: number };
   /** Replaces the base weapon damage die while this buff is active (Shillelagh). */
   weaponDamageDie?: string;
   /** Restricts weapon overrides to named weapons (for example Club/Quarterstaff). */
@@ -1069,6 +1071,8 @@ export interface ActiveBuff {
   weaponDamagePenaltyDice?: string;
   weaponAttacksMagical?: boolean;
   weaponDamageRider?: string;
+  /** Save-based burst on the next ranged weapon hit, centered on its target. */
+  weaponHitArea?: { damage: string; damageType: string; radiusFt: number; saveAbility: keyof Abilities; saveDc: number };
   /** Replaces the base weapon damage die while this buff is active (Shillelagh). */
   weaponDamageDie?: string;
   /** Restricts weapon overrides to named weapons (for example Club/Quarterstaff). */

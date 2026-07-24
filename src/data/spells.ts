@@ -422,6 +422,18 @@ export function entangle(ability: SpellcastingAbility, mod: number, pb: number):
   };
 }
 
+export function hailOfThorns(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Hail of Thorns', type: 'special', spellLevel: 1, spellSchool: 'conjuration', castingAbility: ability,
+    description: `The next ranged weapon hit before concentration ends bursts in a 5-foot radius. DEX save DC ${saveDC(mod, pb)}; 1d10 piercing damage on a failed save, half on success.`,
+    isBonusAction: true, concentration: true, durationRounds: 10, targetScope: 'self',
+    buff: {
+      name: 'Hail of Thorns', key: 'hail-of-thorns', requiresConcentration: true,
+      weaponHitArea: { damage: '1d10', damageType: 'piercing', radiusFt: 5, saveAbility: 'dex', saveDc: saveDC(mod, pb) },
+    },
+  };
+}
+
 export function wardingBond(): MonsterAction {
   return {
     name: 'Warding Bond',
@@ -2080,7 +2092,7 @@ type SpellFactory = (ability: SpellcastingAbility, mod: number, pb: number) => M
 const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Magic Missile', () => magicMissile()],
   ['Blade Ward', bladeWard], ['Resistance', resistance], ['Shillelagh', shillelagh], ['Sorcerous Burst', sorcerousBurst], ['Poison Spray', poisonSpray], ['Produce Flame', produceFlame], ['Thorn Whip', thornWhip], ['Acid Splash', acidSplash], ['Starry Wisp', starryWisp], ['Thunderclap', thunderclap], ['Toll the Dead', tollTheDead], ['True Strike', trueStrike],
-  ['Shield', shield],
+  ['Shield', shield], ['Hail of Thorns', hailOfThorns],
   ['Hellish Rebuke', hellishRebuke],
   ['Burning Hands', burningHands], ['Thunderwave', thunderwave], ['Sleep', sleep],
   ['Bless', () => bless()], ['Bane', bane], ['Cure Wounds', cureWounds],

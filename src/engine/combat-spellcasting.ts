@@ -592,6 +592,7 @@ export function applyBuffFromSpell(
     weaponDamagePenaltyDice: tmpl.weaponDamagePenaltyDice,
     weaponAttacksMagical: tmpl.weaponAttacksMagical,
     weaponDamageRider: tmpl.weaponDamageRider,
+    weaponHitArea: tmpl.weaponHitArea,
     weaponDamageDie: tmpl.weaponDamageDie,
     weaponNames: tmpl.weaponNames,
     weaponAttackAbility: tmpl.weaponAttackAbility,
@@ -682,6 +683,15 @@ function scaleAttackSpellForSlot(action: MonsterAction, slotLevelUsed: number): 
     if (!extra) return action;
     const dice = `${2 + extra}d8`;
     return { ...action, initialDamage: dice, buff: { ...action.buff, bonusActionDamage: dice } };
+  }
+
+  if (action.name === 'Hail of Thorns' && action.buff?.weaponHitArea) {
+    const extra = Math.max(0, slotLevelUsed - (action.spellLevel ?? 1));
+    if (!extra) return action;
+    const match = action.buff.weaponHitArea.damage.match(/^(\d+)d10$/);
+    if (!match) return action;
+    const damage = `${parseInt(match[1], 10) + extra}d10`;
+    return { ...action, buff: { ...action.buff, weaponHitArea: { ...action.buff.weaponHitArea, damage } } };
   }
 
   if (action.name !== 'Witch Bolt' || !action.damage) return action;
