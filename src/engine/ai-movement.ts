@@ -99,6 +99,19 @@ function chebyshev(a: { x: number; y: number }, b: { x: number; y: number }): nu
   return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
 }
 
+/** A Frightened creature cannot voluntarily reduce its distance to the fear source. */
+export function isFrightenedMoveLegal(
+  creature: Creature,
+  destination: { x: number; y: number },
+  state: BattleState,
+): boolean {
+  const sources = (creature.activeBuffs ?? [])
+    .filter(buff => (buff.appliedConditions ?? (buff.appliedCondition ? [buff.appliedCondition] : [])).includes('frightened'))
+    .map(buff => state.creatures.find(candidate => candidate.id === buff.casterId))
+    .filter((source): source is Creature => Boolean(source?.isAlive));
+  return sources.every(source => chebyshev(destination, source.position) >= chebyshev(creature.position, source.position));
+}
+
 /**
  * A* pathfinding over the grid, respecting terrain + other creatures.
  * Goal is satisfied by ANY cell that's orthogonal-or-diagonal-adjacent
@@ -273,7 +286,7 @@ export function reachableMovementDestinations(
       if ((x === from.x && y === from.y) || chebyshev(from, destination) > maxSquares) continue;
       if (!isValidStep(destination, size, fp, state.creatures, creature.id, gridSize, movementBlocked)) continue;
       const path = findPath(from, destination, size, fp, state.creatures, creature.id, gridSize, movementBlocked, maxSquares, { exactGoal: true });
-      if (path.length && path[path.length - 1]?.x === x && path[path.length - 1]?.y === y) results.push({ x, y, distanceFt: path.length * 5 });
+      if (path.length && path[path.length - 1]?.x === x && path[path.length - 1]?.y === y && isFrightenedMoveLegal(creature, destination, state)) results.push({ x, y, distanceFt: path.length * 5 });
     }
   }
   return results.sort((left, right) => left.x - right.x || left.y - right.y);
@@ -281,7 +294,7 @@ export function reachableMovementDestinations(
 
 export function moveToDestination(creature: Creature, destination: { x: number; y: number }, state: BattleState): { x: number; y: number } {
   const reachable = reachableMovementDestinations(creature, state);
-  if (!reachable.some(cell => cell.x === destination.x && cell.y === destination.y)) return creature.position;
+  if (!reachable.some(cell => cell.x === destination.x && cell.y === destination.y) || !isFrightenedMoveLegal(creature, destination, state)) return creature.position;
   const from = { ...creature.position };
   const size = creature.wildShape?.size ?? creature.temporarySize ?? creature.monsterData.size;
   const fp = getFootprintSize(size);
@@ -370,6 +383,11 @@ export function moveToward(creature: Creature, target: { x: number; y: number },
         squaresUsed = chebyshev(from, found);
       }
     }
+  }
+
+  if (!isFrightenedMoveLegal(creature, current, state)) {
+    current = from;
+    squaresUsed = 0;
   }
 
   if (current.x !== from.x || current.y !== from.y) {

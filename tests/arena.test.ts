@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { Encounter } from '../src/api/encounter.js';
 import { getActiveCreature, getLegalActions, applyLegalAction, startArena } from '../src/api/arena.js';
-import { reachableMovementDestinations } from '../src/engine/ai-movement.js';
+import { isFrightenedMoveLegal, reachableMovementDestinations } from '../src/engine/ai-movement.js';
 import { processTurnStart } from '../src/engine/ai-turn.js';
 import { applyDamage, applyDamageRollPenalty, executeSpell, getEffectiveMoveSpeed, hasDisadvantage, processTargetTurnEndOngoingEffects, resolveAttack, rollAllInitiatives, runDeathSave } from '../src/engine/combat.js';
 import { dropConcentratedBuffsFrom } from '../src/engine/combat-buffs.js';
@@ -449,6 +449,18 @@ describe('Kaggle arena bridge', () => {
     const action = getLegalActions(encounter, caster.id).find(choice => choice.type === 'spell' && choice.actionName === 'Bestow Curse' && choice.curseChoice === 'damage_rider')!;
     applyLegalAction(encounter, action);
     expect(target.activeBuffs.find(buff => buff.key === 'bestow-curse')?.damageRider).toBe('1d8 necrotic');
+  });
+
+  it('rejects voluntary movement closer to the source of Fear', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 5, y: 0 } });
+    encounter.start();
+    const source = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    const frightened = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
+    frightened.activeBuffs.push({ name: 'Fear', key: 'fear', casterId: source.id, appliedRound: 1, endRound: 11, appliedConditions: ['frightened'] });
+    expect(isFrightenedMoveLegal(frightened, { x: 4, y: 0 }, encounter.state!)).toBe(false);
+    expect(isFrightenedMoveLegal(frightened, { x: 6, y: 0 }, encounter.state!)).toBe(true);
   });
 
   it('repeats Call Lightning from authoritative concentration state without another slot', () => {
