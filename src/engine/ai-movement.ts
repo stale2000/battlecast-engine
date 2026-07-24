@@ -282,6 +282,7 @@ export function reachableMovementDestinations(
   creature: Creature,
   state: BattleState,
 ): Array<{ x: number; y: number; distanceFt: number }> {
+  if (creature.mountedOnId) return [];
   const maxSquares = Math.floor(creature.movementRemaining / 5);
   if (maxSquares <= 0) return [];
   const from = { ...creature.position };
@@ -311,6 +312,8 @@ export function moveToDestination(creature: Creature, destination: { x: number; 
   const movementBlocked = movementBlockedSetFor(creature, state);
   const path = findPath(from, destination, size, fp, state.creatures, creature.id, state.gridSize, movementBlocked, Math.floor(creature.movementRemaining / 5), { exactGoal: true, movementCost: (current, position) => persistentZoneMovementCost(state, creature, current, position) });
   creature.position = destination;
+  const rider = creature.riderId ? state.creatures.find(candidate => candidate.id === creature.riderId) : undefined;
+  if (rider?.mountedOnId === creature.id) rider.position = { ...destination };
   creature.movementRemaining -= movementCostForPath(creature, state, from, path) * 5;
   state.events.push({ kind: 'move', creatureId: creature.id, from, to: destination, path: path.length > 1 ? [from, ...path] : undefined, durationMs: Math.min(BASE_DURATIONS.move * Math.max(1, path.length / 2), 800) });
   applyPersistentZoneMovementEffects(state, creature, path, from);

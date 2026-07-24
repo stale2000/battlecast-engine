@@ -227,7 +227,7 @@ export function getActiveSize(creature: Creature): MonsterData['size'] {
 }
 
 /** Adds a source-owned summon to an active encounter. Callers must supply a validated cell. */
-export function createSummonedCreature(state: BattleState, source: Creature, monsterData: MonsterData, position: { x: number; y: number }, durationRounds: number): Creature | null {
+export function createSummonedCreature(state: BattleState, source: Creature, monsterData: MonsterData, position: { x: number; y: number }, durationRounds?: number, options: { requiresConcentration?: boolean; controlledMount?: boolean } = {}): Creature | null {
   const gridSize = state.gridSize ?? 20;
   if (position.x < 0 || position.y < 0 || position.x + getFootprintSize(monsterData.size) > gridSize || position.y + getFootprintSize(monsterData.size) > gridSize
     || isPositionBlocked(position, monsterData.size, state.creatures, undefined, state.terrainBlocked)) return null;
@@ -235,7 +235,9 @@ export function createSummonedCreature(state: BattleState, source: Creature, mon
   summon.id = `summon-${source.id}-${state.round}-${state.creatures.filter(creature => creature.summonedById === source.id).length + 1}`;
   summon.displayName = `${source.displayName}'s ${monsterData.name}`;
   summon.summonedById = source.id;
-  summon.summonExpiresRound = state.round + durationRounds;
+  summon.summonExpiresRound = durationRounds === undefined ? undefined : state.round + durationRounds;
+  summon.summonRequiresConcentration = options.requiresConcentration;
+  summon.controlledMountForId = options.controlledMount ? source.id : undefined;
   summon.initiative = source.initiative;
   state.creatures.push(summon);
   if (state.initiativeOrder) {
@@ -2015,7 +2017,22 @@ function markPermanentlyDead(state: BattleState, target: Creature, attacker: Cre
   }
   target.conditions = [];
   target.conditionTimers = [];
+  if (target.mountedOnId) {
+    const mount = state.creatures.find(creature => creature.id === target.mountedOnId);
+    if (mount?.riderId === target.id) mount.riderId = undefined;
+    target.mountedOnId = undefined;
+  }
   dropConcentratedBuffsFrom(state, target.id);
+  for (const rider of state.creatures) {
+    if (rider.mountedOnId !== target.id) continue;
+    rider.mountedOnId = undefined;
+    rider.position = { ...target.position };
+  }
+  const dismissedSummons = new Set(state.creatures.filter(creature => creature.summonedById === target.id).map(creature => creature.id));
+  if (dismissedSummons.size) {
+    state.creatures = state.creatures.filter(creature => !dismissedSummons.has(creature.id));
+    state.initiativeOrder = state.initiativeOrder.filter(id => !dismissedSummons.has(id));
+  }
   target.activeBuffs = [];
   if (attacker) attacker.stats.killCount++;
   applyDarkOnesBlessingOnDeath(state, target, attacker);

@@ -368,7 +368,11 @@ export interface MonsterAction {
   /** Creates one controlled creature at a visible, unoccupied destination. */
   summon?: {
     rangeFt: number;
-    durationRounds: number;
+    durationRounds?: number;
+    /** The creature is a controlled mount for its caster when ridden. */
+    controlledMount?: boolean;
+    /** Whether losing the caster's concentration dismisses this creature. */
+    requiresConcentration?: boolean;
     variants: Array<{
       key: string;
       monsterData: MonsterData;
@@ -707,9 +711,16 @@ export interface Creature {
   superiorHunterDefense?: { damageType: string; round: number; turnIndex: number };
   recharges: Record<string, boolean>; // track recharge abilities
   concentratingOn?: string;
-  /** Source-owned creature created by a concentration summon spell. */
+  /** Source-owned creature created by a summon spell. */
   summonedById?: string;
   summonExpiresRound?: number;
+  summonRequiresConcentration?: boolean;
+  /** A controlled mount carries this rider. Positions are kept in sync. */
+  mountedOnId?: string;
+  /** The creature this controlled mount carries. */
+  riderId?: string;
+  /** The caster allowed to ride this controlled mount. */
+  controlledMountForId?: string;
   stats: CreatureStats;
   /**
    * Generic counter store for consumable resources: spell slots

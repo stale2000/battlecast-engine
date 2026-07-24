@@ -95,6 +95,35 @@ function hasUnusedHasteAction(creature: Creature): boolean {
     && (creature.activeBuffs ?? []).some(buff => buff.hasteAction);
 }
 
+function mountingCost(creature: Creature, state: NonNullable<Encounter['state']>): number {
+  return Math.ceil(getEffectiveMoveSpeed(creature, state) / 2);
+}
+
+function isIncapacitated(creature: Creature): boolean {
+  return creature.conditions.includes('incapacitated') || creature.conditions.includes('unconscious') || creature.conditions.includes('paralyzed') || creature.conditions.includes('stunned');
+}
+
+function mountActions(state: NonNullable<Encounter['state']>, active: Creature): ArenaAction[] {
+  const gridSize = state.gridSize ?? 20;
+  const cost = mountingCost(active, state);
+  if (active.mountedOnId) {
+    const mount = state.creatures.find(candidate => candidate.id === active.mountedOnId);
+    if (!mount || !mount.isAlive || active.movementRemaining < cost) return [];
+    const size = active.wildShape?.size ?? active.temporarySize ?? active.monsterData.size;
+    const footprint = getFootprintSize(size);
+    const choices: ArenaAction[] = [];
+    for (let y = Math.max(0, mount.position.y - 1); y <= Math.min(gridSize - footprint, mount.position.y + 1); y++) for (let x = Math.max(0, mount.position.x - 1); x <= Math.min(gridSize - footprint, mount.position.x + 1); x++) {
+      if (isPositionBlocked({ x, y }, size, state.creatures.filter(candidate => candidate.id !== mount.id), active.id, state.terrainBlocked)) continue;
+      choices.push({ id: `dismount:${mount.id}:${x},${y}`, type: 'dismount', mountId: mount.id, destination: { x, y } });
+    }
+    return choices;
+  }
+  if (active.movementRemaining < cost) return [];
+  return state.creatures
+    .filter(candidate => candidate.isAlive && candidate.team === active.team && candidate.controlledMountForId === active.id && !candidate.riderId && creatureDistance(active, candidate) <= 5)
+    .map(candidate => ({ id: `mount:${candidate.id}`, type: 'mount' as const, mountId: candidate.id }));
+}
+
 function monkUnarmedAction(active: Creature): [number, MonsterAction] | undefined {
   const entries = getActiveActions(active).entries();
   return Array.from(entries).find(([, action]) => action.type === 'melee' && action.attackBonus !== undefined && action.name === 'Martial Arts (Unarmed)')
@@ -288,6 +317,15 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
   if (!state || !active || active.id !== creatureId) return [];
   const enemies = state.creatures.filter(c => c.team !== active.team && c.isAlive && !c.dying);
   const actions: ArenaAction[] = [];
+  const rider = active.riderId ? state.creatures.find(candidate => candidate.id === active.riderId) : undefined;
+  if (active.controlledMountForId && rider?.mountedOnId === active.id && !isIncapacitated(rider)) {
+    if (reachableMovementDestinations(active, state).length) actions.push({ id: 'move_to', type: 'move_to' });
+    if (active.movementRemaining > 0) actions.push({ id: 'dash', type: 'dash', isBonusAction: false });
+    actions.push({ id: 'dodge', type: 'dodge' });
+    actions.push({ id: 'disengage', type: 'disengage', isBonusAction: false });
+    actions.push({ id: 'end_turn', type: 'end_turn' });
+    return actions;
+  }
   const attackInProgress = attacksUsed(active) > 0;
   const hasteOnly = active.hasActed && hasUnusedHasteAction(active);
   if (!active.hasActed || hasteOnly) {
@@ -404,6 +442,7 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
     for (const target of enemies.filter(target => creatureDistance(active, target) <= 5)) actions.push({ id: `repeat_action_spell:${slug(active.repeatableActionSpell.name)}:${target.id}`, type: 'repeat_action_spell', spellName: active.repeatableActionSpell.name, targetId: target.id });
   }
   actions.push(...repeatAreaSpellActions(state, active));
+  actions.push(...mountActions(state, active));
   if (!active.hasActed && active.concentrationAura?.origin === 'point' && active.concentrationAura.moveFt && active.concentrationAura.endRound > state.round
     && !active.concentrationAura.movedThisTurn && (!active.concentrationAura.moveRequiresCasterMove || active.hasMovedThisTurn)) actions.push({ id: 'move_aura', type: 'move_aura' });
   if (reachableMovementDestinations(active, state).length) actions.push({ id: 'move_to', type: 'move_to' });
@@ -640,6 +679,26 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
         checkBattleComplete(state);
         if (!state.isComplete) endTurn(encounter, active);
       }
+    } else if (legal.type === 'mount') {
+      const mount = state.creatures.find(candidate => candidate.id === legal.mountId);
+      const cost = mountingCost(active, state);
+      if (!mount || active.mountedOnId || !mount.isAlive || mount.team !== active.team || mount.controlledMountForId !== active.id || mount.riderId || creatureDistance(active, mount) > 5 || active.movementRemaining < cost) throw new EncounterError('Illegal or stale arena mount.');
+      active.mountedOnId = mount.id;
+      mount.riderId = active.id;
+      active.position = { ...mount.position };
+      active.movementRemaining -= cost;
+      pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Mount', details: `${active.displayName} mounts ${mount.displayName}.`, type: 'move' });
+    } else if (legal.type === 'dismount') {
+      const mount = state.creatures.find(candidate => candidate.id === legal.mountId);
+      const cost = mountingCost(active, state);
+      const size = active.wildShape?.size ?? active.temporarySize ?? active.monsterData.size;
+      const destination = legal.destination;
+      if (!mount || active.mountedOnId !== mount.id || mount.riderId !== active.id || active.movementRemaining < cost || Math.max(Math.abs(destination.x - mount.position.x), Math.abs(destination.y - mount.position.y)) > 1 || isPositionBlocked(destination, size, state.creatures.filter(candidate => candidate.id !== mount.id), active.id, state.terrainBlocked)) throw new EncounterError('Illegal or stale arena dismount.');
+      active.mountedOnId = undefined;
+      mount.riderId = undefined;
+      active.position = { ...destination };
+      active.movementRemaining -= cost;
+      pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Dismount', details: `${active.displayName} dismounts ${mount.displayName}.`, type: 'move' });
     } else if (legal.type === 'dash') {
       active.movementRemaining += getEffectiveMoveSpeed(active, state);
       if (legal.isBonusAction) active.bonusActionUsed = true;

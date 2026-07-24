@@ -31,7 +31,7 @@ import { monsters } from './monsters.js';
 import {
   FULL_CASTER_SLOTS, HALF_CASTER_SLOTS, WARLOCK_SLOTS, slotsToResources,
   magicMissile, burningHands, thunderwave, sleep,
-  scorchingRay, summonBeast, conjureAnimals, web, spikeGrowth, flamingSphere, cloudOfDaggers, shatter, moonbeam, holdPerson, spiritualWeapon,
+  scorchingRay, summonBeast, findSteed, conjureAnimals, web, spikeGrowth, flamingSphere, cloudOfDaggers, shatter, moonbeam, holdPerson, spiritualWeapon,
   fireball, lightningBolt, spiritGuardians, callLightning, hypnoticPattern,
   bless, bane, cureWounds, healingWord, heroism, protectionFromEvilAndGood, sanctuary, shieldOfFaith, guidingBolt,
   hex, huntersMark, dissonantWhispers, entangle,
@@ -1637,6 +1637,7 @@ function buildClassSpells(
       }
       if (level >= 3) repertoire.push(shieldOfFaith());
       repertoire.push(aid(spellAbility, mod, pb), magicWeapon(spellAbility, mod, pb), shiningSmite(spellAbility, mod, pb));
+      if (level >= 5) repertoire.push(findSteed(spellAbility, mod, pb));
       repertoire.push(blindingSmite(spellAbility, mod, pb));
       repertoire.push(banishment(spellAbility, mod, pb), deathWard(spellAbility, mod, pb));
       repertoire.push(flameStrike(spellAbility, mod, pb));
@@ -2566,6 +2567,7 @@ export function getAvailableSpells(
     case 'Paladin':
       repertoire.push(bless(), cureWounds(spellAbility, mod, pb), shieldOfFaith());
       repertoire.push(aid(spellAbility, mod, pb), magicWeapon(spellAbility, mod, pb), shiningSmite(spellAbility, mod, pb));
+      if (level >= 5) repertoire.push(findSteed(spellAbility, mod, pb));
       repertoire.push(blindingSmite(spellAbility, mod, pb));
       repertoire.push(banishment(spellAbility, mod, pb), deathWard(spellAbility, mod, pb));
       repertoire.push(flameStrike(spellAbility, mod, pb));

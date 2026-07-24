@@ -104,6 +104,12 @@ function clearHealingSpellConditions(
   }
 }
 
+function applySteedLifeBond(state: BattleState, caster: Creature, amount: number): void {
+  if (amount <= 0) return;
+  const steed = state.creatures.find(creature => creature.controlledMountForId === caster.id && creature.isAlive);
+  if (steed && creatureDistance(caster, steed) <= 5) applyHealing(state, steed, amount, caster, 'Life Bond');
+}
+
 function tryAutomaticCounterspell(state: BattleState, caster: Creature, action: MonsterAction): boolean {
   if (action.name === 'Counterspell' || (action.spellLevel ?? 0) > 3) return false;
   const counterspeller = state.creatures
@@ -951,6 +957,8 @@ export function executeSpell(
       || !canSeePoint(state, caster, aoeCenter)) return false;
     const from = { ...caster.position };
     caster.position = { ...aoeCenter };
+    const rider = caster.riderId ? state.creatures.find(candidate => candidate.id === caster.riderId) : undefined;
+    if (rider?.mountedOnId === caster.id) rider.position = { ...aoeCenter };
     state.events.push({ kind: 'move', creatureId: caster.id, from, to: { ...aoeCenter }, durationMs: 0 });
     pushLog(state, { round: state.round, turn: state.turnIndex, actor: caster.displayName, action: castAction.name, details: `${caster.displayName} teleports to (${aoeCenter.x}, ${aoeCenter.y}).`, type: 'move' });
     return true;
@@ -978,7 +986,23 @@ export function executeSpell(
       { name: 'Multiattack', type: 'multiattack', description: `The spirit makes ${Math.max(1, Math.floor(slotLevelUsed / variant.attack.attacksPerSpellLevels))} ${variant.attack.actionName} attack${slotLevelUsed >= variant.attack.attacksPerSpellLevels * 2 ? 's' : ''}.` },
       ...monsterData.actions,
     ];
-    const summon = createSummonedCreature(state, caster, monsterData, aoeCenter, castAction.summon.durationRounds);
+    if (castAction.summon.controlledMount) {
+      const previousSteeds = new Set(state.creatures.filter(creature => creature.controlledMountForId === caster.id).map(creature => creature.id));
+      for (const rider of state.creatures) {
+        if (!rider.mountedOnId || !previousSteeds.has(rider.mountedOnId)) continue;
+        const steed = state.creatures.find(creature => creature.id === rider.mountedOnId);
+        rider.mountedOnId = undefined;
+        rider.position = { ...(steed?.position ?? caster.position) };
+      }
+      if (previousSteeds.size) {
+        state.creatures = state.creatures.filter(creature => !previousSteeds.has(creature.id));
+        state.initiativeOrder = state.initiativeOrder.filter(id => !previousSteeds.has(id));
+      }
+    }
+    const summon = createSummonedCreature(state, caster, monsterData, aoeCenter, castAction.summon.durationRounds, {
+      requiresConcentration: castAction.summon.requiresConcentration ?? castAction.concentration === true,
+      controlledMount: castAction.summon.controlledMount,
+    });
     if (!summon) return false;
     pushLog(state, { round: state.round, turn: state.turnIndex, actor: caster.displayName, action: castAction.name, details: `${caster.displayName} summons ${summon.displayName}.`, type: 'special' });
     return true;
@@ -1091,6 +1115,7 @@ export function executeSpell(
         const beforeHeal = t.currentHp;
         const amount = capHealingTotalForAction(castAction, t, rollHealingTotal(caster, castAction, spellSlotUsedForThisCast, t));
         applyHealing(state, t, amount, caster, castAction.name);
+        if (t.id === caster.id && spellSlotUsedForThisCast !== null) applySteedLifeBond(state, caster, Math.max(0, t.currentHp - beforeHeal));
         clearHealingSpellConditions(state, caster, t, castAction);
         if (t.id !== caster.id && t.currentHp > beforeHeal) healedAnotherCreature = true;
       }
@@ -1098,6 +1123,7 @@ export function executeSpell(
       const beforeHeal = primaryTarget.currentHp;
       const amount = capHealingTotalForAction(castAction, primaryTarget, rollHealingTotal(caster, castAction, spellSlotUsedForThisCast, primaryTarget));
       applyHealing(state, primaryTarget, amount, caster, castAction.name);
+      if (primaryTarget.id === caster.id && spellSlotUsedForThisCast !== null) applySteedLifeBond(state, caster, Math.max(0, primaryTarget.currentHp - beforeHeal));
       clearHealingSpellConditions(state, caster, primaryTarget, castAction);
       if (primaryTarget.id !== caster.id && primaryTarget.currentHp > beforeHeal) healedAnotherCreature = true;
     }

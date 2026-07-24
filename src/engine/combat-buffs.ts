@@ -306,7 +306,7 @@ export function dropConcentratedBuffsFrom(
     caster.repeatableAreaSpell = undefined;
     caster.repeatableActionSpell = undefined;
   }
-  state.creatures = state.creatures.filter(creature => creature.summonedById !== casterId);
+  state.creatures = state.creatures.filter(creature => creature.summonedById !== casterId || !creature.summonRequiresConcentration);
   if (state.initiativeOrder) state.initiativeOrder = state.initiativeOrder.filter(id => state.creatures.some(creature => creature.id === id));
   for (const creature of state.creatures) {
     if (creature.temporaryFlightSourceId !== casterId) continue;

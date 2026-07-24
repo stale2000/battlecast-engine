@@ -600,6 +600,33 @@ export function summonBeast(ability: SpellcastingAbility, mod: number, pb: numbe
   };
 }
 
+function otherworldlySteed(kind: 'celestial' | 'fey' | 'fiend', mod: number, pb: number): MonsterData {
+  const damageType = kind === 'celestial' ? 'radiant' : kind === 'fey' ? 'psychic' : 'necrotic';
+  const actions: MonsterAction[] = [{
+    name: 'Otherworldly Slam', type: 'melee', attackBonus: spellAttackBonus(mod, pb), damage: '1d8+2', damageType, reach: 5, magical: true,
+    description: `Melee Attack Roll: your spell attack modifier, reach 5 ft. Hit: 1d8 + the spell's level ${damageType} damage.`,
+  }];
+  if (kind === 'celestial') actions.push({ name: 'Healing Touch', type: 'special', isBonusAction: true, targetScope: 'one_ally', range: { normal: 5, long: 5 }, resourceCost: { key: 'healing-touch', amount: 1 }, heal: { dice: '2d8+2', addCastingMod: false }, description: 'One creature within 5 feet regains 2d8 plus the spell’s level Hit Points. (1/Long Rest)' });
+  if (kind === 'fey') actions.push({ name: 'Fey Step', type: 'special', isBonusAction: true, targetScope: 'self', resourceCost: { key: 'fey-step', amount: 1 }, teleport: { distanceFt: 60 }, description: 'Teleport, along with your rider, to an unoccupied space within 60 feet. (1/Long Rest)' });
+  if (kind === 'fiend') actions.push({ name: 'Fell Glare', type: 'special', targetScope: 'one_enemy', range: { normal: 60, long: 60 }, resourceCost: { key: 'fell-glare', amount: 1 }, savingThrow: { ability: 'wis', dc: saveDC(mod, pb), conditionOnFail: 'frightened', conditionDuration: 'end_of_next_turn' }, description: 'One creature within 60 feet makes a Wisdom save or is Frightened until the end of your next turn. (1/Long Rest)' });
+  return {
+    name: `Otherworldly Steed (${kind[0]!.toUpperCase()}${kind.slice(1)})`, size: 'Large', type: kind[0]!.toUpperCase() + kind.slice(1), alignment: 'Neutral', ac: 12, hp: 25, hpFormula: '25', speed: { walk: 60 },
+    abilities: { str: 18, dex: 12, con: 14, int: 6, wis: 12, cha: 8 }, saves: { str: 7, dex: 4, con: 5, int: 1, wis: 4, cha: 2 }, senses: 'Passive Perception 11', languages: 'Telepathy 1 mile (works only with its summoner)', cr: '0', xp: 0, proficiencyBonus: pb,
+    actions, initialResources: kind === 'celestial' ? { 'healing-touch': 1 } : kind === 'fey' ? { 'fey-step': 1 } : { 'fell-glare': 1 },
+  };
+}
+
+export function findSteed(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Find Steed', type: 'special', spellLevel: 2, spellSchool: 'conjuration', castingAbility: ability, targetScope: 'self',
+    description: 'Summon a loyal Otherworldly Steed in an unoccupied space within 30 feet. It is a controlled mount while you ride it and disappears if you die or it drops to 0 Hit Points.',
+    summon: {
+      rangeFt: 30, controlledMount: true, requiresConcentration: false,
+      variants: (['celestial', 'fey', 'fiend'] as const).map(key => ({ key, monsterData: otherworldlySteed(key, mod, pb), hpPerSlotLevel: 10, acPerSlotLevel: 1, attack: { actionName: 'Otherworldly Slam', dice: '1d8', baseBonus: 0, baseSpellLevel: 2 } })),
+    },
+  };
+}
+
 export function conjureAnimals(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
   return {
     name: 'Conjure Animals', type: 'special', spellLevel: 3, spellSchool: 'conjuration', castingAbility: ability,
@@ -1827,7 +1854,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Enlarge/Reduce', enlargeReduce],
   ['Mage Armor', mageArmor],
   ['Ray of Enfeeblement', rayOfEnfeeblement], ['Ray of Sickness', rayOfSickness], ["Tasha's Hideous Laughter", tashasHideousLaughter],
-  ['Scorching Ray', scorchingRay], ['Summon Beast', summonBeast], ['Conjure Animals', conjureAnimals], ['Web', web], ['Spike Growth', spikeGrowth], ['Hold Person', holdPerson],
+  ['Scorching Ray', scorchingRay], ['Summon Beast', summonBeast], ['Find Steed', findSteed], ['Conjure Animals', conjureAnimals], ['Web', web], ['Spike Growth', spikeGrowth], ['Hold Person', holdPerson],
   ['Flaming Sphere', flamingSphere], ['Cloud of Daggers', cloudOfDaggers],
   ['Shatter', shatter], ['Moonbeam', moonbeam], ['Spiritual Weapon', spiritualWeapon],
   ['Aid', aid], ['Magic Weapon', magicWeapon], ['Shining Smite', shiningSmite],

@@ -14,7 +14,7 @@ import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildCustomHero, buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
-import { acidArrow, armorOfAgathys, bane, barkskin, beaconOfHope, bestowCurse, bladeWard, bless, blindingSmite, buildSpellAction, callLightning, chromaticOrb, cloudOfDaggers, command, conjureAnimals, counterspell, cureWounds, dissonantWhispers, dispelMagic, enlargeReduce, entangle, expeditiousRetreat, fireball, flamingSphere, fly, grease, gustOfWind, haste, hellishRebuke, heroism, inflictWounds, invisibility, lesserRestoration, mageArmor, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, seeInvisibility, shield, shiningSmite, slow, spikeGrowth, spiritualWeapon, summonBeast, tashasHideousLaughter, web, witchBolt } from '../src/data/spells.js';
+import { acidArrow, armorOfAgathys, bane, barkskin, beaconOfHope, bestowCurse, bladeWard, bless, blindingSmite, buildSpellAction, callLightning, chromaticOrb, cloudOfDaggers, command, conjureAnimals, counterspell, cureWounds, dissonantWhispers, dispelMagic, enlargeReduce, entangle, expeditiousRetreat, findSteed, fireball, flamingSphere, fly, grease, gustOfWind, haste, hellishRebuke, heroism, inflictWounds, invisibility, lesserRestoration, mageArmor, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, seeInvisibility, shield, shiningSmite, slow, spikeGrowth, spiritualWeapon, summonBeast, tashasHideousLaughter, web, witchBolt } from '../src/data/spells.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
@@ -2149,6 +2149,36 @@ describe('Kaggle arena bridge', () => {
     const caster = encounter.state!.creatures.find(creature => creature.id === druid.id)!;
     expect(trySpellcast(encounter.state!, caster)).toBe(true);
     expect(encounter.state!.creatures.some(creature => creature.summonedById === caster.id)).toBe(true);
+  });
+
+  it('summons and controls a Find Steed mount at Paladin level five', () => {
+    expect(buildSpellAction('Find Steed', 'cha', 3, 3)?.summon).toBeTruthy();
+    expect(getAvailableSpells('Paladin', 5).some(spell => spell.name === 'Find Steed')).toBe(true);
+    const encounter = new Encounter({ seed: 1, gridSize: 12 });
+    const [paladin] = encounter.addCreature({ heroClass: 'Paladin', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [findSteed('cha', 3, 3)] } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 8, y: 8 } });
+    encounter.start();
+    encounter.state!.initiativeOrder = [paladin.id];
+    startArena(encounter);
+    const activePaladin = encounter.state!.creatures.find(creature => creature.id === paladin.id)!;
+    const summon = getLegalActions(encounter, paladin.id).find(action => action.type === 'spell_summon' && action.actionName === 'Find Steed' && action.variantKey === 'celestial' && action.destination?.x === 1 && action.destination?.y === 1)!;
+    applyLegalAction(encounter, summon);
+    const steed = encounter.state!.creatures.find(creature => creature.controlledMountForId === paladin.id)!;
+    expect(steed).toMatchObject({ monsterData: { ac: 12 }, currentHp: 25, initiative: activePaladin.initiative });
+    const mount = getLegalActions(encounter, activePaladin.id).find(action => action.type === 'mount' && action.mountId === steed.id)!;
+    applyLegalAction(encounter, mount);
+    expect(activePaladin).toMatchObject({ mountedOnId: steed.id, position: steed.position });
+    applyLegalAction(encounter, getLegalActions(encounter, activePaladin.id).find(action => action.type === 'end_turn')!);
+    const steedMove = getLegalActions(encounter, steed.id).find(action => action.type === 'move_to')!;
+    expect(getLegalActions(encounter, steed.id).some(action => action.type === 'attack')).toBe(false);
+    const destination = reachableMovementDestinations(steed, encounter.state!).find(cell => cell.x === 3 && cell.y === 1)!;
+    applyLegalAction(encounter, { ...steedMove, destination });
+    expect(activePaladin.position).toEqual(steed.position);
+    dropConcentratedBuffsFrom(encounter.state!, activePaladin.id);
+    expect(encounter.state!.creatures.some(creature => creature.id === steed.id)).toBe(true);
+    applyDamage(encounter.state!, activePaladin, 999, 'force', null);
+    expect(encounter.state!.creatures.some(creature => creature.id === steed.id)).toBe(false);
+    expect(activePaladin.mountedOnId).toBeUndefined();
   });
 
   it('resolves Conjure Animals as a movable spectral pack with its own timing rules', () => {

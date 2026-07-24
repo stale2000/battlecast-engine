@@ -26,6 +26,8 @@ export type ArenaAction =
   | { id: string; type: 'escape_condition'; buffKey: string }
   | { id: string; type: 'help'; targetId: string }
   | { id: string; type: 'healer_battle_medic'; targetId: string }
+  | { id: string; type: 'mount'; mountId: string }
+  | { id: string; type: 'dismount'; mountId: string; destination: { x: number; y: number } }
   | ClassFeatureArenaAction
   | OriginArenaAction
   | { id: string; type: 'wild_shape'; beastName: string }
