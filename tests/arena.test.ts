@@ -1904,6 +1904,10 @@ describe('Kaggle arena bridge', () => {
     for (const heroClass of ['Paladin', 'Ranger', 'Sorcerer', 'Wizard'] as const) expect(getAvailableSpells(heroClass, 5).some(action => action.name === 'Magic Weapon')).toBe(true);
   });
 
+  it('offers Protection from Evil and Good to every SRD caster class', () => {
+    for (const heroClass of ['Cleric', 'Druid', 'Paladin', 'Warlock', 'Wizard'] as const) expect(getAvailableSpells(heroClass, 5).some(action => action.name === 'Protection from Evil and Good')).toBe(true);
+  });
+
   it('offers and resolves supported resource actions without trusting client parameters', () => {
     const encounter = new Encounter({ seed: 1 });
     const [fighter] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'red', position: { x: 0, y: 0 } });
