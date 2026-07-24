@@ -662,6 +662,27 @@ export function escapeGrapple(
   return true;
 }
 
+/** Resolve an action-based check that ends one spell buff, such as Entangle or Web. */
+export function escapeBuff(
+  state: BattleState,
+  target: Creature,
+  buffKey: string,
+): boolean {
+  const buff = target.activeBuffs.find(candidate => candidate.key === buffKey && candidate.escapeAction);
+  if (!buff?.escapeAction) return false;
+  const rolled = rollAttack(0, target.monsterData.heroSpecies === 'Goliath', false);
+  const total = rolled.naturalRoll + abilityModifier(getEffectiveAbilityScore(target, buff.escapeAction.ability));
+  const success = total >= buff.escapeAction.dc;
+  state.events.push({ kind: 'save', targetId: target.id, success, durationMs: BASE_DURATIONS.save });
+  if (success) removeActiveBuff(state, target, buff);
+  pushLog(state, {
+    round: state.round, turn: state.turnIndex, actor: target.displayName, action: `Escape ${buff.name}`,
+    details: `${target.displayName} ${success ? 'escapes' : 'fails to escape'} ${buff.name} (${total} vs DC ${buff.escapeAction.dc}).`,
+    type: success ? 'special' : 'condition',
+  });
+  return true;
+}
+
 function hasOriginFeat(creature: Creature, feat: string): boolean {
   return creature.monsterData.originFeat === feat || creature.monsterData.originFeats?.includes(feat) === true;
 }

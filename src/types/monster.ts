@@ -509,6 +509,8 @@ export interface BuffTemplate {
   saveAdvantageConditions?: Condition[];
   /** Repeat this save at the specified point and remove the buff on success. */
   saveEnds?: { ability: keyof Abilities; dc: number; at: 'targetTurnEnd'; advantageOnDamage?: boolean };
+  /** An action-based ability check that can end this effect. */
+  escapeAction?: { ability: keyof Abilities; dc: number };
 }
 
 export interface MonsterTrait {
@@ -935,6 +937,7 @@ export interface ActiveBuff {
   saveAdvantageConditions?: Condition[];
   /** Repeat this save at the specified point and remove the buff on success. */
   saveEnds?: { ability: keyof Abilities; dc: number; at: 'targetTurnEnd'; advantageOnDamage?: boolean };
+  escapeAction?: { ability: keyof Abilities; dc: number };
   /** A damage-triggered advantage marker consumed by the next save-end roll. */
   saveAdvantageOnNextSave?: boolean;
 }

@@ -23,6 +23,7 @@ import {
   tryUseBonusActionDamageBuff,
   useSpiritualWeaponAttack,
   escapeGrapple,
+  escapeBuff,
 } from '../engine/combat.js';
 import { canSee, getActiveActions } from '../engine/ai-targeting.js';
 import { canDetectWithTremorsense, canSeePoint, revealVisibleHiddenCreatures } from '../engine/visibility.js';
@@ -361,6 +362,9 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
       actions.push({ id: `escape_grapple:${timer.sourceId}:str`, type: 'escape_grapple', sourceId: timer.sourceId, ability: 'str' });
       actions.push({ id: `escape_grapple:${timer.sourceId}:dex`, type: 'escape_grapple', sourceId: timer.sourceId, ability: 'dex' });
     }
+    for (const buff of active.activeBuffs.filter(buff => buff.escapeAction)) {
+      actions.push({ id: `escape_condition:${buff.key}`, type: 'escape_condition', buffKey: buff.key });
+    }
   }
   if (hasteOnly) {
     if (active.movementRemaining > 0) actions.push({ id: 'haste_dash', type: 'dash', isBonusAction: false, hasteAction: true });
@@ -581,6 +585,9 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       });
     } else if (legal.type === 'escape_grapple') {
       if (!escapeGrapple(state, active, legal.sourceId, legal.ability)) throw new EncounterError('Illegal or stale arena grapple escape.');
+      active.hasActed = true;
+    } else if (legal.type === 'escape_condition') {
+      if (!escapeBuff(state, active, legal.buffKey)) throw new EncounterError('Illegal or stale arena condition escape.');
       active.hasActed = true;
     } else if (legal.type === 'help') {
       const target = state.creatures.find(creature => creature.id === legal.targetId);

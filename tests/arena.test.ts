@@ -270,6 +270,24 @@ describe('Kaggle arena bridge', () => {
     expect(encounter.state!.persistentZones).toHaveLength(0);
   });
 
+  it('requires an action, rather than an automatic save, to escape Web', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [web('int', 3, 3)], additionalResources: { 'slot-2': 1 } } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 1, y: 0 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    const target = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
+    withRng({ next: () => 0 }, () => expect(executeSpell(encounter.state!, caster, web('int', 3, 3), target, [target], target.position)).toBe(true));
+    withRng({ next: () => 0.99 }, () => processTargetTurnEndOngoingEffects(encounter.state!, target));
+    expect(target.activeBuffs.some(buff => buff.key === 'web')).toBe(true);
+    encounter.state!.initiativeOrder = [target.id];
+    startArena(encounter);
+    const action = getLegalActions(encounter, target.id).find(choice => choice.type === 'escape_condition' && choice.buffKey === 'web')!;
+    withRng({ next: () => 0.99 }, () => applyLegalAction(encounter, action));
+    expect(target.conditions).not.toContain('restrained');
+    expect(target.activeBuffs.some(buff => buff.key === 'web')).toBe(false);
+  });
+
   it('reapplies Entangle when a creature enters its persisted area', () => {
     const encounter = new Encounter({ seed: 1 });
     encounter.addCreature({ heroClass: 'Druid', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [entangle('wis', 3, 3)], additionalResources: { 'slot-1': 1 } } });

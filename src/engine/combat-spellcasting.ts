@@ -532,6 +532,7 @@ export function applyBuffFromSpell(
     saveAdvantageAbilities: tmpl.saveAdvantageAbilities,
     saveAdvantageConditions: tmpl.saveAdvantageConditions,
     saveEnds: tmpl.saveEnds,
+    escapeAction: tmpl.escapeAction,
   };
   addBuff(target, buff);
   for (const condition of tmpl.appliedConditions ?? (tmpl.appliedCondition ? [tmpl.appliedCondition] : [])) {

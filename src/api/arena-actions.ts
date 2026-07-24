@@ -21,6 +21,7 @@ export type ArenaAction =
   | { id: 'disengage' | 'bonus_disengage' | 'haste_disengage'; type: 'disengage'; isBonusAction: boolean; hasteAction?: boolean }
   | { id: 'hide' | 'bonus_hide' | 'haste_hide'; type: 'hide'; isBonusAction: boolean; hasteAction?: boolean }
   | { id: string; type: 'escape_grapple'; sourceId: string; ability: 'str' | 'dex' }
+  | { id: string; type: 'escape_condition'; buffKey: string }
   | { id: string; type: 'help'; targetId: string }
   | { id: string; type: 'healer_battle_medic'; targetId: string }
   | ClassFeatureArenaAction
