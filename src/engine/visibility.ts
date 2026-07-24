@@ -29,7 +29,7 @@ export function magicalDarknessBlocksSight(
 
 /** Geometric visibility, intentionally ignoring an existing Hide result. */
 export function canSeeCreatureIgnoringHide(state: BattleState, observer: Creature, target: Creature): boolean {
-  if (target.conditions.includes('invisible')) return false;
+  if (target.conditions.includes('invisible') && !(observer.activeBuffs ?? []).some(buff => buff.canSeeInvisible)) return false;
   if (magicalDarknessBlocksSight(state.darknessZones, state.round, observer, target)) return false;
   const sightBlocked = state.terrainSightBlocked;
   if (!sightBlocked?.size) return true;

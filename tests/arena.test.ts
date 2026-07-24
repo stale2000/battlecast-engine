@@ -13,7 +13,7 @@ import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
-import { bane, barkskin, bestowCurse, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, dissonantWhispers, dispelMagic, fly, haste, hellishRebuke, heroism, invisibility, lesserRestoration, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, resistance, revivify, sanctuary, scorchingRay, shield, shiningSmite, spiritualWeapon, web, witchBolt } from '../src/data/spells.js';
+import { bane, barkskin, bestowCurse, bladeWard, bless, blindingSmite, callLightning, chromaticOrb, dissonantWhispers, dispelMagic, fly, haste, hellishRebuke, heroism, invisibility, lesserRestoration, magicWeapon, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, resistance, revivify, sanctuary, scorchingRay, seeInvisibility, shield, shiningSmite, spiritualWeapon, web, witchBolt } from '../src/data/spells.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
@@ -489,6 +489,19 @@ describe('Kaggle arena bridge', () => {
     const attack = attacker.monsterData.actions.find(action => action.type === 'melee' && action.attackBonus !== undefined)!;
     expect(executeSpell(encounter.state!, protectedCreature, protectionFromEvilAndGood('wis', 3, 3), protectedCreature)).toBe(true);
     expect(hasDisadvantage(attacker, protectedCreature, attack)).toBe(true);
+  });
+
+  it('lets See Invisibility observe an invisible creature', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalResources: { 'slot-2': 1 } } });
+    encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'blue', position: { x: 2, y: 0 }, heroOverrides: { additionalResources: { 'slot-2': 1 } } });
+    encounter.start();
+    const invisible = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    const observer = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
+    expect(executeSpell(encounter.state!, invisible, invisibility('int', 3, 3), invisible)).toBe(true);
+    expect(canSee(encounter.state!, observer, invisible)).toBe(false);
+    expect(executeSpell(encounter.state!, observer, seeInvisibility('int', 3, 3), observer)).toBe(true);
+    expect(canSee(encounter.state!, observer, invisible)).toBe(true);
   });
 
   it('repeats Call Lightning from authoritative concentration state without another slot', () => {

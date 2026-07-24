@@ -1499,6 +1499,15 @@ export function invisibility(ability: SpellcastingAbility, _mod: number, _pb: nu
   };
 }
 
+export function seeInvisibility(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'See Invisibility', type: 'special', spellLevel: 2, spellSchool: 'divination', castingAbility: ability,
+    durationRounds: 600,
+    description: 'For 1 hour, you can see Invisible creatures and objects as though they were visible.',
+    targetScope: 'self', buff: { name: 'See Invisibility', key: 'see-invisibility', canSeeInvisible: true },
+  };
+}
+
 export function dispelMagic(_ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
   void _ability;
   void _mod;
@@ -1586,6 +1595,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Aid', aid], ['Magic Weapon', magicWeapon], ['Shining Smite', shiningSmite],
   ['Blindness/Deafness', blindnessDeafness], ['Mirror Image', mirrorImage],
   ['Invisibility', invisibility],
+  ['See Invisibility', seeInvisibility],
   ['Gust of Wind', gustOfWind], ['Lesser Restoration', lesserRestoration], ['Protection from Poison', protectionFromPoison],
   ['Misty Step', mistyStep],
   ['Blur', blur], ['Barkskin', barkskin],

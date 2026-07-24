@@ -485,6 +485,8 @@ export interface BuffTemplate {
   sanctuarySaveDc?: number;
   /** Attackers of these creature types have Disadvantage against the target. */
   attackersOfTypesHaveDisadvantage?: string[];
+  /** This creature can see Invisible creatures. */
+  canSeeInvisible?: boolean;
   /** Grants the restricted one-attack/Dash/Disengage/Hide action from Haste. */
   hasteAction?: boolean;
   /** Ability-specific saving throw Advantage, such as Haste's Dexterity saves. */
@@ -907,6 +909,7 @@ export interface ActiveBuff {
   mirrorImages?: number;
   sanctuarySaveDc?: number;
   attackersOfTypesHaveDisadvantage?: string[];
+  canSeeInvisible?: boolean;
   hasteAction?: boolean;
   saveAdvantageAbilities?: Array<keyof Abilities>;
   /** Repeat this save at the specified point and remove the buff on success. */
