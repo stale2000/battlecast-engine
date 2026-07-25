@@ -38,6 +38,7 @@ import {
   applyActionRuntimeEffects, emptyDamageSummary, addDamageToSummary,
   conditionTargetMatchesActionSize, hasTotalCoverFromContainer, logTotalCoverFromContainer, passesSanctuary,
   isImmuneToDamageType,
+  canTakeReactions,
   type BattleState,
 } from './combat.js';
 import { runOpportunityAttacks } from './ai-turn.js';
@@ -206,7 +207,8 @@ function findCountercharmBard(state: BattleState, target: Creature): Creature | 
     .filter(c => c.team === target.team)
     .filter(c => c.monsterData.heroClass === 'Bard' && (c.monsterData.heroLevel ?? 0) >= 7)
     .filter(c => c.monsterData.reactionPreferences?.countercharm?.enabled ?? true)
-    .filter(c => !c.reactionUsed && creatureDistance(c, target) <= 30)
+    .filter(c => canTakeReactions(c) && !c.conditions.some(condition => ['incapacitated', 'paralyzed', 'stunned', 'unconscious'].includes(condition)))
+    .filter(c => creatureDistance(c, target) <= 30)
     .sort((a, b) => (b.monsterData.heroLevel ?? 0) - (a.monsterData.heroLevel ?? 0))[0];
 }
 
@@ -218,20 +220,23 @@ function tryCountercharm(
   dc: number,
   ability: keyof Creature['monsterData']['abilities'],
 ): { total: number; passed: boolean } | null {
-  if (!conditionOnFail || !['charmed', 'frightened'].includes(conditionOnFail)) return null;
+  if (!conditionOnFail || !['charmed', 'frightened'].includes(conditionOnFail as string)) return null;
+  const charmCondition = conditionOnFail as 'charmed' | 'frightened';
   const bard = findCountercharmBard(state, target);
   if (!bard) return null;
+  const allowed = bard.monsterData.reactionPreferences?.countercharm?.conditions ?? ['charmed', 'frightened'];
+  if (!allowed.includes(charmCondition)) return null;
 
   bard.reactionUsed = true;
   bard.stats.actionUsage['Countercharm'] = (bard.stats.actionUsage['Countercharm'] || 0) + 1;
-  const reroll = rollSaveWithBuffs(target, saveMod, true, dc, ability, conditionOnFail);
+  const reroll = rollSaveWithBuffs(target, saveMod, true, dc, ability, charmCondition);
   const passed = reroll.total >= dc;
   pushLog(state, {
     round: state.round,
     turn: state.turnIndex,
     actor: bard.displayName,
     action: 'Countercharm',
-    details: `${bard.displayName} forces ${target.displayName} to reroll the ${conditionOnFail} save with Advantage (${reroll.total} vs DC ${dc}).`,
+    details: `${bard.displayName} forces ${target.displayName} to reroll the ${charmCondition} save with Advantage (${reroll.total} vs DC ${dc}).`,
     type: passed ? 'save' : 'special',
   });
   return { total: reroll.total, passed };

@@ -284,6 +284,16 @@ function reactionMeetsDamage(creature: Creature, key: keyof NonNullable<Creature
   return damage >= (preference && 'minDamage' in preference ? preference.minDamage ?? 0 : 0);
 }
 
+/** Keep a configured pool of spell slots available for the creature's turn. */
+export function reactionMeetsSlotReserve(creature: Creature, key: 'shield' | 'hellishRebuke' | 'counterspell', slotCost: number): boolean {
+  const reserve = creature.monsterData.reactionPreferences?.[key]?.reserveSlots ?? 0;
+  if (reserve <= 0) return true;
+  const remaining = Object.entries(creature.resources ?? {})
+    .filter(([resource]) => /^slot-[1-9]$/.test(resource))
+    .reduce((sum, [, amount]) => sum + Math.max(0, amount), 0);
+  return remaining - slotCost >= reserve;
+}
+
 export function getActiveTraits(creature: Creature) {
   return creature.wildShape?.traits ?? creature.monsterData.traits ?? [];
 }
@@ -1858,7 +1868,7 @@ function tryAutomaticShield(state: BattleState, target: Creature, rollTotal: num
   if (!reactionEnabled(target, 'shield') || naturalRoll === 20 || rollTotal < ac || rollTotal >= ac + 5 || !canTakeReactions(target)) return false;
   const shield = target.monsterData.actions.find(action => action.name === 'Shield' && action.reactionOnly);
   const slot = lowestAvailableSlot(target);
-  if (!shield || slot === null) return false;
+  if (!shield || slot === null || !reactionMeetsSlotReserve(target, 'shield', 1)) return false;
   consumeResource(target, `slot-${slot}`);
   target.reactionUsed = true;
   addBuff(target, { name: 'Shield', key: `shield:${target.id}`, casterId: target.id, appliedRound: state.round, endRound: state.round + 1, acBonus: 5 });
@@ -3401,7 +3411,7 @@ function applyDamage(state: BattleState, target: Creature, damage: number, damag
     const slot = resourceKey ? null : lowestAvailableSlot(target);
     const canPay = resourceKey
       ? consumeResource(target, resourceKey, hellishRebuke.resourceCost!.amount)
-      : slot !== null && consumeResource(target, `slot-${slot}`);
+      : slot !== null && reactionMeetsSlotReserve(target, 'hellishRebuke', 1) && consumeResource(target, `slot-${slot}`);
     if (canPay && hellishRebuke.savingThrow?.damageOnFail) {
       target.reactionUsed = true;
       const save = rollSaveWithBuffs(attacker, getEffectiveSaveModifier(attacker, hellishRebuke.savingThrow.ability, state), false, hellishRebuke.savingThrow.dc, hellishRebuke.savingThrow.ability);
@@ -3841,6 +3851,7 @@ function applyCuttingWordsToAttackRoll(
   if (naturalRoll === 20 || roll.total < ac) return;
   const bard = findCuttingWordsBard(state, target, attacker);
   if (!bard) return;
+  if ((bard.monsterData.reactionPreferences?.cuttingWords?.mode ?? 'both') === 'damage') return;
   const die = bardicInspirationDieForLevel(bard.monsterData.heroLevel ?? 1);
   if (roll.total - maxRollForDie(die) >= ac) return;
   const penalty = rollDice(die).total;
@@ -3895,6 +3906,7 @@ function applyCuttingWordsToDamageRoll(
   if (damage <= 0) return damage;
   const bard = findCuttingWordsBard(state, target, attacker);
   if (!bard) return damage;
+  if ((bard.monsterData.reactionPreferences?.cuttingWords?.mode ?? 'both') === 'attack') return damage;
   const die = bardicInspirationDieForLevel(bard.monsterData.heroLevel ?? 1);
   const reduction = Math.min(damage, rollDice(die).total);
   useCuttingWords(state, bard, attacker, reduction, 'damage');

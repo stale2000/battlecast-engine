@@ -192,6 +192,33 @@ describe('Bard defensive and Power Word features', () => {
     expect(state.logs.some(l => l.action === 'Countercharm')).toBe(true);
   });
 
+  it('Countercharm obeys the disabled reaction policy', () => {
+    const bard = createCreatureWithFixedHp(buildHero('Bard', 7), 'blue', { x: 1, y: 1 }, 0);
+    bard.monsterData.reactionPreferences = { countercharm: { enabled: false } };
+    const ally = createCreatureWithFixedHp(makeTarget(), 'blue', { x: 2, y: 1 }, 1);
+    const enemy = createCreatureWithFixedHp(makeTarget(), 'red', { x: 3, y: 1 }, 2);
+    const dread: MonsterAction = { name: 'Dreadful Glare', type: 'special', description: 'WIS save or frightened.', savingThrow: { ability: 'wis', dc: 15, conditionOnFail: 'frightened', conditionDuration: '1_minute' } };
+    const state = stateWith([bard, ally, enemy]);
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    resolveSingleTargetSave(state, enemy, ally, dread);
+    expect(ally.conditions).toContain('frightened');
+    expect(bard.reactionUsed).toBeFalsy();
+    expect(state.logs.some(l => l.action === 'Countercharm')).toBe(false);
+  });
+
+  it('Countercharm cannot be used while the Bard is incapacitated', () => {
+    const bard = createCreatureWithFixedHp(buildHero('Bard', 7), 'blue', { x: 1, y: 1 }, 0);
+    bard.conditions.push('incapacitated');
+    const ally = createCreatureWithFixedHp(makeTarget(), 'blue', { x: 2, y: 1 }, 1);
+    const enemy = createCreatureWithFixedHp(makeTarget(), 'red', { x: 3, y: 1 }, 2);
+    const dread: MonsterAction = { name: 'Dreadful Glare', type: 'special', description: 'WIS save or frightened.', savingThrow: { ability: 'wis', dc: 15, conditionOnFail: 'frightened', conditionDuration: '1_minute' } };
+    const state = stateWith([bard, ally, enemy]);
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    resolveSingleTargetSave(state, enemy, ally, dread);
+    expect(ally.conditions).toContain('frightened');
+    expect(bard.reactionUsed).toBeFalsy();
+  });
+
   it('Words of Creation lets Power Word Kill affect a second nearby enemy', () => {
     const bard = createCreatureWithFixedHp(buildHero('Bard', 20), 'blue', { x: 1, y: 1 }, 0);
     const enemy1 = createCreatureWithFixedHp(makeTarget({ hp: 80 }), 'red', { x: 4, y: 1 }, 1);

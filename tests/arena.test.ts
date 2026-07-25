@@ -200,6 +200,19 @@ describe('Kaggle arena bridge', () => {
     expect(target.stats.actionUsage.Shield).toBe(1);
   });
 
+  it('honors reaction spell-slot reserves for Shield and Hellish Rebuke', () => {
+    const encounter = new Encounter({ seed: 1 });
+    encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [{ name: 'Test Strike', type: 'melee', description: 'test', attackBonus: 9, damage: '1d8', damageType: 'slashing', reach: 5 }] } });
+    encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'blue', position: { x: 1, y: 0 }, heroOverrides: { acOverride: 10, reactionPreferences: { shield: { enabled: true, reserveSlots: 1 } }, additionalActions: [shield('int', 3, 3)], additionalResources: { 'slot-1': 1 } } });
+    encounter.start();
+    const attacker = encounter.state!.creatures.find(creature => creature.team === 'red')!;
+    const target = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
+    const hp = target.currentHp;
+    withRng({ next: () => 0.5 }, () => resolveAttack(encounter.state!, attacker, target, attacker.monsterData.actions.find(action => action.name === 'Test Strike')!));
+    expect(target.currentHp).toBeLessThan(hp);
+    expect(target.resources['slot-1']).toBe(1);
+  });
+
   it('resolves Hellish Rebuke as an authoritative reaction rather than a turn action', () => {
     const encounter = new Encounter({ seed: 1 });
     encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [{ name: 'Test Strike', type: 'melee', description: 'test', attackBonus: 100, damage: '1d4', damageType: 'slashing', reach: 5 }] } });
@@ -1101,6 +1114,17 @@ describe('Kaggle arena bridge', () => {
     expect(result.observations.red.publicCombatState.creatures.filter(c => c.team === 'blue').every(c => !('build' in c) && !('hp' in c) && 'creatureType' in c && 'visibleEquipment' in c)).toBe(true);
     expect(result.observations.red.publicCombatState.creatures.filter(c => c.team === 'red').every(c => 'build' in c && 'preparedSpells' in c.build && 'equipment' in c.build)).toBe(true);
     expect(() => kaggleStep({ ...init(), redParty: { characters: [{ heroClass: 'Fighter', abilities: { str: 15, dex: 15, con: 15, int: 15, wis: 15, cha: 15 } }] } })).toThrow(/exactly four/);
+  });
+
+  it('shows reaction policy only to its owner', () => {
+    const policy = { shield: { enabled: false }, uncannyDodge: { enabled: true, minDamage: 7 } };
+    const party = { characters: Array.from({ length: 4 }, () => ({ heroClass: 'Fighter', abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, reactionPreferences: policy })) };
+    const result = kaggleStep({ ...init(), redParty: party, blueParty: party });
+    const own = result.observations.red.publicCombatState.creatures.filter(c => c.team === 'red');
+    const opponent = result.observations.red.publicCombatState.creatures.filter(c => c.team === 'blue');
+    expect(own.every(c => 'build' in c && c.build.reactionPreferences)).toBe(true);
+    expect(own[0] && 'build' in own[0] ? own[0].build.reactionPreferences : undefined).toEqual(policy);
+    expect(opponent.every(c => !('build' in c) && !('reactionPreferences' in c))).toBe(true);
   });
 
   it('validates optional class cantrip selections without changing default builds', () => {

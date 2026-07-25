@@ -50,11 +50,13 @@ function parseReactionPreferences(value: unknown, label: string): ReactionPrefer
   for (const [key, raw] of Object.entries(input)) {
     const policy = assertArenaObject(raw, `${label}.reactionPreferences.${key}`);
     if (typeof policy.enabled !== 'boolean') throw new EncounterError(`${label}.reactionPreferences.${key}.enabled must be boolean.`);
-    for (const field of ['minDamage', 'maxSpellLevel']) {
+    for (const field of ['minDamage', 'maxSpellLevel', 'reserveSlots']) {
       const numeric = policy[field];
       if (numeric !== undefined && (!Number.isInteger(numeric) || (numeric as number) < 0 || (field === 'maxSpellLevel' && (numeric as number) > 9))) throw new EncounterError(`${label}.reactionPreferences.${key}.${field} is invalid.`);
     }
     if (policy.redirect !== undefined && typeof policy.redirect !== 'boolean') throw new EncounterError(`${label}.reactionPreferences.${key}.redirect must be boolean.`);
+    if (policy.mode !== undefined && !['attack', 'damage', 'both'].includes(policy.mode as string)) throw new EncounterError(`${label}.reactionPreferences.${key}.mode is invalid.`);
+    if (policy.conditions !== undefined && (!Array.isArray(policy.conditions) || policy.conditions.some(condition => condition !== 'charmed' && condition !== 'frightened'))) throw new EncounterError(`${label}.reactionPreferences.${key}.conditions is invalid.`);
     (result as Record<string, unknown>)[key] = { ...policy };
   }
   return result;

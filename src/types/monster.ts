@@ -1138,15 +1138,15 @@ export interface ActiveBuff {
 }
 
 export interface ReactionPreferences {
-  shield?: { enabled: boolean };
+  shield?: { enabled: boolean; reserveSlots?: number };
   uncannyDodge?: { enabled: boolean; minDamage?: number };
   deflectAttacks?: { enabled: boolean; minDamage?: number; redirect?: boolean };
   stoneEndurance?: { enabled: boolean; minDamage?: number };
   superiorHuntersDefense?: { enabled: boolean; minDamage?: number };
-  hellishRebuke?: { enabled: boolean; minDamage?: number };
-  counterspell?: { enabled: boolean; maxSpellLevel?: number };
-  cuttingWords?: { enabled: boolean };
-  countercharm?: { enabled: boolean };
+  hellishRebuke?: { enabled: boolean; minDamage?: number; reserveSlots?: number };
+  counterspell?: { enabled: boolean; maxSpellLevel?: number; reserveSlots?: number };
+  cuttingWords?: { enabled: boolean; mode?: 'attack' | 'damage' | 'both' };
+  countercharm?: { enabled: boolean; conditions?: Array<'charmed' | 'frightened'> };
   retaliation?: { enabled: boolean; minDamage?: number };
   stormThunder?: { enabled: boolean; minDamage?: number };
   infernalRebuke?: { enabled: boolean; minDamage?: number };

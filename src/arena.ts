@@ -45,6 +45,7 @@ function observation(encounter: Encounter, team: Team) {
           species: c.monsterData.heroSpecies, speciesChoice: c.monsterData.heroSpeciesChoice, speciesCastingAbility: c.monsterData.heroSpeciesCastingAbility, background: c.monsterData.heroBackground, originFeat: c.monsterData.originFeat, originFeats: c.monsterData.originFeats,
           abilities: { ...c.monsterData.abilities }, ac: c.monsterData.ac, speed: { ...c.monsterData.speed },
           equipment: visibleEquipment(c), cantrips: c.monsterData.speciesCantrips, preparedSpells: preparedSpells(c),
+          reactionPreferences: c.monsterData.reactionPreferences ? structuredClone(c.monsterData.reactionPreferences) : undefined,
         },
       }
     : {

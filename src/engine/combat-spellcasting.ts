@@ -34,7 +34,7 @@ import {
 import { pushTargetAwayFromCaster, resolveAoE } from './combat-aoe.js';
 import {
   applyDamage, applyCondition, applyActionRuntimeEffects, gainHp, pushLog, resolveAttack, getAliveCreatures, createSummonedCreature, stabiliseDyingAlly,
-  getEffectiveMoveSpeed, getEffectiveSaveModifier, resolveSpellReflection, createPersistentZone, isCreatureSilenced,
+  getEffectiveMoveSpeed, getEffectiveSaveModifier, resolveSpellReflection, createPersistentZone, isCreatureSilenced, reactionMeetsSlotReserve,
   type BattleState,
 } from './combat.js';
 
@@ -155,6 +155,7 @@ function tryAutomaticCounterspell(state: BattleState, caster: Creature, action: 
   const counterspeller = state.creatures
     .filter(candidate => candidate.isAlive && candidate.team !== caster.team && (candidate.monsterData.reactionPreferences?.counterspell?.enabled ?? true) && !candidate.reactionUsed && !candidate.conditions.some(condition => ['incapacitated', 'paralyzed', 'stunned', 'unconscious'].includes(condition)) && creatureDistance(candidate, caster) <= 60)
     .filter(candidate => candidate.monsterData.actions.some(candidateAction => candidateAction.name === 'Counterspell' && candidateAction.reactionOnly) && hasResource(candidate, 'slot-3'))
+    .filter(candidate => reactionMeetsSlotReserve(candidate, 'counterspell', 1))
     .sort((left, right) => left.id.localeCompare(right.id))[0];
   if (!counterspeller) return false;
   if ((action.spellLevel ?? 0) > (counterspeller.monsterData.reactionPreferences?.counterspell?.maxSpellLevel ?? 3)) return false;
@@ -391,6 +392,8 @@ function clearPowerWordHealConditions(
       type: 'condition',
     });
   }
+  // Power Word Heal explicitly grants standing as part of the spell; it is
+  // not an independently configurable reaction policy.
   if (target.conditions.includes('prone') && !target.reactionUsed) {
     target.reactionUsed = true;
     target.conditions = target.conditions.filter(c => c !== 'prone');
