@@ -619,6 +619,12 @@ function applyArenaMount(state: NonNullable<Encounter['state']>, active: Creatur
   pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Dismount', details: `${active.displayName} dismounts ${mount.displayName}.`, type: 'move' });
 }
 
+function consumeArenaActionSlot(active: Creature, action: { isBonusAction?: boolean; hasteAction?: boolean }): void {
+  if (action.isBonusAction) active.bonusActionUsed = true;
+  else if (action.hasteAction) active.turnFlags.arenaHasteActionUsed = true;
+  else active.hasActed = true;
+}
+
 function applyArenaAttack(state: NonNullable<Encounter['state']>, active: Creature, activeActions: MonsterAction[], legal: Extract<ArenaAction, { type: 'attack' }>): void {
   const target = state.creatures.find(c => c.id === legal.targetId)!;
   const attack = activeActions[legal.actionIndex];
@@ -673,6 +679,81 @@ function applyArenaSpell(state: NonNullable<Encounter['state']>, active: Creatur
   checkBattleComplete(state);
 }
 
+type ArenaSpellContinuation = Extract<ArenaAction, { type: 'spell_teleport' | 'spell_summon' | 'repeat_spell' | 'spiritual_weapon' | 'repeat_area_spell' | 'repeat_action_spell' }>;
+
+function applyArenaSpellContinuation(state: NonNullable<Encounter['state']>, active: Creature, activeActions: MonsterAction[], submitted: ArenaAction, legal: ArenaSpellContinuation): void {
+  if (legal.type === 'spell_teleport') {
+    const destination = submitted.type === 'spell_teleport' ? submitted.destination : undefined;
+    const spell = activeActions[legal.actionIndex];
+    if (!destination || !Number.isInteger(destination.x) || !Number.isInteger(destination.y) || !spell || spell.name !== legal.actionName || !spell.teleport || !executeSpell(state, active, spell, active, undefined, destination)) throw new EncounterError(`Illegal or stale arena spell "${legal.id}".`);
+    consumeArenaActionSlot(active, spell);
+    checkBattleComplete(state);
+  } else if (legal.type === 'spell_summon') {
+    const destination = legal.destination;
+    const baseSpell = activeActions[legal.actionIndex];
+    const variant = baseSpell?.summon?.variants.find(candidate => candidate.key === legal.variantKey);
+    const spell = baseSpell && variant ? { ...baseSpell, summon: { ...baseSpell.summon!, variants: [variant] } } : undefined;
+    if (!destination || !Number.isInteger(destination.x) || !Number.isInteger(destination.y) || !spell || spell.name !== legal.actionName || !executeSpell(state, active, spell, active, undefined, destination)) throw new EncounterError(`Illegal or stale arena summon "${legal.id}".`);
+    consumeArenaActionSlot(active, spell);
+    checkBattleComplete(state);
+  } else if (legal.type === 'repeat_spell') {
+    if (!tryUseBonusActionDamageBuff(state, active, legal.targetId)) throw new EncounterError(`Illegal or stale repeated spell "${legal.id}".`);
+    checkBattleComplete(state);
+  } else if (legal.type === 'spiritual_weapon') {
+    const target = state.creatures.find(creature => creature.id === legal.targetId);
+    if (!target || !useSpiritualWeaponAttack(state, active, target)) throw new EncounterError(`Illegal or stale Spiritual Weapon action "${legal.id}".`);
+    checkBattleComplete(state);
+  } else if (legal.type === 'repeat_area_spell') {
+    const repeat = active.repeatableAreaSpell;
+    const targets = legal.targetIds.map(id => state.creatures.find(creature => creature.id === id)).filter((target): target is Creature => Boolean(target));
+    if (!repeat || repeat.name !== legal.spellName || !targets.length) throw new EncounterError(`Illegal or stale repeated area spell "${legal.id}".`);
+    resolveAoE(state, active, { name: repeat.name, type: 'special', description: `Repeat ${repeat.name}.`, damageType: repeat.damageType, savingThrow: { ability: repeat.saveAbility, dc: repeat.saveDC, damageOnFail: repeat.damageDice, damageOnSuccess: 'half', area: legal.areaShape } }, targets, legal.center, undefined, true);
+    active.hasActed = true;
+    checkBattleComplete(state);
+  } else {
+    const repeat = active.repeatableActionSpell;
+    const target = state.creatures.find(creature => creature.id === legal.targetId);
+    if (!repeat || repeat.name !== legal.spellName || !target || target.team === active.team || !target.isAlive || creatureDistance(active, target) > 5) throw new EncounterError(`Illegal or stale repeated action spell "${legal.id}".`);
+    const before = target.currentHp;
+    resolveAttack(state, active, target, { name: repeat.name, type: 'melee', description: `Repeat ${repeat.name}.`, attackBonus: repeat.attackBonus, damage: repeat.damageDice, damageType: repeat.damageType, magical: true });
+    if (repeat.healFromDamage) applyHealing(state, active, Math.floor(Math.max(0, before - target.currentHp) / 2), active, repeat.name);
+    active.hasActed = true;
+    checkBattleComplete(state);
+  }
+}
+
+function applyArenaCreatureFeature(state: NonNullable<Encounter['state']>, active: Creature, activeActions: MonsterAction[], legal: Extract<ArenaAction, { type: 'wild_shape' | 'monk_strike' }>): void {
+  if (legal.type === 'wild_shape') {
+    const level = active.monsterData.heroLevel ?? 0;
+    const beast = getEligibleWildShapeBeasts({ level, subclass: active.monsterData.heroSubclass }).find(candidate => candidate.name === legal.beastName);
+    if (active.monsterData.heroClass !== 'Druid' || !beast || active.wildShape || active.bonusActionUsed || active.concentratingOn || !hasResource(active, 'wild-shape') || isPositionBlocked(active.position, beast.size, state.creatures, active.id, state.terrainBlocked)) throw new EncounterError('Illegal or stale arena Wild Shape.');
+    if (!consumeResource(active, 'wild-shape')) throw new EncounterError('Illegal or stale arena Wild Shape.');
+    const isMoon = active.monsterData.heroSubclass === 'Circle of the Moon';
+    const tempHp = isMoon ? level * 3 : level;
+    active.wildShape = { beastName: beast.name, tempHp, maxTempHp: tempHp, formHp: beast.formHp, cr: beast.cr, ac: isMoon ? Math.max(beast.ac, 13 + abilityModifier(active.monsterData.abilities.wis)) : beast.ac, speed: beast.speed, actions: beast.actions, size: beast.size, traits: beast.traits, saves: beast.saves, abilities: beast.abilities, isMoon };
+    for (const [key, value] of Object.entries(beast.initialResources ?? {})) active.resources[key] = value;
+    active.bonusActionUsed = true;
+    pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Wild Shape', details: `${active.displayName} transforms into a ${beast.name}.`, type: 'special' });
+    return;
+  }
+  const strike = activeActions[legal.actionIndex];
+  const target = state.creatures.find(creature => creature.id === legal.targetId);
+  const flurryStrikes = Object.keys(active.turnFlags).filter(key => key.startsWith('arena-flurry-')).length;
+  if (active.monsterData.heroClass !== 'Monk' || !strike || !target || !target.isAlive || !attackInRange(active, target, strike)) throw new EncounterError('Illegal or stale arena Monk strike.');
+  if (legal.flurry) {
+    if (flurryStrikes === 0) {
+      if (active.bonusActionUsed || !consumeResource(active, 'ki')) throw new EncounterError('Illegal or stale arena Flurry of Blows.');
+      active.bonusActionUsed = true;
+    } else if (flurryStrikes >= 2) throw new EncounterError('Illegal or stale arena Flurry of Blows.');
+    active.turnFlags[`arena-flurry-${flurryStrikes}`] = true;
+  } else {
+    if (active.bonusActionUsed || flurryStrikes) throw new EncounterError('Illegal or stale arena Martial Arts strike.');
+    active.bonusActionUsed = true;
+  }
+  resolveAttack(state, active, target, strike);
+  checkBattleComplete(state);
+}
+
 /** Applies only an action generated by getLegalActions for the current turn. */
 export function applyLegalAction(encounter: Encounter, action: ArenaAction): void {
   const state = encounter.state;
@@ -699,52 +780,8 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       checkBattleComplete(state);
     } else if (legal.type === 'spell') {
       applyArenaSpell(state, active, activeActions, legal);
-    } else if (legal.type === 'spell_teleport') {
-      const destination = action.type === 'spell_teleport' ? action.destination : undefined;
-      const spell = activeActions[legal.actionIndex];
-      if (!destination || !Number.isInteger(destination.x) || !Number.isInteger(destination.y) || !spell || spell.name !== legal.actionName || !spell.teleport || !executeSpell(state, active, spell, active, undefined, destination)) {
-        throw new EncounterError(`Illegal or stale arena spell "${legal.id}".`);
-      }
-      if (spell.isBonusAction) active.bonusActionUsed = true;
-      else active.hasActed = true;
-      checkBattleComplete(state);
-    } else if (legal.type === 'spell_summon') {
-      const destination = legal.destination;
-      const baseSpell = activeActions[legal.actionIndex];
-      const variant = baseSpell?.summon?.variants.find(candidate => candidate.key === legal.variantKey);
-      const spell = baseSpell && variant ? { ...baseSpell, summon: { ...baseSpell.summon!, variants: [variant] } } : undefined;
-      if (!destination || !Number.isInteger(destination.x) || !Number.isInteger(destination.y) || !spell || spell.name !== legal.actionName || !executeSpell(state, active, spell, active, undefined, destination)) {
-        throw new EncounterError(`Illegal or stale arena summon "${legal.id}".`);
-      }
-      if (spell.isBonusAction) active.bonusActionUsed = true;
-      else active.hasActed = true;
-      checkBattleComplete(state);
-    } else if (legal.type === 'repeat_spell') {
-      if (!tryUseBonusActionDamageBuff(state, active, legal.targetId)) throw new EncounterError(`Illegal or stale repeated spell "${legal.id}".`);
-      checkBattleComplete(state);
-    } else if (legal.type === 'spiritual_weapon') {
-      const target = state.creatures.find(creature => creature.id === legal.targetId);
-      if (!target || !useSpiritualWeaponAttack(state, active, target)) throw new EncounterError(`Illegal or stale Spiritual Weapon action "${legal.id}".`);
-      checkBattleComplete(state);
-    } else if (legal.type === 'repeat_area_spell') {
-      const repeat = active.repeatableAreaSpell;
-      const targets = legal.targetIds.map(id => state.creatures.find(creature => creature.id === id)).filter((target): target is Creature => Boolean(target));
-      if (!repeat || repeat.name !== legal.spellName || !targets.length) throw new EncounterError(`Illegal or stale repeated area spell "${legal.id}".`);
-      resolveAoE(state, active, {
-        name: repeat.name, type: 'special', description: `Repeat ${repeat.name}.`, damageType: repeat.damageType,
-        savingThrow: { ability: repeat.saveAbility, dc: repeat.saveDC, damageOnFail: repeat.damageDice, damageOnSuccess: 'half', area: legal.areaShape },
-      }, targets, legal.center, undefined, true);
-      active.hasActed = true;
-      checkBattleComplete(state);
-    } else if (legal.type === 'repeat_action_spell') {
-      const repeat = active.repeatableActionSpell;
-      const target = state.creatures.find(creature => creature.id === legal.targetId);
-      if (!repeat || repeat.name !== legal.spellName || !target || target.team === active.team || !target.isAlive || creatureDistance(active, target) > 5) throw new EncounterError(`Illegal or stale repeated action spell "${legal.id}".`);
-      const before = target.currentHp;
-      resolveAttack(state, active, target, { name: repeat.name, type: 'melee', description: `Repeat ${repeat.name}.`, attackBonus: repeat.attackBonus, damage: repeat.damageDice, damageType: repeat.damageType, magical: true });
-      if (repeat.healFromDamage) applyHealing(state, active, Math.floor(Math.max(0, before - target.currentHp) / 2), active, repeat.name);
-      active.hasActed = true;
-      checkBattleComplete(state);
+    } else if (legal.type === 'spell_teleport' || legal.type === 'spell_summon' || legal.type === 'repeat_spell' || legal.type === 'spiritual_weapon' || legal.type === 'repeat_area_spell' || legal.type === 'repeat_action_spell') {
+      applyArenaSpellContinuation(state, active, activeActions, action, legal);
     } else if (legal.type === 'move_aura') {
       const destination = action.type === 'move_aura' ? action.destination : undefined;
       if (!destination || !moveConcentrationAura(state, active, destination)) throw new EncounterError('Illegal or stale concentration-aura destination.');
@@ -756,9 +793,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       applyArenaMount(state, active, legal);
     } else if (legal.type === 'dash') {
       active.movementRemaining += getEffectiveMoveSpeed(active, state);
-      if (legal.isBonusAction) active.bonusActionUsed = true;
-      else if (legal.hasteAction) active.turnFlags.arenaHasteActionUsed = true;
-      else active.hasActed = true;
+      consumeArenaActionSlot(active, legal);
       pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Dash', details: `${active.displayName} dashes.`, type: 'move' });
     } else if (legal.type === 'dodge') {
       active.turnFlags.dodge = true;
@@ -766,9 +801,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Dodge', details: `${active.displayName} dodges.`, type: 'special' });
     } else if (legal.type === 'disengage') {
       active.turnFlags.arenaDisengaged = true;
-      if (legal.isBonusAction) active.bonusActionUsed = true;
-      else if (legal.hasteAction) active.turnFlags.arenaHasteActionUsed = true;
-      else active.hasActed = true;
+      consumeArenaActionSlot(active, legal);
       pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Disengage', details: `${active.displayName} disengages.`, type: 'move' });
     } else if (legal.type === 'hide') {
       const stealth = (active.monsterData.skills?.Stealth ?? abilityModifier(active.monsterData.abilities.dex))
@@ -784,9 +817,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
         active.activeBuffs.push({ name: 'Hidden', key: `hidden-from:${target.id}`, casterId: active.id, appliedRound: state.round, endRound: state.round + 600 });
         successes++;
       }
-      if (legal.isBonusAction) active.bonusActionUsed = true;
-      else if (legal.hasteAction) active.turnFlags.arenaHasteActionUsed = true;
-      else active.hasActed = true;
+      consumeArenaActionSlot(active, legal);
       pushLog(state, {
         round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Hide',
         details: successes ? `${active.displayName} hides from ${successes} foe${successes === 1 ? '' : 's'}.` : `${active.displayName} fails to hide.`, type: 'special',
@@ -823,34 +854,8 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
       } catch (error) {
         throw new EncounterError(error instanceof Error ? error.message : 'Illegal or stale arena origin action.');
       }
-    } else if (legal.type === 'wild_shape') {
-      const level = active.monsterData.heroLevel ?? 0;
-      const beast = getEligibleWildShapeBeasts({ level, subclass: active.monsterData.heroSubclass }).find(candidate => candidate.name === legal.beastName);
-      if (active.monsterData.heroClass !== 'Druid' || !beast || active.wildShape || active.bonusActionUsed || active.concentratingOn || !hasResource(active, 'wild-shape') || isPositionBlocked(active.position, beast.size, state.creatures, active.id, state.terrainBlocked)) throw new EncounterError('Illegal or stale arena Wild Shape.');
-      if (!consumeResource(active, 'wild-shape')) throw new EncounterError('Illegal or stale arena Wild Shape.');
-      const isMoon = active.monsterData.heroSubclass === 'Circle of the Moon';
-      const tempHp = isMoon ? level * 3 : level;
-      active.wildShape = { beastName: beast.name, tempHp, maxTempHp: tempHp, formHp: beast.formHp, cr: beast.cr, ac: isMoon ? Math.max(beast.ac, 13 + abilityModifier(active.monsterData.abilities.wis)) : beast.ac, speed: beast.speed, actions: beast.actions, size: beast.size, traits: beast.traits, saves: beast.saves, abilities: beast.abilities, isMoon };
-      for (const [key, value] of Object.entries(beast.initialResources ?? {})) active.resources[key] = value;
-      active.bonusActionUsed = true;
-      pushLog(state, { round: state.round, turn: state.turnIndex, actor: active.displayName, action: 'Wild Shape', details: `${active.displayName} transforms into a ${beast.name}.`, type: 'special' });
-    } else if (legal.type === 'monk_strike') {
-      const strike = activeActions[legal.actionIndex];
-      const target = state.creatures.find(creature => creature.id === legal.targetId);
-      const flurryStrikes = Object.keys(active.turnFlags).filter(key => key.startsWith('arena-flurry-')).length;
-      if (active.monsterData.heroClass !== 'Monk' || !strike || !target || !target.isAlive || !attackInRange(active, target, strike)) throw new EncounterError('Illegal or stale arena Monk strike.');
-      if (legal.flurry) {
-        if (flurryStrikes === 0) {
-          if (active.bonusActionUsed || !consumeResource(active, 'ki')) throw new EncounterError('Illegal or stale arena Flurry of Blows.');
-          active.bonusActionUsed = true;
-        } else if (flurryStrikes >= 2) throw new EncounterError('Illegal or stale arena Flurry of Blows.');
-        active.turnFlags[`arena-flurry-${flurryStrikes}`] = true;
-      } else {
-        if (active.bonusActionUsed || flurryStrikes) throw new EncounterError('Illegal or stale arena Martial Arts strike.');
-        active.bonusActionUsed = true;
-      }
-      resolveAttack(state, active, target, strike);
-      checkBattleComplete(state);
+    } else if (legal.type === 'wild_shape' || legal.type === 'monk_strike') {
+      applyArenaCreatureFeature(state, active, activeActions, legal);
     } else {
       endTurn(encounter, active);
     }

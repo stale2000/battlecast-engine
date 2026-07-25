@@ -85,10 +85,6 @@ export function findPlacementSlots(
     }
   }
 
-  if (positions.length < count) {
-    console.warn(`[BattleCast] Could only place ${positions.length} of ${count} ${size} creatures (grid ${gridSize}x${gridSize})`);
-  }
-
   return positions;
 }
 
