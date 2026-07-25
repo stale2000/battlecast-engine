@@ -36,7 +36,7 @@ while (result.statuses.red !== 'DONE' && result.statuses.blue !== 'DONE') {
     ?? actions.find(action => action.type === 'spell')
     ?? actions.find(action => action.type === 'end_turn')
     ?? actions[0];
-  const action = chosen.type === 'move_to'
+  const action = chosen.type === 'move_to' && chosen.destination
     ? { id: chosen.id, x: chosen.destination.x, y: chosen.destination.y }
     : chosen;
 
@@ -80,6 +80,34 @@ Stop when both statuses are `DONE`. Terminal rewards are `1` for the winner,
 `-1` for the loser, and `0` for a draw. A non-terminal response always has
 zero rewards.
 
+## Sample AIs
+
+The repository includes a small deterministic simulator with three intentionally
+simple policies. It uses two legal level-5 presets: a balanced Fighter/Cleric/
+Wizard/Rogue party and the same party in reverse slot order.
+
+```bash
+npm run build
+node examples/arena-4v4.mjs aggressive caster
+```
+
+Available policies are:
+
+- `aggressive` - prefer weapon attacks, then spells, then movement.
+- `caster` - prefer any available spell, then attacks and movement.
+- `cautious` - prefer Dodge, healing spells, attacks, then ending the turn.
+
+Run a different matchup with:
+
+```bash
+node examples/arena-4v4.mjs cautious aggressive
+node examples/arena-4v4.mjs caster caster
+```
+
+These are reference policies, not competitive agents. They choose only from
+the current legal-action catalogue; the engine still validates every target,
+destination, resource cost, roll, and state transition.
+
 ## What is authoritative
 
 - The serialized state returned by the engine is authoritative and must not be
@@ -89,4 +117,3 @@ zero rewards.
   mutation.
 - Targets, damage, dice, movement legality, resources, and the seeded RNG are
   selected and resolved by the engine.
-
