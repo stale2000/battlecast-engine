@@ -29,7 +29,7 @@
     }
   },
   "bin": {
-    "battlecast-engine": "./dist/mcp/cli.js"
+    "battlecast-engine": "dist/mcp/cli.js"
   },
   "files": [
     "dist",
