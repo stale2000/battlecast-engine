@@ -1083,6 +1083,15 @@ export function spikeGrowth(ability: SpellcastingAbility, _mod: number, _pb: num
   };
 }
 
+export function plantGrowth(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Plant Growth', type: 'special', spellLevel: 3, spellSchool: 'transmutation', castingAbility: ability,
+    description: 'Plants overgrow a 100-foot-radius area for 8 hours, making the area Difficult Terrain.',
+    range: { normal: 150, long: 150 }, targetScope: 'area_enemies',
+    persistentZone: { radiusFt: 100, durationRounds: 96, triggers: [], difficultTerrain: true },
+  };
+}
+
 export function cloudOfDaggers(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
   return {
     name: 'Cloud of Daggers',
@@ -2175,7 +2184,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Enlarge/Reduce', enlargeReduce],
   ['Mage Armor', mageArmor],
   ['Ray of Enfeeblement', rayOfEnfeeblement], ['Ray of Sickness', rayOfSickness], ["Tasha's Hideous Laughter", tashasHideousLaughter],
-  ['Scorching Ray', scorchingRay], ['Summon Beast', summonBeast], ['Summon Fey', summonFey], ['Summon Undead', summonUndead], ['Animate Dead', animateDead], ['Find Steed', findSteed], ['Conjure Animals', conjureAnimals], ['Web', web], ['Spike Growth', spikeGrowth], ['Hold Person', holdPerson],
+  ['Scorching Ray', scorchingRay], ['Summon Beast', summonBeast], ['Summon Fey', summonFey], ['Summon Undead', summonUndead], ['Animate Dead', animateDead], ['Find Steed', findSteed], ['Conjure Animals', conjureAnimals], ['Web', web], ['Spike Growth', spikeGrowth], ['Plant Growth', plantGrowth], ['Hold Person', holdPerson],
   ['Flaming Sphere', flamingSphere], ['Flame Blade', flameBlade], ['Heat Metal', heatMetal], ['Cloud of Daggers', cloudOfDaggers],
   ['Shatter', shatter], ['Moonbeam', moonbeam], ['Spiritual Weapon', spiritualWeapon],
   ['Aid', aid], ['Magic Weapon', magicWeapon], ['Shining Smite', shiningSmite],
