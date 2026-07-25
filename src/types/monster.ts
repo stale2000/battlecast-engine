@@ -240,6 +240,8 @@ export interface MonsterAction {
   closeRangeDisadvantage?: boolean;
   /** Buff applied to the target after this attack hits and deals damage, e.g. Guiding Bolt. */
   buffOnHit?: BuffTemplate;
+  /** Buff grants a temporary, serialized action to its target (e.g. Dragon's Breath). */
+  grantsAction?: MonsterAction;
   /** Buff applied to targets that fail this action's saving throw, e.g. Vicious Mockery. */
   buffOnFailedSave?: BuffTemplate;
   /** Buff applied to targets that succeed on this action's saving throw. */
@@ -495,6 +497,8 @@ export interface BuffTemplate {
   bonusActionDamage?: string;
   /** The affected creature can take Dash as a Bonus Action. */
   bonusActionDash?: boolean;
+  /** Temporary action added to the target while this buff remains active. */
+  grantsAction?: MonsterAction;
   /** Damage type for bonusActionDamage. */
   bonusActionDamageType?: string;
   /** Maximum range in feet for the bonus-action damage link. */
@@ -974,6 +978,8 @@ export interface ActiveBuff {
   requiresConcentration?: boolean;
   /** Slot level of the spell that created this effect, for Dispel Magic. */
   spellLevel?: number;
+  /** Temporary action granted by this buff; retained in serialized state. */
+  grantsAction?: MonsterAction;
   /**
    * Dice/flat bonus added to THIS creature's attack rolls. "1d4" for Bless,
    * "-1d4" for Bane.

@@ -644,8 +644,15 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
           ? { ...baseSpell, dispelMagic: { ...baseSpell.dispelMagic, selectedKey: legal.effectKey } }
           : baseSpell && legal.damageResistance && baseSpell.damageResistanceChoice && baseSpell.buff
             ? { ...baseSpell, damageResistanceChoice: { ...baseSpell.damageResistanceChoice, selected: legal.damageResistance }, buff: { ...baseSpell.buff, resistDamageTypes: [legal.damageResistance] } }
-            : baseSpell && legal.damageType && baseSpell.damageTypeChoice
-              ? { ...baseSpell, damageTypeChoice: { ...baseSpell.damageTypeChoice, selected: legal.damageType }, damageType: legal.damageType }
+          : baseSpell && legal.damageType && baseSpell.damageTypeChoice
+            ? {
+              ...baseSpell,
+              damageTypeChoice: { ...baseSpell.damageTypeChoice, selected: legal.damageType },
+              damageType: legal.damageType,
+              buff: baseSpell.buff?.grantsAction
+                ? { ...baseSpell.buff, grantsAction: { ...baseSpell.buff.grantsAction, damageType: legal.damageType, damageTypeChoice: { choices: baseSpell.buff.grantsAction.damageTypeChoice?.choices ?? [], selected: legal.damageType } } }
+                : baseSpell.buff,
+            }
               : baseSpell && legal.sizeChange && baseSpell.sizeChangeChoice
                 ? {
                     ...baseSpell,

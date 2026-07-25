@@ -725,6 +725,26 @@ export function summonBeast(ability: SpellcastingAbility, mod: number, pb: numbe
   };
 }
 
+/** Dragon's Breath grants a target a reusable cone action while concentration lasts. */
+export function dragonsBreath(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  const damageTypes = ['acid', 'cold', 'fire', 'lightning', 'poison'];
+  return {
+    name: "Dragon's Breath", type: 'special', spellLevel: 2, spellSchool: 'transmutation', castingAbility: ability,
+    concentration: true, durationRounds: 10, range: { normal: 30, long: 30 }, targetScope: 'one_ally',
+    damageTypeChoice: { choices: damageTypes, selected: 'fire' },
+    description: `One willing creature within 30 feet gains a 15-foot Cone breath weapon for 1 minute. Each creature in the Cone makes a DEX save (DC ${saveDC(mod, pb)}) for 3d6 damage of the chosen type, half on success.`,
+    buff: {
+      name: "Dragon's Breath", key: 'dragons-breath', requiresConcentration: true,
+      grantsAction: {
+        name: "Dragon's Breath", type: 'special', spellLevel: 0, spellSchool: 'evocation', castingAbility: ability,
+        damageType: 'fire', targetScope: 'area_enemies', damageTypeChoice: { choices: damageTypes, selected: 'fire' },
+        savingThrow: { ability: 'dex', dc: saveDC(mod, pb), damageOnFail: '3d6', damageOnSuccess: 'half', area: '15-foot cone' },
+        description: 'Exhale a 15-foot Cone. DEX save for half damage.',
+      },
+    },
+  };
+}
+
 function otherworldlySteed(kind: 'celestial' | 'fey' | 'fiend', mod: number, pb: number): MonsterData {
   const damageType = kind === 'celestial' ? 'radiant' : kind === 'fey' ? 'psychic' : 'necrotic';
   const actions: MonsterAction[] = [{
@@ -2193,7 +2213,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Enlarge/Reduce', enlargeReduce],
   ['Mage Armor', mageArmor],
   ['Ray of Enfeeblement', rayOfEnfeeblement], ['Ray of Sickness', rayOfSickness], ["Tasha's Hideous Laughter", tashasHideousLaughter],
-  ['Scorching Ray', scorchingRay], ['Summon Beast', summonBeast], ['Summon Fey', summonFey], ['Summon Undead', summonUndead], ['Animate Dead', animateDead], ['Find Steed', findSteed], ['Conjure Animals', conjureAnimals], ['Web', web], ['Spike Growth', spikeGrowth], ['Plant Growth', plantGrowth], ['Hold Person', holdPerson],
+  ['Scorching Ray', scorchingRay], ['Summon Beast', summonBeast], ['Dragon\'s Breath', dragonsBreath], ['Summon Fey', summonFey], ['Summon Undead', summonUndead], ['Animate Dead', animateDead], ['Find Steed', findSteed], ['Conjure Animals', conjureAnimals], ['Web', web], ['Spike Growth', spikeGrowth], ['Plant Growth', plantGrowth], ['Hold Person', holdPerson],
   ['Flaming Sphere', flamingSphere], ['Flame Blade', flameBlade], ['Heat Metal', heatMetal], ['Cloud of Daggers', cloudOfDaggers],
   ['Shatter', shatter], ['Moonbeam', moonbeam], ['Spiritual Weapon', spiritualWeapon],
   ['Aid', aid], ['Magic Weapon', magicWeapon], ['Shining Smite', shiningSmite],

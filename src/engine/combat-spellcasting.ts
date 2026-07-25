@@ -542,6 +542,7 @@ export function applyBuffFromSpell(
     appliedRound: state.round, endRound,
     requiresConcentration: tmpl.requiresConcentration,
     spellLevel: action.spellLevel,
+    grantsAction: tmpl.grantsAction,
     attackBonus: tmpl.attackBonus,
     attackBonusDice: tmpl.attackBonusDice,
     saveBonus: tmpl.saveBonus,

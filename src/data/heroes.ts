@@ -33,7 +33,7 @@ import { monsters } from './monsters.js';
 import {
   FULL_CASTER_SLOTS, HALF_CASTER_SLOTS, WARLOCK_SLOTS, slotsToResources,
   magicMissile, burningHands, thunderwave, sleep,
-  scorchingRay, summonBeast, summonFey, summonUndead, animateDead, findSteed, conjureAnimals, web, spikeGrowth, flamingSphere, cloudOfDaggers, shatter, moonbeam, holdPerson, spiritualWeapon,
+  scorchingRay, summonBeast, dragonsBreath, summonFey, summonUndead, animateDead, findSteed, conjureAnimals, web, spikeGrowth, flamingSphere, cloudOfDaggers, shatter, moonbeam, holdPerson, spiritualWeapon,
   fireball, lightningBolt, spiritGuardians, callLightning, hypnoticPattern,
   bless, bane, cureWounds, healingWord, heroism, protectionFromEvilAndGood, sanctuary, shieldOfFaith, wardingBond, guidingBolt,
   hex, huntersMark, dissonantWhispers, entangle,
@@ -1688,7 +1688,7 @@ function buildOptionalSpells(
       pool.push(expeditiousRetreat(spellAbility, mod, pb), falseLife(spellAbility, mod, pb), grease(spellAbility, mod, pb), longstrider(spellAbility, mod, pb), mageArmor(spellAbility, mod, pb), protectionFromEvilAndGood(spellAbility, mod, pb), rayOfSickness(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
       pool.push(blindnessDeafness(spellAbility, mod, pb), blur(spellAbility, mod, pb), cloudOfDaggers(spellAbility, mod, pb), darkness(spellAbility, mod, pb), enlargeReduce(spellAbility, mod, pb), flamingSphere(spellAbility, mod, pb), invisibility(spellAbility, mod, pb), magicWeapon(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb), rayOfEnfeeblement(spellAbility, mod, pb), seeInvisibility(spellAbility, mod, pb));
       pool.push(holdPerson(spellAbility, mod, pb), shatter(spellAbility, mod, pb));
-      pool.push(acidArrow(spellAbility, mod, pb), summonFey(spellAbility, mod, pb), summonUndead(spellAbility, mod, pb), animateDead(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb), protectionFromEnergy(spellAbility, mod, pb), wardingWind(spellAbility, mod, pb));
+      pool.push(acidArrow(spellAbility, mod, pb), dragonsBreath(spellAbility, mod, pb), summonFey(spellAbility, mod, pb), summonUndead(spellAbility, mod, pb), animateDead(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb), protectionFromEnergy(spellAbility, mod, pb), wardingWind(spellAbility, mod, pb));
       pool.push(mistyStep(spellAbility, mod, pb));
       pool.push(dispelMagic(spellAbility, mod, pb), haste(spellAbility, mod, pb), hypnoticPattern(spellAbility, mod, pb), slow(spellAbility, mod, pb), sleetStorm(spellAbility, mod, pb), stinkingCloud(spellAbility, mod, pb), vampiricTouch(spellAbility, mod, pb));
       pool.push(counterspell(spellAbility, mod, pb));
@@ -1703,7 +1703,7 @@ function buildOptionalSpells(
       pool.push(expeditiousRetreat(spellAbility, mod, pb), falseLife(spellAbility, mod, pb), grease(spellAbility, mod, pb), longstrider(spellAbility, mod, pb), mageArmor(spellAbility, mod, pb), rayOfSickness(spellAbility, mod, pb));
       pool.push(blindnessDeafness(spellAbility, mod, pb), blur(spellAbility, mod, pb), darkness(spellAbility, mod, pb), enlargeReduce(spellAbility, mod, pb), flamingSphere(spellAbility, mod, pb), invisibility(spellAbility, mod, pb), magicWeapon(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb), seeInvisibility(spellAbility, mod, pb));
       pool.push(holdPerson(spellAbility, mod, pb));
-      pool.push(flameBlade(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb), protectionFromEnergy(spellAbility, mod, pb), web(spellAbility, mod, pb), wardingWind(spellAbility, mod, pb));
+      pool.push(dragonsBreath(spellAbility, mod, pb), flameBlade(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb), protectionFromEnergy(spellAbility, mod, pb), web(spellAbility, mod, pb), wardingWind(spellAbility, mod, pb));
       pool.push(mistyStep(spellAbility, mod, pb));
       pool.push(dispelMagic(spellAbility, mod, pb), haste(spellAbility, mod, pb), hypnoticPattern(spellAbility, mod, pb), slow(spellAbility, mod, pb), sleetStorm(spellAbility, mod, pb), stinkingCloud(spellAbility, mod, pb), vampiricTouch(spellAbility, mod, pb));
       pool.push(counterspell(spellAbility, mod, pb));
@@ -2607,7 +2607,7 @@ export function getAvailableSpells(
       optional.push(expeditiousRetreat(spellAbility, mod, pb), falseLife(spellAbility, mod, pb), grease(spellAbility, mod, pb), longstrider(spellAbility, mod, pb), mageArmor(spellAbility, mod, pb), protectionFromEvilAndGood(spellAbility, mod, pb), rayOfSickness(spellAbility, mod, pb), tashasHideousLaughter(spellAbility, mod, pb));
       optional.push(blindnessDeafness(spellAbility, mod, pb), blur(spellAbility, mod, pb), cloudOfDaggers(spellAbility, mod, pb), darkness(spellAbility, mod, pb), enlargeReduce(spellAbility, mod, pb), invisibility(spellAbility, mod, pb), magicWeapon(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb), rayOfEnfeeblement(spellAbility, mod, pb));
       optional.push(flamingSphere(spellAbility, mod, pb), holdPerson(spellAbility, mod, pb), shatter(spellAbility, mod, pb), seeInvisibility(spellAbility, mod, pb));
-      optional.push(acidArrow(spellAbility, mod, pb), summonFey(spellAbility, mod, pb), summonUndead(spellAbility, mod, pb), animateDead(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb), protectionFromEnergy(spellAbility, mod, pb), wardingWind(spellAbility, mod, pb));
+      optional.push(acidArrow(spellAbility, mod, pb), dragonsBreath(spellAbility, mod, pb), summonFey(spellAbility, mod, pb), summonUndead(spellAbility, mod, pb), animateDead(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb), protectionFromEnergy(spellAbility, mod, pb), wardingWind(spellAbility, mod, pb));
       optional.push(mistyStep(spellAbility, mod, pb));
       optional.push(dispelMagic(spellAbility, mod, pb), haste(spellAbility, mod, pb), hypnoticPattern(spellAbility, mod, pb), slow(spellAbility, mod, pb), sleetStorm(spellAbility, mod, pb));
       optional.push(stinkingCloud(spellAbility, mod, pb));
@@ -2623,7 +2623,7 @@ export function getAvailableSpells(
       optional.push(expeditiousRetreat(spellAbility, mod, pb), falseLife(spellAbility, mod, pb), grease(spellAbility, mod, pb), longstrider(spellAbility, mod, pb), mageArmor(spellAbility, mod, pb), rayOfSickness(spellAbility, mod, pb));
       optional.push(blindnessDeafness(spellAbility, mod, pb), blur(spellAbility, mod, pb), darkness(spellAbility, mod, pb), enlargeReduce(spellAbility, mod, pb), flameBlade(spellAbility, mod, pb), invisibility(spellAbility, mod, pb), magicWeapon(spellAbility, mod, pb), mirrorImage(spellAbility, mod, pb));
       optional.push(flamingSphere(spellAbility, mod, pb), holdPerson(spellAbility, mod, pb), seeInvisibility(spellAbility, mod, pb));
-      optional.push(gustOfWind(spellAbility, mod, pb), protectionFromEnergy(spellAbility, mod, pb), web(spellAbility, mod, pb), wardingWind(spellAbility, mod, pb));
+      optional.push(dragonsBreath(spellAbility, mod, pb), gustOfWind(spellAbility, mod, pb), protectionFromEnergy(spellAbility, mod, pb), web(spellAbility, mod, pb), wardingWind(spellAbility, mod, pb));
       optional.push(mistyStep(spellAbility, mod, pb));
       optional.push(dispelMagic(spellAbility, mod, pb), haste(spellAbility, mod, pb), hypnoticPattern(spellAbility, mod, pb), slow(spellAbility, mod, pb), sleetStorm(spellAbility, mod, pb));
       optional.push(stinkingCloud(spellAbility, mod, pb));

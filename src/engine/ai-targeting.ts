@@ -49,7 +49,9 @@ import { canSeeCreatureIgnoringHide } from './visibility.js';
 // ─────────────────────────────────────────────────────────────────────
 
 export function getActiveActions(creature: Creature): MonsterAction[] {
-  const actions = creature.wildShape ? creature.wildShape.actions : creature.monsterData.actions;
+  const base = creature.wildShape ? creature.wildShape.actions : creature.monsterData.actions;
+  const granted = creature.wildShape ? [] : creature.activeBuffs.flatMap(buff => buff.grantsAction ? [buff.grantsAction] : []);
+  const actions = granted.length ? [...base, ...granted] : base;
   if (!creature.swallowedTargetId) return actions;
   if (!actions.some(a => a.name === 'Swallow')) return actions;
   return actions.filter(a => a.name !== 'Bite');
