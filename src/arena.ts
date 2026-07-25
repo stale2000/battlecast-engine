@@ -1,9 +1,8 @@
 import { Encounter, EncounterError, type SerializedEncounter, type Team } from './api/encounter.js';
 import { applyLegalAction, getActiveCreature, getLegalActions, sameArenaAction, startArena, type ArenaAction } from './api/arena.js';
 import { assertArenaObject, parseArenaParty } from './api/arena-construction.js';
+import { buildArenaObservation } from './api/arena-observation.js';
 export { validateArenaParty } from './api/arena-construction.js';
-import type { Creature } from './types/monster.js';
-import { getActiveSize } from './engine/combat.js';
 
 export const ARENA_PROTOCOL_VERSION = 1;
 export const ARENA_ROUND_CAP = 20;
@@ -14,58 +13,11 @@ type Request =
   | { version: 1; mode: 'step'; state: SerializedEncounter; team: Team; action: string | ArenaAction };
 
 
-function status(creature: Creature): 'ok' | 'bloodied' | 'dying' | 'dead' {
-  if (!creature.isAlive) return 'dead';
-  if (creature.deathSaves) return 'dying';
-  return creature.currentHp * 2 <= creature.maxHp ? 'bloodied' : 'ok';
-}
-
-function visibleEquipment(creature: Creature): string[] {
-  return [...new Set(creature.monsterData.actions
-    .filter(action => action.attackBonus !== undefined && action.spellLevel === undefined)
-    .map(action => action.name))];
-}
-
-function preparedSpells(creature: Creature): string[] {
-  return [...new Set(creature.monsterData.actions
-    .filter(action => (action.spellLevel ?? 0) > 0)
-    .map(action => action.name).concat(creature.monsterData.speciesPreparedSpells ?? []))];
-}
-
 function observation(encounter: Encounter, team: Team) {
   const state = encounter.state!;
   const active = getActiveCreature(encounter);
   const complete = encounter.phase === 'complete';
-  const creature = (c: Creature) => c.team === team
-    ? {
-        id: c.id, name: c.displayName, team: c.team, hp: `${c.currentHp}/${c.maxHp}`, temporaryHp: c.temporaryHp ?? 0,
-        position: { ...c.position }, size: getActiveSize(c), conditions: [...c.conditions], status: status(c), resources: { ...c.resources },
-        build: {
-          heroClass: c.monsterData.heroClass, heroLevel: c.monsterData.heroLevel, heroSubclass: c.monsterData.heroSubclass,
-          species: c.monsterData.heroSpecies, speciesChoice: c.monsterData.heroSpeciesChoice, speciesCastingAbility: c.monsterData.heroSpeciesCastingAbility, background: c.monsterData.heroBackground, originFeat: c.monsterData.originFeat, originFeats: c.monsterData.originFeats,
-          abilities: { ...c.monsterData.abilities }, ac: c.monsterData.ac, speed: { ...c.monsterData.speed },
-          equipment: visibleEquipment(c), cantrips: c.monsterData.speciesCantrips, preparedSpells: preparedSpells(c),
-          reactionPreferences: c.monsterData.reactionPreferences ? structuredClone(c.monsterData.reactionPreferences) : undefined,
-        },
-      }
-    : {
-        id: c.id, name: c.displayName, team: c.team, position: { ...c.position }, size: getActiveSize(c),
-        conditions: [...c.conditions], status: status(c), creatureType: c.monsterData.type, visibleEquipment: visibleEquipment(c),
-      };
-  return {
-    phase: complete ? 'complete' : 'combat',
-    round: state.round,
-    activeCreatureIds: active?.team === team ? [active.id] : [],
-    publicCombatState: {
-      teams: {
-        red: { alive: state.creatures.filter(c => c.team === 'red' && c.isAlive).length, total: state.creatures.filter(c => c.team === 'red').length },
-        blue: { alive: state.creatures.filter(c => c.team === 'blue' && c.isAlive).length, total: state.creatures.filter(c => c.team === 'blue').length },
-      },
-      creatures: state.creatures.map(creature),
-      winner: state.winner,
-    },
-    legalActions: active?.team === team ? getLegalActions(encounter, active.id) : [],
-  };
+  return buildArenaObservation(state, team, active, active?.team === team ? getLegalActions(encounter, active.id) : [], complete);
 }
 
 function response(encounter: Encounter) {

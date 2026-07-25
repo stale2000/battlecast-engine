@@ -44,11 +44,25 @@ const SHIELD_TRAINING = new Set<typeof HERO_CLASS_NAMES[number]>(['Barbarian', '
 function parseReactionPreferences(value: unknown, label: string): ReactionPreferences | undefined {
   if (value === undefined) return undefined;
   const input = assertArenaObject(value, `${label}.reactionPreferences`);
-  const allowed = new Set(['shield', 'uncannyDodge', 'deflectAttacks', 'stoneEndurance', 'superiorHuntersDefense', 'hellishRebuke', 'counterspell', 'cuttingWords', 'countercharm', 'retaliation', 'stormThunder', 'infernalRebuke']);
-  if (Object.keys(input).some(key => !allowed.has(key))) throw new EncounterError(`${label}.reactionPreferences contains an unsupported reaction.`);
+  const fields: Record<string, readonly string[]> = {
+    shield: ['enabled', 'reserveSlots'],
+    uncannyDodge: ['enabled', 'minDamage'],
+    deflectAttacks: ['enabled', 'minDamage', 'redirect'],
+    stoneEndurance: ['enabled', 'minDamage'],
+    superiorHuntersDefense: ['enabled', 'minDamage'],
+    hellishRebuke: ['enabled', 'minDamage', 'reserveSlots'],
+    counterspell: ['enabled', 'maxSpellLevel', 'reserveSlots'],
+    cuttingWords: ['enabled', 'mode'],
+    countercharm: ['enabled', 'conditions'],
+    retaliation: ['enabled', 'minDamage'],
+    stormThunder: ['enabled', 'minDamage'],
+    infernalRebuke: ['enabled', 'minDamage'],
+  };
+  if (Object.keys(input).some(key => !fields[key])) throw new EncounterError(`${label}.reactionPreferences contains an unsupported reaction.`);
   const result: ReactionPreferences = {};
   for (const [key, raw] of Object.entries(input)) {
     const policy = assertArenaObject(raw, `${label}.reactionPreferences.${key}`);
+    if (Object.keys(policy).some(field => !fields[key]!.includes(field))) throw new EncounterError(`${label}.reactionPreferences.${key} contains an unsupported field.`);
     if (typeof policy.enabled !== 'boolean') throw new EncounterError(`${label}.reactionPreferences.${key}.enabled must be boolean.`);
     for (const field of ['minDamage', 'maxSpellLevel', 'reserveSlots']) {
       const numeric = policy[field];

@@ -1127,6 +1127,11 @@ describe('Kaggle arena bridge', () => {
     expect(opponent.every(c => !('build' in c) && !('reactionPreferences' in c))).toBe(true);
   });
 
+  it('rejects reaction-policy fields that do not belong to the selected reaction', () => {
+    const party = { characters: Array.from({ length: 4 }, () => ({ heroClass: 'Fighter', abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, reactionPreferences: { shield: { enabled: true, minDamage: 10 } } })) };
+    expect(() => kaggleStep({ ...init(), redParty: party })).toThrow(/unsupported field/);
+  });
+
   it('validates optional class cantrip selections without changing default builds', () => {
     const wizard = { heroClass: 'Wizard', species: 'Dwarf', background: 'Soldier', abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, abilityIncreases: { str: 2, con: 1 }, cantrips: ['Ray of Frost', 'Chill Touch', 'Shocking Grasp'], spells: getAvailableSpells('Wizard', 5).filter(spell => spell.spellLevel > 0).slice(0, 8).map(spell => spell.name) };
     const party = { characters: Array.from({ length: 4 }, () => wizard) };
