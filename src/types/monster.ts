@@ -736,6 +736,8 @@ export interface MonsterData {
    * when the creature is created. Unset = no resources.
    */
   initialResources?: Record<string, number>;
+  /** Host-selected reaction automation policy. Omitted means engine defaults. */
+  reactionPreferences?: ReactionPreferences;
   isHomebrew?: boolean;
   homebrewId?: string;
 }
@@ -1133,6 +1135,21 @@ export interface ActiveBuff {
   escapeAction?: { ability: keyof Abilities; dc: number };
   /** A damage-triggered advantage marker consumed by the next save-end roll. */
   saveAdvantageOnNextSave?: boolean;
+}
+
+export interface ReactionPreferences {
+  shield?: { enabled: boolean };
+  uncannyDodge?: { enabled: boolean; minDamage?: number };
+  deflectAttacks?: { enabled: boolean; minDamage?: number; redirect?: boolean };
+  stoneEndurance?: { enabled: boolean; minDamage?: number };
+  superiorHuntersDefense?: { enabled: boolean; minDamage?: number };
+  hellishRebuke?: { enabled: boolean; minDamage?: number };
+  counterspell?: { enabled: boolean; maxSpellLevel?: number };
+  cuttingWords?: { enabled: boolean };
+  countercharm?: { enabled: boolean };
+  retaliation?: { enabled: boolean; minDamage?: number };
+  stormThunder?: { enabled: boolean; minDamage?: number };
+  infernalRebuke?: { enabled: boolean; minDamage?: number };
 }
 
 /** A serialized area of magical darkness on the combat grid. */

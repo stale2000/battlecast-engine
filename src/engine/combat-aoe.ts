@@ -205,6 +205,7 @@ function findCountercharmBard(state: BattleState, target: Creature): Creature | 
   return getAliveCreatures(state)
     .filter(c => c.team === target.team)
     .filter(c => c.monsterData.heroClass === 'Bard' && (c.monsterData.heroLevel ?? 0) >= 7)
+    .filter(c => c.monsterData.reactionPreferences?.countercharm?.enabled ?? true)
     .filter(c => !c.reactionUsed && creatureDistance(c, target) <= 30)
     .sort((a, b) => (b.monsterData.heroLevel ?? 0) - (a.monsterData.heroLevel ?? 0))[0];
 }

@@ -12,7 +12,7 @@ import {
   type ArenaBackground,
   type ArenaSpecies,
 } from '../data/arena-origins.js';
-import type { Abilities, MonsterAction } from '../types/monster.js';
+import type { Abilities, MonsterAction, ReactionPreferences } from '../types/monster.js';
 import { bless, burningHands, cureWounds, entangle, guidingBolt, healingWord, holdPerson, magicMissile, shieldOfFaith, sleep, thunderwave } from '../data/spells.js';
 import { arenaCombatCantrip, type ArenaCombatCantripName } from '../data/arena-combat-cantrips.js';
 
@@ -40,6 +40,25 @@ const ARMOR_TRAINING: Record<typeof HERO_CLASS_NAMES[number], readonly ('light' 
   Barbarian: ['light', 'medium'], Bard: ['light'], Cleric: ['light', 'medium', 'heavy'], Druid: ['light', 'medium'], Fighter: ['light', 'medium', 'heavy'], Monk: [], Paladin: ['light', 'medium', 'heavy'], Ranger: ['light', 'medium'], Rogue: ['light'], Sorcerer: [], Warlock: ['light'], Wizard: [],
 };
 const SHIELD_TRAINING = new Set<typeof HERO_CLASS_NAMES[number]>(['Barbarian', 'Cleric', 'Druid', 'Fighter', 'Paladin', 'Ranger']);
+
+function parseReactionPreferences(value: unknown, label: string): ReactionPreferences | undefined {
+  if (value === undefined) return undefined;
+  const input = assertArenaObject(value, `${label}.reactionPreferences`);
+  const allowed = new Set(['shield', 'uncannyDodge', 'deflectAttacks', 'stoneEndurance', 'superiorHuntersDefense', 'hellishRebuke', 'counterspell', 'cuttingWords', 'countercharm', 'retaliation', 'stormThunder', 'infernalRebuke']);
+  if (Object.keys(input).some(key => !allowed.has(key))) throw new EncounterError(`${label}.reactionPreferences contains an unsupported reaction.`);
+  const result: ReactionPreferences = {};
+  for (const [key, raw] of Object.entries(input)) {
+    const policy = assertArenaObject(raw, `${label}.reactionPreferences.${key}`);
+    if (typeof policy.enabled !== 'boolean') throw new EncounterError(`${label}.reactionPreferences.${key}.enabled must be boolean.`);
+    for (const field of ['minDamage', 'maxSpellLevel']) {
+      const numeric = policy[field];
+      if (numeric !== undefined && (!Number.isInteger(numeric) || (numeric as number) < 0 || (field === 'maxSpellLevel' && (numeric as number) > 9))) throw new EncounterError(`${label}.reactionPreferences.${key}.${field} is invalid.`);
+    }
+    if (policy.redirect !== undefined && typeof policy.redirect !== 'boolean') throw new EncounterError(`${label}.reactionPreferences.${key}.redirect must be boolean.`);
+    (result as Record<string, unknown>)[key] = { ...policy };
+  }
+  return result;
+}
 
 function isWeaponProficient(heroClass: typeof HERO_CLASS_NAMES[number], weapon: typeof ARENA_WEAPONS[string]): boolean {
   if (heroClass === 'Barbarian' || heroClass === 'Cleric' || heroClass === 'Fighter' || heroClass === 'Paladin' || heroClass === 'Ranger') return true;
@@ -267,10 +286,11 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     if (typeof character.heroClass !== 'string' || !HERO_CLASS_NAMES.includes(character.heroClass as typeof HERO_CLASS_NAMES[number])) {
       throw new EncounterError(`${label}.heroClass must be a supported hero class.`);
     }
-    if (!Object.keys(character).every(key => ['heroClass', 'abilities', 'subclass', 'spells', 'cantrips', 'weapons', 'armor', 'shield', 'species', 'background', 'abilityIncreases', 'alignment', 'dragonAncestry', 'elfLineage', 'highElfCantrip', 'gnomeLineage', 'goliathAncestry', 'tieflingLegacy', 'speciesCastingAbility', 'size', 'languages', 'elfKeenSense', 'humanSkill', 'originCantrips', 'originSpell', 'originCastingAbility', 'humanOriginFeat', 'humanOriginSkills', 'humanOriginTools', 'humanOriginCantrips', 'humanOriginSpell', 'humanOriginCastingAbility', 'familiar'].includes(key))) {
+    if (!Object.keys(character).every(key => ['heroClass', 'abilities', 'subclass', 'spells', 'cantrips', 'weapons', 'armor', 'shield', 'species', 'background', 'abilityIncreases', 'alignment', 'dragonAncestry', 'elfLineage', 'highElfCantrip', 'gnomeLineage', 'goliathAncestry', 'tieflingLegacy', 'speciesCastingAbility', 'size', 'languages', 'elfKeenSense', 'humanSkill', 'originCantrips', 'originSpell', 'originCastingAbility', 'humanOriginFeat', 'humanOriginSkills', 'humanOriginTools', 'humanOriginCantrips', 'humanOriginSpell', 'humanOriginCastingAbility', 'familiar', 'reactionPreferences'].includes(key))) {
       throw new EncounterError(`${label} contains unsupported build choices.`);
     }
     const baseAbilities = parseAbilities(character.abilities, `${label}.abilities`);
+    const reactionPreferences = parseReactionPreferences(character.reactionPreferences, label);
     const hasOrigin = character.species !== undefined || character.background !== undefined || character.abilityIncreases !== undefined;
     if (hasOrigin && (typeof character.species !== 'string' || !ARENA_SPECIES.includes(character.species as ArenaSpecies) || typeof character.background !== 'string' || !ARENA_BACKGROUNDS.includes(character.background as ArenaBackground))) {
       throw new EncounterError(`${label} must use an SRD species and background together.`);
@@ -381,6 +401,7 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     return {
       heroClass, heroLevel: 5, team, ...(familiar ? { familiarForm: familiar as typeof FAMILIAR_FORMS[number] } : {}),
       heroOverrides: {
+        reactionPreferences,
         abilities, subclass: character.subclass as HeroSubclassName | undefined, spells, cantrips, weapons: toWeaponOverrides(weapons, character.shield === false), ...(armor ? { armorBaseOverride: ARENA_ARMOR[armor].armorBase, armorDexCapOverride: ARENA_ARMOR[armor].dexCap, wearingHeavyArmor: ARENA_ARMOR[armor].category === 'heavy', ...(ARENA_ARMOR[armor].minimumStrength && abilities.str < ARENA_ARMOR[armor].minimumStrength ? { speedPenaltyOverride: 10 } : {}) } : {}), ...(character.shield !== undefined ? { shieldOverride: character.shield as boolean } : {}),
         ...(species && background ? {
           species, speciesChoice: elfLineage ?? gnomeLineage ?? goliathAncestry ?? tieflingLegacy ?? character.dragonAncestry as string | undefined, speciesCastingAbility, background, originFeat: BACKGROUNDS[background].originFeat, originFeats: [BACKGROUNDS[background].originFeat, ...(humanOriginFeat ? [humanOriginFeat] : [])], originSkills: [...new Set([...BACKGROUNDS[background].skills, ...(elfKeenSense ? [elfKeenSense] : []), ...(humanSkill ? [humanSkill] : []), ...selectedOriginSkills])], originTool: BACKGROUNDS[background].tool, originTools: [...new Set([BACKGROUNDS[background].tool, ...selectedOriginTools])],

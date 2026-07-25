@@ -2,6 +2,15 @@ import { describe, it, expect } from 'vitest';
 import { buildHero, buildCustomHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes';
 
 describe('buildCustomHero', () => {
+  it('preserves immutable reaction preferences on the authoritative stat block', () => {
+    const custom = buildCustomHero('Rogue', 5, {
+      reactionPreferences: { uncannyDodge: { enabled: true, minDamage: 10 }, shield: { enabled: false } },
+    });
+    expect(custom.reactionPreferences).toEqual({
+      uncannyDodge: { enabled: true, minDamage: 10 },
+      shield: { enabled: false },
+    });
+  });
   it('keeps default cantrips deterministic while exposing the full supported pool for selection', () => {
     for (const cls of HERO_CLASS_NAMES) {
       const available = getAvailableSpells(cls, 5).filter(spell => spell.spellLevel === 0);

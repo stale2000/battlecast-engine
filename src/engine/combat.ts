@@ -275,6 +275,15 @@ export function canTakeReactions(creature: Creature): boolean {
   return !creature.reactionUsed && !(creature.activeBuffs ?? []).some(buff => buff.preventsReactions);
 }
 
+function reactionEnabled(creature: Creature, key: keyof NonNullable<Creature['monsterData']['reactionPreferences']>): boolean {
+  return creature.monsterData.reactionPreferences?.[key]?.enabled ?? true;
+}
+
+function reactionMeetsDamage(creature: Creature, key: keyof NonNullable<Creature['monsterData']['reactionPreferences']>, damage: number): boolean {
+  const preference = creature.monsterData.reactionPreferences?.[key];
+  return damage >= (preference && 'minDamage' in preference ? preference.minDamage ?? 0 : 0);
+}
+
 export function getActiveTraits(creature: Creature) {
   return creature.wildShape?.traits ?? creature.monsterData.traits ?? [];
 }
@@ -1593,6 +1602,7 @@ function canUseSuperiorHuntersDefense(target: Creature): boolean {
   if ((target.monsterData.heroLevel ?? 0) < 15) return false;
   if (target.monsterData.heroSubclass && target.monsterData.heroSubclass !== 'Hunter') return false;
   if (!canTakeReactions(target)) return false;
+  if (!reactionEnabled(target, 'superiorHuntersDefense')) return false;
   return !target.conditions.includes('incapacitated') &&
     !target.conditions.includes('stunned') &&
     !target.conditions.includes('paralyzed') &&
@@ -1608,6 +1618,7 @@ function sameDamageType(a: string, b: string): boolean {
 
 function applySuperiorHuntersDefense(state: BattleState, target: Creature, damage: number, damageType: string): number {
   if (damage <= 0) return damage;
+  if (!reactionMeetsDamage(target, 'superiorHuntersDefense', damage)) return damage;
   const active = target.superiorHunterDefense;
   if (active && active.round === state.round && active.turnIndex === state.turnIndex && sameDamageType(active.damageType, damageType)) {
     const before = damage;
@@ -1844,7 +1855,7 @@ function getEffectiveAC(target: Creature): number {
 
 /** Resolve Shield at the only moment it is legal: after a noncritical hit is known. */
 function tryAutomaticShield(state: BattleState, target: Creature, rollTotal: number, naturalRoll: number, ac: number): boolean {
-  if (naturalRoll === 20 || rollTotal < ac || rollTotal >= ac + 5 || !canTakeReactions(target)) return false;
+  if (!reactionEnabled(target, 'shield') || naturalRoll === 20 || rollTotal < ac || rollTotal >= ac + 5 || !canTakeReactions(target)) return false;
   const shield = target.monsterData.actions.find(action => action.name === 'Shield' && action.reactionOnly);
   const slot = lowestAvailableSlot(target);
   if (!shield || slot === null) return false;
@@ -3010,7 +3021,7 @@ function activeBuffResistanceName(target: Creature, damageType: string): string 
 
 function canMonkDeflectDamage(target: Creature, damageType: string, isAttack: boolean): boolean {
   const level = target.monsterData.heroClass === 'Monk' ? (target.monsterData.heroLevel ?? 0) : 0;
-  if (level < 3 || !isAttack || !canTakeReactions(target) || target.currentHp <= 0) return false;
+  if (level < 3 || !isAttack || !reactionEnabled(target, 'deflectAttacks') || !canTakeReactions(target) || target.currentHp <= 0) return false;
   if (target.conditions.includes('incapacitated') || target.conditions.includes('stunned') ||
       target.conditions.includes('paralyzed') || target.conditions.includes('petrified') ||
       target.conditions.includes('unconscious')) return false;
@@ -3025,7 +3036,7 @@ function applyMonkDeflectDamage(
   damage: number,
   damageType: string,
 ): number {
-  if (!canMonkDeflectDamage(target, damageType, true) || damage <= 0) return damage;
+  if (!canMonkDeflectDamage(target, damageType, true) || !reactionMeetsDamage(target, 'deflectAttacks', damage) || damage <= 0) return damage;
 
   const level = target.monsterData.heroLevel ?? 0;
   const dexMod = abilityModifier(getEffectiveAbilityScore(target, 'dex'));
@@ -3044,7 +3055,7 @@ function applyMonkDeflectDamage(
   target.stats.actionUsage[action] = (target.stats.actionUsage[action] || 0) + 1;
   state.events.push({ kind: 'effect', creatureId: target.id, label: action, tone: 'success', durationMs: BASE_DURATIONS.effect });
 
-  if (reduced === 0 && attacker?.isAlive && hasResource(target, 'ki')) {
+  if (reduced === 0 && (target.monsterData.reactionPreferences?.deflectAttacks?.redirect ?? true) && attacker?.isAlive && hasResource(target, 'ki')) {
     consumeResource(target, 'ki');
     const dice = `2d${monkMartialArtsDieSides(level)}${signedBonus(dexMod)}`;
     const redirect = rollDamage(dice, false).total;
@@ -3192,6 +3203,7 @@ function applyDamage(state: BattleState, target: Creature, damage: number, damag
   // Arena reactions are automatic. Stone's Endurance is the only Goliath
   // ancestry reaction that changes incoming damage before HP is applied.
   if (target.monsterData.heroSpecies === 'Goliath' && target.monsterData.heroSpeciesChoice === 'Stone'
+      && reactionEnabled(target, 'stoneEndurance') && reactionMeetsDamage(target, 'stoneEndurance', damage)
       && canTakeReactions(target) && damage > 0 && consumeResource(target, 'goliath-giant-ancestry')) {
     target.reactionUsed = true;
     const reduction = rollDice('1d12').total + abilityModifier(getEffectiveAbilityScore(target, 'con'));
@@ -3213,6 +3225,7 @@ function applyDamage(state: BattleState, target: Creature, damage: number, damag
   // (not saves). Guarded against dying targets above - an unconscious
   // Rogue can't take a reaction.
   if (isAttack && target.monsterData.heroClass === 'Rogue' && (target.monsterData.heroLevel ?? 0) >= 5
+      && reactionEnabled(target, 'uncannyDodge') && reactionMeetsDamage(target, 'uncannyDodge', damage)
       && canTakeReactions(target) && damage > 0) {
     target.reactionUsed = true;
     const before = damage;
@@ -3346,6 +3359,7 @@ function applyDamage(state: BattleState, target: Creature, damage: number, damag
 
   if (damage > 0 && target.isAlive && target.currentHp > 0 && attacker && attacker.isAlive
       && target.monsterData.heroSpecies === 'Goliath' && target.monsterData.heroSpeciesChoice === 'Storm'
+      && reactionEnabled(target, 'stormThunder') && reactionMeetsDamage(target, 'stormThunder', damage)
       && canTakeReactions(target) && creatureDistance(target, attacker) <= 60
       && consumeResource(target, 'goliath-giant-ancestry')) {
     target.reactionUsed = true;
@@ -3365,6 +3379,7 @@ function applyDamage(state: BattleState, target: Creature, damage: number, damag
 
   if (damage > 0 && target.isAlive && target.currentHp > 0 && attacker && attacker.isAlive
       && target.monsterData.heroSpecies === 'Tiefling' && target.monsterData.heroSpeciesChoice === 'Infernal'
+      && reactionEnabled(target, 'infernalRebuke') && reactionMeetsDamage(target, 'infernalRebuke', damage)
       && canTakeReactions(target) && creatureDistance(target, attacker) <= 60
       && consumeResource(target, 'infernal-hellish-rebuke')) {
     target.reactionUsed = true;
@@ -3380,6 +3395,7 @@ function applyDamage(state: BattleState, target: Creature, damage: number, damag
 
   const hellishRebuke = target.monsterData.actions.find(action => action.name === 'Hellish Rebuke' && action.reactionOnly);
   if (damage > 0 && target.isAlive && target.currentHp > 0 && attacker && attacker.isAlive && hellishRebuke
+      && reactionEnabled(target, 'hellishRebuke') && reactionMeetsDamage(target, 'hellishRebuke', damage)
       && canTakeReactions(target) && creatureDistance(target, attacker) <= (hellishRebuke.range?.normal ?? 60)) {
     const resourceKey = hellishRebuke.resourceCost?.key;
     const slot = resourceKey ? null : lowestAvailableSlot(target);
@@ -3403,6 +3419,7 @@ function applyDamage(state: BattleState, target: Creature, damage: number, damag
   // Retaliation (Barbarian L10): reaction melee attack when damaged by adjacent creature
   if (damage > 0 && target.isAlive && target.currentHp > 0 && attacker && attacker.isAlive
       && target.monsterData.heroClass === 'Barbarian' && (target.monsterData.heroLevel ?? 0) >= 10
+      && reactionEnabled(target, 'retaliation') && reactionMeetsDamage(target, 'retaliation', damage)
       && canTakeReactions(target) && creatureDistance(target, attacker) <= 5) {
     target.reactionUsed = true;
     const meleeAction = target.monsterData.actions.find(a => a.type === 'melee' && a.damage);
@@ -3791,6 +3808,7 @@ function findCuttingWordsBard(state: BattleState, protectedCreature: Creature, h
   return getAliveCreatures(state)
     .filter(c => c.team === protectedCreature.team)
     .filter(c => c.monsterData.heroClass === 'Bard' && (c.monsterData.heroLevel ?? 0) >= 3)
+    .filter(c => reactionEnabled(c, 'cuttingWords'))
     .filter(c => canTakeReactions(c) && hasResource(c, 'bardic-inspiration'))
     .filter(c => creatureDistance(c, hostileCreature) <= 60)
     .sort((a, b) => (b.monsterData.heroLevel ?? 0) - (a.monsterData.heroLevel ?? 0))[0];

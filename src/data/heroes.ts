@@ -28,7 +28,7 @@
  * This matches a legal 2024 standard-array-plus-background-boost chassis
  * without modeling species traits or origin feats.
  */
-import { MonsterData, MonsterAction, MonsterTrait, Abilities, type Speed, type WeaponMasteryProperty } from '../types/monster.js';
+import { MonsterData, MonsterAction, MonsterTrait, Abilities, ReactionPreferences, type Speed, type WeaponMasteryProperty } from '../types/monster.js';
 import { monsters } from './monsters.js';
 import {
   FULL_CASTER_SLOTS, HALF_CASTER_SLOTS, WARLOCK_SLOTS, slotsToResources,
@@ -2468,6 +2468,7 @@ export interface HeroOverrides {
   spells?: string[];
   cantrips?: string[];
   spellSelectionIncludesCantrips?: boolean;
+  reactionPreferences?: ReactionPreferences;
 }
 
 function weaponOverrideToSpec(weapon: WeaponOverride): WeaponSpec {
@@ -2918,6 +2919,7 @@ export function buildCustomHero(
     speciesPreparedSpells: overrides.speciesPreparedSpells,
     preferredWildShapeBeast: overrides.preferredWildShapeBeast,
     initialResources: Object.keys(initialResources).length ? initialResources : undefined,
+    reactionPreferences: overrides.reactionPreferences,
   };
 
   return data;
