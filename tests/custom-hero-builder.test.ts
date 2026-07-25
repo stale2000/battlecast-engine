@@ -201,6 +201,15 @@ describe('getAvailableSpells', () => {
     expect(names('Ranger')).toContain('Ensnaring Strike');
     expect(names('Druid')).toContain('Wind Wall');
     expect(names('Warlock')).toContain('Hunger of Hadar');
+    expect(names('Cleric')).toContain('Protection from Energy');
+    expect(names('Sorcerer')).toContain('Flame Blade');
+    expect(names('Bard')).toContain('Plant Growth');
+    expect(names('Bard')).toContain('See Invisibility');
+    for (const spell of ['Bane', 'Invisibility', 'Misty Step', 'Vampiric Touch']) expect(names('Warlock')).toContain(spell);
+    expect(names('Sorcerer')).toContain('Sleet Storm');
+    expect(names('Wizard')).toContain('Sleet Storm');
+    expect(getAvailableSpells('Ranger', 9).map(spell => spell.name)).toContain('Conjure Animals');
+    expect(getAvailableSpells('Ranger', 9).map(spell => spell.name)).toContain('Plant Growth');
   });
 
   it('returns empty for martial classes', () => {
