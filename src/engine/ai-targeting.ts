@@ -287,7 +287,8 @@ export function adjustForResistance(dmg: number, damageType: string, target: Cre
  * when there's no terrain data - pre-terrain behavior.
  */
 export function canSee(state: BattleState, attacker: Creature, target: Creature): boolean {
-  if (target.activeBuffs?.some(buff => buff.key === `hidden-from:${attacker.id}`)) return false;
+  if (target.activeBuffs?.some(buff => buff.key === `hidden-from:${attacker.id}`)
+    && !target.activeBuffs.some(buff => buff.suppressInvisibilityForCasterId === attacker.id)) return false;
   return canSeeCreatureIgnoringHide(state, attacker, target);
 }
 

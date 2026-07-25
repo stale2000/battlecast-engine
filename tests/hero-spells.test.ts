@@ -1,11 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { Creature, MonsterData, MonsterAction } from '../src/types/monster';
-import { flameBlade, heatMetal } from '../src/data/spells.js';
+import { flameBlade, heatMetal, magicMissile, mindSpike } from '../src/data/spells.js';
 import {
   BattleState, DEFAULT_TACTICS, createCreature,
   executeSpell, applyHealing, applyAutoDarts, applyBuffFromSpell, applyDamage,
   hasBuff, tryUseBonusActionDamageBuff,
 } from '../src/engine/combat';
+import { canSeeCreatureIgnoringHide } from '../src/engine/visibility.js';
 
 function makeMonsterData(overrides: Partial<MonsterData> = {}): MonsterData {
   return {
@@ -68,6 +69,14 @@ describe('applyHealing', () => {
 });
 
 describe('applyAutoDarts (Magic Missile)', () => {
+  it('defaults all darts to the primary target for direct casts', () => {
+    const caster = createCreature(makeMonsterData({ initialResources: { 'slot-1': 1 } }), 'red', { x: 0, y: 0 }, 0);
+    const target = createCreature(makeMonsterData({ hp: 30 }), 'blue', { x: 5, y: 0 }, 1);
+    const state = makeState([caster, target]);
+    expect(executeSpell(state, caster, magicMissile(), target)).toBe(true);
+    expect(target.currentHp).toBeLessThan(30);
+  });
+
   it('deals damage to all targets without rolling attack', () => {
     const caster = createCreature(makeMonsterData(), 'red', { x: 0, y: 0 }, 0);
     const t1 = createCreature(makeMonsterData({ hp: 20 }), 'blue', { x: 5, y: 0 }, 1);
@@ -218,6 +227,20 @@ describe('applyBuffFromSpell', () => {
     applyDamage(state, ally, 9, 'fire', null);
     expect(ally.currentHp).toBe(16); // Resistance halves to 4, then bond transfers 4.
     expect(caster.currentHp).toBe(16);
+  });
+});
+
+describe('Mind Spike', () => {
+  it('deals save damage and lets its caster see the failed target for one hour', () => {
+    const caster = createCreature(makeMonsterData(), 'red', { x: 0, y: 0 }, 0);
+    const target = createCreature(makeMonsterData({ hp: 30 }), 'blue', { x: 5, y: 0 }, 1);
+    target.conditions.push('invisible');
+    const state = makeState([caster, target]);
+    expect(canSeeCreatureIgnoringHide(state, caster, target)).toBe(false);
+    expect(executeSpell(state, caster, mindSpike('wis', 20, 10), target)).toBe(true);
+    expect(target.currentHp).toBeLessThan(30);
+    expect(canSeeCreatureIgnoringHide(state, caster, target)).toBe(true);
+    expect(caster.concentratingOn).toBeUndefined();
   });
 });
 

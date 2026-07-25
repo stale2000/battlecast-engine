@@ -411,6 +411,8 @@ export interface MonsterAction {
   };
   /** Restores a recently dead creature to life. */
   revive?: { maxDeathRounds: number; hp: number };
+  /** Stabilizes a dying ally at 0 HP without restoring hit points. */
+  stabilize?: boolean;
   /** Chooses one server-validated damage resistance for a spell effect. */
   damageResistanceChoice?: { choices: string[]; selected?: string };
   /** Chooses one server-validated damage type for a spell effect. */
@@ -611,6 +613,10 @@ export interface BuffTemplate {
   canSeeInvisible?: boolean;
   /** This creature cannot benefit from the Invisible condition while the buff lasts. */
   suppressesInvisibility?: boolean;
+  /** This creature cannot benefit from Invisible against the spell's caster. */
+  suppressInvisibilityForCaster?: boolean;
+  /** This creature cannot benefit from Invisible against one named caster. */
+  suppressInvisibilityForCasterId?: string;
   /** Grants the restricted one-attack/Dash/Disengage/Hide action from Haste. */
   hasteAction?: boolean;
   /** This effect limits the creature to one attack when it takes Attack. */
@@ -1112,6 +1118,7 @@ export interface ActiveBuff {
   attackersOfTypesHaveDisadvantage?: string[];
   canSeeInvisible?: boolean;
   suppressesInvisibility?: boolean;
+  suppressInvisibilityForCasterId?: string;
   hasteAction?: boolean;
   /** This effect limits the creature to one attack when it takes Attack. */
   limitAttacksToOne?: boolean;

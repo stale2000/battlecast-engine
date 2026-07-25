@@ -46,6 +46,15 @@ export function resistance(ability: SpellcastingAbility, _mod: number, _pb: numb
   };
 }
 
+export function spareTheDying(ability: SpellcastingAbility, _mod: number, pb: number): MonsterAction {
+  const range = pb >= 3 ? 30 : 15;
+  return {
+    name: 'Spare the Dying', type: 'special', spellLevel: 0, spellSchool: 'necromancy', castingAbility: ability,
+    description: `One dying creature within ${range} feet becomes Stable.`,
+    range: { normal: range, long: range }, targetScope: 'one_ally', stabilize: true,
+  };
+}
+
 export function poisonSpray(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
   const dice = pb >= 6 ? '4d12' : pb >= 4 ? '3d12' : pb >= 3 ? '2d12' : '1d12';
   return {
@@ -661,6 +670,17 @@ export function rayOfEnfeeblement(ability: SpellcastingAbility, mod: number, pb:
     range: { normal: 60, long: 60 }, targetScope: 'one_enemy', savingThrow: { ability: 'con', dc: saveDC(mod, pb) },
     buffOnFailedSave: { name: 'Ray of Enfeeblement', key: 'ray-of-enfeeblement', requiresConcentration: true, strengthTestDisadvantage: true, damageRollPenalty: '1d8', saveEnds: { ability: 'con', dc: saveDC(mod, pb), at: 'targetTurnEnd' } },
     buffOnSuccessfulSave: { name: 'Ray of Enfeeblement', key: 'ray-of-enfeeblement-success', attackDisadvantage: true, expiresOnSourceTurnStart: true },
+  };
+}
+
+export function mindSpike(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Mind Spike', type: 'special', spellLevel: 0, spellSchool: 'divination', castingAbility: ability,
+    durationRounds: 600, range: { normal: 120, long: 120 }, targetScope: 'one_enemy',
+    description: `One creature within 120 feet makes a WIS save (DC ${saveDC(mod, pb)}); 3d8 psychic damage on a failed save, half on a success. On a failed save, you know its location and ignore its Invisible condition for 1 hour.`,
+    damageType: 'psychic',
+    savingThrow: { ability: 'wis', dc: saveDC(mod, pb), damageOnFail: '3d8', damageOnSuccess: 'half' },
+    buffOnFailedSave: { name: 'Mind Spike', key: 'mind-spike', suppressInvisibilityForCaster: true },
   };
 }
 
@@ -2200,7 +2220,7 @@ export function wallOfFire(ability: SpellcastingAbility, mod: number, pb: number
 type SpellFactory = (ability: SpellcastingAbility, mod: number, pb: number) => MonsterAction;
 const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Magic Missile', () => magicMissile()], ['Lightning Arrow', lightningArrow], ['Silence', silence], ['Compelled Duel', compelledDuel], ['Warding Wind', wardingWind],
-  ['Blade Ward', bladeWard], ['Resistance', resistance], ['Shillelagh', shillelagh], ['Sorcerous Burst', sorcerousBurst], ['Poison Spray', poisonSpray], ['Produce Flame', produceFlame], ['Thorn Whip', thornWhip], ['Acid Splash', acidSplash], ['Starry Wisp', starryWisp], ['Thunderclap', thunderclap], ['Toll the Dead', tollTheDead], ['True Strike', trueStrike],
+  ['Blade Ward', bladeWard], ['Resistance', resistance], ['Spare the Dying', spareTheDying], ['Shillelagh', shillelagh], ['Sorcerous Burst', sorcerousBurst], ['Poison Spray', poisonSpray], ['Produce Flame', produceFlame], ['Thorn Whip', thornWhip], ['Acid Splash', acidSplash], ['Starry Wisp', starryWisp], ['Thunderclap', thunderclap], ['Toll the Dead', tollTheDead], ['True Strike', trueStrike],
   ['Shield', shield], ['Hail of Thorns', hailOfThorns],
   ['Hellish Rebuke', hellishRebuke],
   ['Burning Hands', burningHands], ['Thunderwave', thunderwave], ['Sleep', sleep],
@@ -2232,7 +2252,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['See Invisibility', seeInvisibility],
   ['Gust of Wind', gustOfWind], ['Lesser Restoration', lesserRestoration], ['Protection from Poison', protectionFromPoison],
   ['Misty Step', mistyStep],
-  ['Blur', blur], ['Barkskin', barkskin],
+  ['Blur', blur], ['Barkskin', barkskin], ['Mind Spike', mindSpike],
   ['Acid Arrow', acidArrow],
   ['Fireball', fireball], ['Lightning Bolt', lightningBolt],
   ['Spirit Guardians', spiritGuardians], ['Call Lightning', callLightning],

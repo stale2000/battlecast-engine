@@ -14,12 +14,47 @@ import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildCustomHero, buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
-import { acidArrow, armorOfAgathys, bane, barkskin, beaconOfHope, bestowCurse, bladeWard, bless, blindingSmite, brandingSmite, buildSpellAction, callLightning, chromaticOrb, cloudOfDaggers, command, conjureAnimals, counterspell, cureWounds, darkness, daylight, dissonantWhispers, dispelMagic, enlargeReduce, entangle, ensnaringStrike, expeditiousRetreat, findSteed, fireball, flamingSphere, fly, grease, gustOfWind, haste, hellishRebuke, heroism, holdPerson, hungerOfHadar, inflictWounds, invisibility, lesserRestoration, mageArmor, magicWeapon, massHealingWord, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, searingSmite, seeInvisibility, shield, shiningSmite, slow, spikeGrowth, spiritualWeapon, summonBeast, tashasHideousLaughter, thunderousSmite, web, witchBolt, wrathfulSmite } from '../src/data/spells.js';
+import { acidArrow, armorOfAgathys, bane, barkskin, beaconOfHope, bestowCurse, bladeWard, bless, blindingSmite, brandingSmite, buildSpellAction, callLightning, chromaticOrb, cloudOfDaggers, command, conjureAnimals, counterspell, cureWounds, darkness, daylight, dissonantWhispers, dispelMagic, enlargeReduce, entangle, ensnaringStrike, expeditiousRetreat, findSteed, fireball, flamingSphere, fly, grease, gustOfWind, haste, hellishRebuke, heroism, holdPerson, hungerOfHadar, inflictWounds, invisibility, lesserRestoration, mageArmor, magicWeapon, massHealingWord, mindSpike, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, searingSmite, seeInvisibility, shield, shiningSmite, slow, spareTheDying, spikeGrowth, spiritualWeapon, summonBeast, tashasHideousLaughter, thunderousSmite, web, witchBolt, wrathfulSmite } from '../src/data/spells.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
 
 describe('Kaggle arena bridge', () => {
+  it('stabilizes a dying ally with Spare the Dying', () => {
+    const encounter = new Encounter({ seed: 23 });
+    const [addedCaster] = encounter.addCreature({ heroClass: 'Cleric', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [spareTheDying('wis', 3, 3)] } });
+    const [addedAlly] = encounter.addCreature({ heroClass: 'Fighter', heroLevel: 5, team: 'red', position: { x: 2, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 8, y: 0 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.id === addedCaster.id)!;
+    const ally = encounter.state!.creatures.find(creature => creature.id === addedAlly.id)!;
+    ally.currentHp = 0; ally.dying = true; ally.deathSaves = { successes: 0, failures: 1 };
+    encounter.state!.initiativeOrder = [caster.id];
+    startArena(encounter);
+    const action = getLegalActions(encounter, caster.id).find(candidate => candidate.actionName === 'Spare the Dying' && candidate.targetId === ally.id)!;
+    applyLegalAction(encounter, action);
+    expect(ally.dying).toBe(false);
+    expect(ally.currentHp).toBe(0);
+    expect(ally.conditions).toContain('unconscious');
+  });
+
+  it('Mind Spike damages and reveals an invisible target only to its caster', () => {
+    const encounter = new Encounter({ seed: 29 });
+    const [addedCaster] = encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 } });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 3, y: 0 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.id === addedCaster.id)!;
+    const target = encounter.state!.creatures.find(creature => creature.team === 'blue')!;
+    target.conditions.push('invisible');
+    target.activeBuffs.push({ name: 'Hidden', key: `hidden-from:${caster.id}`, casterId: target.id, appliedRound: 1, endRound: 601 });
+    expect(canSee(encounter.state!, caster, target)).toBe(false);
+    const action = mindSpike('int', 20, 3);
+    expect(executeSpell(encounter.state!, caster, action, target)).toBe(true);
+    expect(target.currentHp).toBeLessThan(target.maxHp);
+    expect(target.activeBuffs.some(buff => buff.suppressInvisibilityForCasterId === caster.id)).toBe(true);
+    expect(canSee(encounter.state!, caster, target)).toBe(true);
+  });
+
   it('resolves Daylight zones and dispels overlapping magical Darkness', () => {
     const encounter = new Encounter({ seed: 19 });
     const [addedCaster] = encounter.addCreature({

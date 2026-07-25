@@ -146,15 +146,15 @@ function spellTargets(active: Creature, state: NonNullable<Encounter['state']>, 
   if (action.autoDarts || action.savingThrow?.area || action.persistentZone || (action.targetScope === 'all_allies_in_area' && !action.multiTargetBuff && !action.multiTargetHeal)) return [];
   const living = action.revive
     ? state.creatures.filter(c => !c.isAlive && c.team === active.team && c.stats.deathRound !== undefined && state.round - c.stats.deathRound <= action.revive!.maxDeathRounds)
-    : state.creatures.filter(c => c.isAlive && (!c.dying || action.heal !== undefined));
+    : state.creatures.filter(c => c.isAlive && (!c.dying || action.heal !== undefined || action.stabilize));
   if (action.targetScope === 'self') return [active];
   const inRange = (target: Creature) => {
     const range = action.range?.normal;
     return (range === undefined || creatureDistance(active, target) <= range)
       && (!action.targetTypeRestriction || target.monsterData.type.toLowerCase() === action.targetTypeRestriction.toLowerCase());
   };
-  if (action.targetScope === 'one_ally' || action.targetScope === 'all_allies_in_area' || action.heal || action.layOnHands || action.removesConditions || action.grantsFlight) {
-    return living.filter(c => c.team === active.team && inRange(c) && !((action.requiresNoHeavyArmor ?? false) && c.monsterData.wearingHeavyArmor) && (action.heal || action.layOnHands ? c.currentHp < c.maxHp || c.dying : action.removesConditions && !action.buff ? action.removesConditions.some(condition => c.conditions.includes(condition)) : true));
+  if (action.targetScope === 'one_ally' || action.targetScope === 'all_allies_in_area' || action.heal || action.layOnHands || action.removesConditions || action.grantsFlight || action.stabilize) {
+    return living.filter(c => c.team === active.team && inRange(c) && !((action.requiresNoHeavyArmor ?? false) && c.monsterData.wearingHeavyArmor) && (action.stabilize ? c.dying : action.heal || action.layOnHands ? c.currentHp < c.maxHp || c.dying : action.removesConditions && !action.buff ? action.removesConditions.some(condition => c.conditions.includes(condition)) : true));
   }
   if (action.targetScope === 'any_one') {
     return living.filter(target => inRange(target) && (!action.range || canSee(state, active, target)));

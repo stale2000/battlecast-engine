@@ -2698,11 +2698,11 @@ function canActToStabilise(actor: Creature): boolean {
   );
 }
 
-function stabiliseDyingAlly(state: BattleState, actor: Creature, target: Creature): boolean {
+function stabiliseDyingAlly(state: BattleState, actor: Creature, target: Creature, rangeFt = 5, allowNonHeroTarget = false): boolean {
   if (!canActToStabilise(actor)) return false;
-  if (target.team !== actor.team || !target.monsterData.isHero) return false;
+  if (target.team !== actor.team || (!allowNonHeroTarget && !target.monsterData.isHero)) return false;
   if (!target.isAlive || !target.dying) return false;
-  if (creatureDistance(actor, target) > 5) return false;
+  if (creatureDistance(actor, target) > rangeFt) return false;
 
   target.currentHp = 0;
   target.dying = false;

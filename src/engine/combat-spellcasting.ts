@@ -33,7 +33,7 @@ import {
 } from './combat-buffs.js';
 import { pushTargetAwayFromCaster, resolveAoE } from './combat-aoe.js';
 import {
-  applyDamage, applyCondition, applyActionRuntimeEffects, gainHp, pushLog, resolveAttack, getAliveCreatures, createSummonedCreature,
+  applyDamage, applyCondition, applyActionRuntimeEffects, gainHp, pushLog, resolveAttack, getAliveCreatures, createSummonedCreature, stabiliseDyingAlly,
   getEffectiveMoveSpeed, getEffectiveSaveModifier, resolveSpellReflection, createPersistentZone, isCreatureSilenced,
   type BattleState,
 } from './combat.js';
@@ -613,6 +613,7 @@ export function applyBuffFromSpell(
     attackersOfTypesHaveDisadvantage: tmpl.attackersOfTypesHaveDisadvantage,
     canSeeInvisible: tmpl.canSeeInvisible,
     suppressesInvisibility: tmpl.suppressesInvisibility,
+    suppressInvisibilityForCasterId: tmpl.suppressInvisibilityForCaster ? caster.id : undefined,
     hasteAction: tmpl.hasteAction,
     limitAttacksToOne: tmpl.limitAttacksToOne,
     restrictActionBonusCombination: tmpl.restrictActionBonusCombination,
@@ -1171,6 +1172,9 @@ export function executeSpell(
     });
     return true;
   }
+  if (castAction.stabilize) {
+    return primaryTarget ? stabiliseDyingAlly(state, caster, primaryTarget, castAction.range?.normal ?? 5, true) : false;
+  }
 
   if (castAction.spiritualWeapon && primaryTarget && castAction.attackBonus !== undefined && castAction.damage) {
     caster.spiritualWeapon = {
@@ -1227,9 +1231,12 @@ export function executeSpell(
     return true;
   }
 
-  // Auto-hit darts (Magic Missile) - caller supplies dart targets
-  if (castAction.autoDarts && aoeTargets && aoeTargets.length > 0) {
-    applyAutoDarts(state, caster, castAction, aoeTargets.slice(0, castAction.autoDarts));
+  // Auto-hit darts (Magic Missile) - callers may split them across targets.
+  if (castAction.autoDarts) {
+    const dartTargets = (aoeTargets?.length ? aoeTargets : primaryTarget ? [primaryTarget] : [])
+      .slice(0, castAction.autoDarts);
+    if (!dartTargets.length) return false;
+    applyAutoDarts(state, caster, castAction, dartTargets);
     return true;
   }
 

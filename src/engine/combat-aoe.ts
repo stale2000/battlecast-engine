@@ -191,6 +191,7 @@ function applySaveBuff(state: BattleState, attacker: Creature, target: Creature,
     appliedCondition: tmpl.appliedCondition,
     appliedConditions: tmpl.appliedConditions,
     endsOnDamage: tmpl.endsOnDamage,
+    suppressInvisibilityForCasterId: tmpl.suppressInvisibilityForCaster ? attacker.id : undefined,
   });
   pushLog(state, {
     round: state.round, turn: state.turnIndex,

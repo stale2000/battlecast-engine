@@ -42,6 +42,7 @@ function obscuringZoneBlocksSight(zones: PersistentZone[] | undefined, round: nu
 export function canSeeCreatureIgnoringHide(state: BattleState, observer: Creature, target: Creature): boolean {
   if (target.conditions.includes('invisible')
     && !(target.activeBuffs ?? []).some(buff => buff.suppressesInvisibility)
+    && !(target.activeBuffs ?? []).some(buff => buff.suppressInvisibilityForCasterId === observer.id)
     && !(observer.activeBuffs ?? []).some(buff => buff.canSeeInvisible)) return false;
   if (magicalDarknessBlocksSight(state.darknessZones, state.round, observer, target, state.daylightZones)) return false;
   if (obscuringZoneBlocksSight(state.persistentZones, state.round, observer, target)) return false;
