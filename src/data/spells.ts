@@ -805,7 +805,9 @@ function undeadSpirit(form: 'ghostly' | 'putrid' | 'skeletal', mod: number, pb: 
     abilities: { str: 12, dex: 16, con: 15, int: 4, wis: 10, cha: 9 },
     resistances: ['necrotic'], senses: 'Darkvision 60 ft., Passive Perception 10', languages: 'Understands the languages you speak', cr: '0', xp: 0, proficiencyBonus: pb,
     actions: [{ name: 'Deathly Touch', type: ghostly ? 'melee' : 'ranged', attackBonus: spellAttackBonus(mod, pb), damage: '1d10+3', damageType: 'necrotic', reach: ghostly ? 5 : undefined, range: ghostly ? undefined : { normal: 60, long: 60 }, magical: true,
-      ...(putrid ? { conditionOnHit: { condition: 'paralyzed' as const, save: { ability: 'con' as const, dc: saveDC(mod, pb) }, duration: 'end_of_next_turn' as const } } : {}),
+      ...(ghostly
+        ? { conditionOnHit: { condition: 'frightened' as const, save: { ability: 'wis' as const, dc: saveDC(mod, pb) }, duration: 'end_of_next_turn' as const } }
+        : putrid ? { conditionOnHit: { condition: 'paralyzed' as const, save: { ability: 'con' as const, dc: saveDC(mod, pb) }, duration: 'end_of_next_turn' as const } } : {}),
       description: `${ghostly ? 'Melee' : 'Ranged'} Spell Attack: your spell attack modifier. Hit: 1d10 + 3 necrotic damage.` }],
   };
 }
