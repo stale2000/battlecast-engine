@@ -275,10 +275,15 @@ export function nearestFootprintEdge(from: { x: number; y: number }, target: Cre
   return best;
 }
 
+function movementStepCost(creature: Creature, state: BattleState, position: { x: number; y: number }): number {
+  const flying = (creature.monsterData.speed.fly ?? creature.wildShape?.speed.fly ?? 0) > 0;
+  return !flying && state.terrainDifficult?.has(`${position.x},${position.y}`) ? 2 : 1;
+}
+
 function movementCostForPath(creature: Creature, state: BattleState, from: { x: number; y: number }, path: Array<{ x: number; y: number }>): number {
   let previous = from;
   return path.reduce((cost, position) => {
-    const nextCost = persistentZoneMovementCost(state, creature, previous, position);
+    const nextCost = movementStepCost(creature, state, position) * persistentZoneMovementCost(state, creature, previous, position);
     previous = position;
     return cost + nextCost;
   }, 0);
@@ -302,7 +307,7 @@ export function reachableMovementDestinations(
       const destination = { x, y };
       if ((x === from.x && y === from.y) || chebyshev(from, destination) > maxSquares) continue;
       if (!isValidStep(destination, size, fp, state.creatures, creature.id, gridSize, movementBlocked)) continue;
-      const path = findPath(from, destination, size, fp, state.creatures, creature.id, gridSize, movementBlocked, maxSquares, { exactGoal: true, movementCost: (current, position) => persistentZoneMovementCost(state, creature, current, position) });
+      const path = findPath(from, destination, size, fp, state.creatures, creature.id, gridSize, movementBlocked, maxSquares, { exactGoal: true, movementCost: (current, position) => movementStepCost(creature, state, position) * persistentZoneMovementCost(state, creature, current, position) });
       if (path.length && path[path.length - 1]?.x === x && path[path.length - 1]?.y === y && isFrightenedMoveLegal(creature, destination, state)) results.push({ x, y, distanceFt: movementCostForPath(creature, state, from, path) * 5 });
     }
   }
@@ -316,7 +321,7 @@ export function moveToDestination(creature: Creature, destination: { x: number; 
   const size = creature.wildShape?.size ?? creature.temporarySize ?? creature.monsterData.size;
   const fp = getFootprintSize(size);
   const movementBlocked = movementBlockedSetFor(creature, state);
-  const path = findPath(from, destination, size, fp, state.creatures, creature.id, state.gridSize, movementBlocked, Math.floor(creature.movementRemaining / 5), { exactGoal: true, movementCost: (current, position) => persistentZoneMovementCost(state, creature, current, position) });
+  const path = findPath(from, destination, size, fp, state.creatures, creature.id, state.gridSize, movementBlocked, Math.floor(creature.movementRemaining / 5), { exactGoal: true, movementCost: (current, position) => movementStepCost(creature, state, position) * persistentZoneMovementCost(state, creature, current, position) });
   creature.position = destination;
   const rider = creature.riderId ? state.creatures.find(candidate => candidate.id === creature.riderId) : undefined;
   if (rider?.mountedOnId === creature.id) rider.position = { ...destination };
@@ -374,7 +379,7 @@ export function moveToward(creature: Creature, target: { x: number; y: number },
     from, target, size, fp,
     state.creatures, creature.id,
     gridSize, movementBlocked, maxSquares,
-    { movementCost: (current, position) => persistentZoneMovementCost(state, creature, current, position) },
+    { movementCost: (current, position) => movementStepCost(creature, state, position) * persistentZoneMovementCost(state, creature, current, position) },
   );
 
   let current = { ...from };
@@ -399,9 +404,9 @@ export function moveToward(creature: Creature, target: { x: number; y: number },
       const cornerBlocked = fdx !== 0 && fdy !== 0 &&
         !isValidStep({ x: from.x + fdx, y: from.y }, size, fp, state.creatures, creature.id, gridSize, movementBlocked) &&
         !isValidStep({ x: from.x, y: from.y + fdy }, size, fp, state.creatures, creature.id, gridSize, movementBlocked);
-      if (!cornerBlocked && persistentZoneMovementCost(state, creature, from, found) * chebyshev(from, found) <= maxSquares) {
+      if (!cornerBlocked && movementStepCost(creature, state, found) * persistentZoneMovementCost(state, creature, from, found) * chebyshev(from, found) <= maxSquares) {
         current = found;
-        movementUsed = persistentZoneMovementCost(state, creature, from, found) * chebyshev(from, found);
+        movementUsed = movementStepCost(creature, state, found) * persistentZoneMovementCost(state, creature, from, found) * chebyshev(from, found);
       }
     }
   }

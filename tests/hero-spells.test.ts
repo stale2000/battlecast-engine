@@ -7,6 +7,7 @@ import {
   hasBuff, tryUseBonusActionDamageBuff,
 } from '../src/engine/combat';
 import { canSeeCreatureIgnoringHide } from '../src/engine/visibility.js';
+import { withRng } from '../src/engine/rng.js';
 
 function makeMonsterData(overrides: Partial<MonsterData> = {}): MonsterData {
   return {
@@ -232,7 +233,7 @@ describe('applyBuffFromSpell', () => {
 
 describe('Mind Spike', () => {
   it('deals save damage and lets its caster see the failed target for one hour', () => {
-    const caster = createCreature(makeMonsterData(), 'red', { x: 0, y: 0 }, 0);
+    const caster = createCreature(makeMonsterData({ initialResources: { 'slot-2': 1 } }), 'red', { x: 0, y: 0 }, 0);
     const target = createCreature(makeMonsterData({ hp: 30 }), 'blue', { x: 5, y: 0 }, 1);
     target.conditions.push('invisible');
     const state = makeState([caster, target]);
@@ -240,7 +241,7 @@ describe('Mind Spike', () => {
     expect(executeSpell(state, caster, mindSpike('wis', 20, 10), target)).toBe(true);
     expect(target.currentHp).toBeLessThan(30);
     expect(canSeeCreatureIgnoringHide(state, caster, target)).toBe(true);
-    expect(caster.concentratingOn).toBeUndefined();
+    expect(caster.concentratingOn).toBe('mind-spike');
   });
 });
 
@@ -313,27 +314,19 @@ describe('executeSpell: dispatch', () => {
   });
 
   it('dispatches attack-roll spell to resolveAttack', () => {
-    // Run 3 times to avoid nat-1 auto-miss flake (5% per trial)
-    let hitAtLeastOnce = false;
-    for (let i = 0; i < 3; i++) {
-      const caster = createCreature(makeMonsterData({
-        abilities: { str: 10, dex: 10, con: 10, int: 16, wis: 10, cha: 10 },
-      }), 'red', { x: 0, y: 0 }, 0);
-      const target = createCreature(makeMonsterData({ ac: 5 }), 'blue', { x: 2, y: 0 }, 1);
-      const state = makeState([caster, target]);
-      const startHp = target.currentHp;
-      const action: MonsterAction = {
-        name: 'Fire Bolt', type: 'ranged',
-        attackBonus: 10,
-        damage: '1d10', damageType: 'fire',
-        range: { normal: 120, long: 120 },
-        description: '',
-        spellLevel: 0,
-      };
-      executeSpell(state, caster, action, target);
-      if (target.currentHp < startHp) { hitAtLeastOnce = true; break; }
-    }
-    expect(hitAtLeastOnce).toBe(true);
+    const caster = createCreature(makeMonsterData({
+      abilities: { str: 10, dex: 10, con: 10, int: 16, wis: 10, cha: 10 },
+    }), 'red', { x: 0, y: 0 }, 0);
+    const target = createCreature(makeMonsterData({ ac: 5 }), 'blue', { x: 2, y: 0 }, 1);
+    const state = makeState([caster, target]);
+    const action: MonsterAction = {
+      name: 'Fire Bolt', type: 'ranged', attackBonus: 10,
+      damage: '1d10', damageType: 'fire', range: { normal: 120, long: 120 },
+      description: '', spellLevel: 0,
+    };
+    const startHp = target.currentHp;
+    withRng({ next: () => 0.5 }, () => executeSpell(state, caster, action, target));
+    expect(target.currentHp).toBeLessThan(startHp);
   });
 });
 

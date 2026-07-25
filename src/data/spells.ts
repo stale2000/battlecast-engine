@@ -675,12 +675,12 @@ export function rayOfEnfeeblement(ability: SpellcastingAbility, mod: number, pb:
 
 export function mindSpike(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
   return {
-    name: 'Mind Spike', type: 'special', spellLevel: 0, spellSchool: 'divination', castingAbility: ability,
-    durationRounds: 600, range: { normal: 120, long: 120 }, targetScope: 'one_enemy',
+    name: 'Mind Spike', type: 'special', spellLevel: 2, spellSchool: 'divination', castingAbility: ability,
+    concentration: true, durationRounds: 600, range: { normal: 120, long: 120 }, targetScope: 'one_enemy',
     description: `One creature within 120 feet makes a WIS save (DC ${saveDC(mod, pb)}); 3d8 psychic damage on a failed save, half on a success. On a failed save, you know its location and ignore its Invisible condition for 1 hour.`,
     damageType: 'psychic',
     savingThrow: { ability: 'wis', dc: saveDC(mod, pb), damageOnFail: '3d8', damageOnSuccess: 'half' },
-    buffOnFailedSave: { name: 'Mind Spike', key: 'mind-spike', suppressInvisibilityForCaster: true },
+    buffOnFailedSave: { name: 'Mind Spike', key: 'mind-spike', suppressInvisibilityForCaster: true, requiresConcentration: true },
   };
 }
 

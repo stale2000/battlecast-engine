@@ -14,7 +14,7 @@
  *   sight - you can see (and shoot) across it. Lava, deep water,
  *   cliff edges, bottomless pits.
  */
-export type TerrainKind = 'wall' | 'chasm';
+export type TerrainKind = 'wall' | 'chasm' | 'difficult' | 'half-cover' | 'three-quarters-cover' | 'total-cover';
 
 /**
  * A single terrain cell in a sparse map annotation. Maps typically
@@ -43,7 +43,35 @@ export function blocksMovement(kind: TerrainKind): boolean {
  * resolution. Exported now so the type surface stays stable.
  */
 export function blocksLineOfSight(kind: TerrainKind): boolean {
-  return kind === 'wall';
+  return kind === 'wall' || kind === 'total-cover';
+}
+
+export function buildDifficultTerrainSet(terrain?: TerrainCell[]): Set<string> {
+  return new Set((terrain ?? []).filter(cell => cell.kind === 'difficult').map(cell => `${cell.x},${cell.y}`));
+}
+
+export function buildCoverMap(terrain?: TerrainCell[]): Record<string, 2 | 5> {
+  const cover: Record<string, 2 | 5> = {};
+  for (const cell of terrain ?? []) {
+    if (cell.kind === 'half-cover') cover[`${cell.x},${cell.y}`] = 2;
+    if (cell.kind === 'three-quarters-cover') cover[`${cell.x},${cell.y}`] = 5;
+  }
+  return cover;
+}
+
+export function coverLevelBetween(
+  from: { x: number; y: number }, to: { x: number; y: number }, fromFp: number, toFp: number,
+  cover: Record<string, 2 | 5> | undefined,
+): 0 | 2 | 5 {
+  if (!cover || Object.keys(cover).length === 0) return 0;
+  const a = footprintCenter(from, fromFp);
+  const b = footprintCenter(to, toFp);
+  let best: 0 | 2 | 5 = 0;
+  for (const [x, y] of bresenhamLine(a.x, a.y, b.x, b.y)) {
+    if ((x === a.x && y === a.y) || (x === b.x && y === b.y)) continue;
+    best = Math.max(best, cover[`${x},${y}`] ?? 0) as 0 | 2 | 5;
+  }
+  return best;
 }
 
 /**
@@ -158,6 +186,8 @@ export function lineOfSightBlocked(
  *   `.` or ` ` → open (no cell emitted)
  *   `W`       → wall   (blocks movement + sight)
  *   `C`       → chasm  (blocks movement, not sight - lava, water, pit)
+ *   `D`       → difficult terrain, `H` → half cover, `Q` → three-quarters cover,
+ *   `T`       → total cover
  *
  * Leading/trailing whitespace and blank lines are stripped. Each row's
  * characters correspond left-to-right to grid x coordinates; each row
@@ -184,6 +214,10 @@ export function parseTerrainMask(mask: string): TerrainCell[] {
       const ch = row[x];
       if (ch === 'W') cells.push({ x, y, kind: 'wall' });
       else if (ch === 'C') cells.push({ x, y, kind: 'chasm' });
+      else if (ch === 'D') cells.push({ x, y, kind: 'difficult' });
+      else if (ch === 'H') cells.push({ x, y, kind: 'half-cover' });
+      else if (ch === 'Q') cells.push({ x, y, kind: 'three-quarters-cover' });
+      else if (ch === 'T') cells.push({ x, y, kind: 'total-cover' });
       // '.' and ' ' and anything else → open (no cell)
     }
   }

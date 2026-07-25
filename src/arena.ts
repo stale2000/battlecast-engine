@@ -2,7 +2,15 @@ import { Encounter, EncounterError, type SerializedEncounter, type Team } from '
 import { applyLegalAction, getActiveCreature, getLegalActions, sameArenaAction, startArena, type ArenaAction } from './api/arena.js';
 import { assertArenaObject, parseArenaParty } from './api/arena-construction.js';
 import { buildArenaObservation } from './api/arena-observation.js';
-export { validateArenaParty } from './api/arena-construction.js';
+export {
+  validateArenaParty,
+} from './api/arena-construction.js';
+export {
+  ARENA_ARMOR_COST_GP,
+  ARENA_EQUIPMENT_BUDGET_GP,
+  ARENA_SHIELD_COST_GP,
+  ARENA_WEAPON_COST_GP,
+} from './data/arena-origins.js';
 
 export const ARENA_PROTOCOL_VERSION = 1;
 export const ARENA_ROUND_CAP = 20;

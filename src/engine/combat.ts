@@ -2,7 +2,7 @@ import { engineRandom } from './rng.js';
 import { ActiveBuff, Creature, Condition, ConditionDuration, DarknessZone, DaylightZone, MonsterAction, MonsterData, PersistentZone, RuntimeTraitEffect } from '../types/monster.js';
 import { AnimationEvent, BASE_DURATIONS, OA_ATTACK_DURATIONS } from '../types/animation.js';
 import { rollAttack, rollDamage, rollExplodingDamage, rollDice, rollInitiative, abilityModifier, rollSave, rollD20, maxDiceTotal } from './dice.js';
-import { lineOfSightBlocked } from '../types/terrain.js';
+import { lineOfSightBlocked, coverLevelBetween, type TerrainCell, buildDifficultTerrainSet, buildCoverMap, buildMovementBlockedSet, buildSightBlockedSet } from '../types/terrain.js';
 import { magicalDarknessBlocksSight } from './visibility.js';
 import {
   distance, getFootprintSize, creatureDistance, isPositionBlocked, canHalflingPassThrough,
@@ -103,6 +103,8 @@ export interface BattleState {
    * through. Undefined or empty = open sight everywhere.
    */
   terrainSightBlocked?: Set<string>;
+  terrainDifficult?: Set<string>;
+  terrainCover?: Record<string, 2 | 5>;
   /** Temporary magical-darkness areas, serialized with the encounter. */
   darknessZones?: DarknessZone[];
   /** Magical daylight areas, serialized with the encounter. */
@@ -501,7 +503,7 @@ export function getInitiativeOrder(creatures: Creature[]): string[] {
     .map(entry => entry.creature.id);
 }
 
-export function initBattle(creatures: Creature[], gridSize?: number): BattleState {
+export function initBattle(creatures: Creature[], gridSize?: number, terrain?: TerrainCell[]): BattleState {
   rollAllInitiatives(creatures);
   const order = getInitiativeOrder(creatures);
 
@@ -519,6 +521,10 @@ export function initBattle(creatures: Creature[], gridSize?: number): BattleStat
     isComplete: false,
     winner: null,
     gridSize,
+    terrainBlocked: buildMovementBlockedSet(terrain),
+    terrainSightBlocked: buildSightBlockedSet(terrain),
+    terrainDifficult: buildDifficultTerrainSet(terrain),
+    terrainCover: buildCoverMap(terrain),
     teamTactics: DEFAULT_TACTICS,
     darknessZones: [],
     daylightZones: [],
@@ -1372,7 +1378,7 @@ function resolveCleaveMastery(state: BattleState, attacker: Creature, originalTa
     roll.total += buffBonus;
     roll.modifier += buffBonus;
   }
-  const ac = getEffectiveAC(cleaveTarget);
+  const ac = getEffectiveAC(cleaveTarget, state, attacker);
   attacker.stats.attacksMade++;
   state.events.push({
     kind: 'attack', attackerId: attacker.id, targetId: cleaveTarget.id,
@@ -1850,7 +1856,7 @@ function hasThiefsReflexes(creature: Creature): boolean {
     && (!creature.monsterData.heroSubclass || creature.monsterData.heroSubclass === 'Thief');
 }
 
-function getEffectiveAC(target: Creature): number {
+function getEffectiveAC(target: Creature, state?: BattleState, attacker?: Creature): number {
   let ac = target.wildShape ? target.wildShape.ac : target.monsterData.ac;
   // Flat AC bonuses from buffs: Shield of Faith +2, Mage Armor (noted but
   // not applied dynamically since it's baked into hero starting AC), etc.
@@ -1859,6 +1865,7 @@ function getEffectiveAC(target: Creature): number {
     if (b.acMinimum) ac = Math.max(ac, b.acMinimum);
     if (b.acBaseFromDex) ac = Math.max(ac, b.acBaseFromDex + abilityModifier(getEffectiveAbilityScore(target, 'dex')));
   }
+  if (state && attacker) ac += coverLevelBetween(attacker.position, target.position, getFootprintSize(getActiveSize(attacker)), getFootprintSize(getActiveSize(target)), state.terrainCover);
   // Displacement trait gives effective AC boost (modeled as disadvantage on attacks, handled elsewhere)
   return ac;
 }
@@ -4199,7 +4206,7 @@ function resolveAttack(
     roll.total += targetAttackBonus;
     roll.modifier += targetAttackBonus;
   }
-  const ac = getEffectiveAC(target);
+  const ac = getEffectiveAC(target, state, attacker);
 
   // Heroic Warrior (Fighter L10) and Human Resourceful inspiration reroll a missed attack.
   const humanInspiration = (attacker.resources?.['heroic-inspiration'] ?? 0) > 0;

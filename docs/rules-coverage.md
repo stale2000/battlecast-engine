@@ -152,14 +152,12 @@ and bonus actions.
 
 Be aware of these before relying on the engine for a ruling:
 
-- **Cover** (half/three-quarters/total) - no general system
 - **Vision and light** - no darkness, dim light, darkvision, or obscurement
-- **Stealth and hiding** - no hidden state, no Hide action
+- **Stealth and hiding** - the arena action path supports Hide and hidden-from observers; the general AI remains simplified
 - **The Ready action** and readied triggers
-- **The Dodge action** as a generic action (the AI has a dodge-like
-  defensive tactic, and specific features like Uncanny Dodge exist)
-- **Mounted combat** - no rider/mount relationship
-- **Difficult terrain and elevation** - terrain blocks or allows, no cost model
+- **Mounted combat** outside the arena action path; arena-controlled mounts
+  and dismounts are modeled
+- **Elevation** - no height model
 - **PC-initiated grapple/shove** - grappling is monster-action driven
 - **Rests and ritual casting** - single-encounter model, resources start full
 - Assorted statblock abilities explicitly marked deferred in the data

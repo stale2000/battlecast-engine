@@ -34,7 +34,7 @@ import {
 import { pushTargetAwayFromCaster, resolveAoE } from './combat-aoe.js';
 import {
   applyDamage, applyCondition, applyActionRuntimeEffects, gainHp, pushLog, resolveAttack, getAliveCreatures, createSummonedCreature, stabiliseDyingAlly,
-  getEffectiveMoveSpeed, getEffectiveSaveModifier, resolveSpellReflection, createPersistentZone, isCreatureSilenced, reactionMeetsSlotReserve,
+  getEffectiveMoveSpeed, getEffectiveSaveModifier, resolveSpellReflection, createPersistentZone, isCreatureSilenced, reactionMeetsSlotReserve, canTakeReactions,
   type BattleState,
 } from './combat.js';
 
@@ -153,7 +153,7 @@ function applySteedLifeBond(state: BattleState, caster: Creature, amount: number
 function tryAutomaticCounterspell(state: BattleState, caster: Creature, action: MonsterAction): boolean {
   if (action.name === 'Counterspell') return false;
   const counterspeller = state.creatures
-    .filter(candidate => candidate.isAlive && candidate.team !== caster.team && (candidate.monsterData.reactionPreferences?.counterspell?.enabled ?? true) && !candidate.reactionUsed && !candidate.conditions.some(condition => ['incapacitated', 'paralyzed', 'stunned', 'unconscious'].includes(condition)) && creatureDistance(candidate, caster) <= 60)
+    .filter(candidate => candidate.isAlive && candidate.team !== caster.team && (candidate.monsterData.reactionPreferences?.counterspell?.enabled ?? true) && canTakeReactions(candidate) && !candidate.conditions.some(condition => ['incapacitated', 'paralyzed', 'stunned', 'unconscious'].includes(condition)) && creatureDistance(candidate, caster) <= 60)
     .filter(candidate => candidate.monsterData.actions.some(candidateAction => candidateAction.name === 'Counterspell' && candidateAction.reactionOnly) && hasResource(candidate, 'slot-3'))
     .filter(candidate => reactionMeetsSlotReserve(candidate, 'counterspell', 1))
     .sort((left, right) => left.id.localeCompare(right.id))[0];

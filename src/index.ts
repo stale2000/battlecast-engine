@@ -59,6 +59,15 @@ export type { HeroClassName } from './data/heroes.js';
 // Types
 export type { Creature, MonsterData, Condition, ConditionDuration, Abilities, Speed } from './types/monster.js';
 export type { AnimationEvent } from './types/animation.js';
+export {
+  parseTerrainMask,
+  buildMovementBlockedSet,
+  buildSightBlockedSet,
+  buildDifficultTerrainSet,
+  buildCoverMap,
+  coverLevelBetween,
+} from './types/terrain.js';
+export type { TerrainCell, TerrainKind } from './types/terrain.js';
 
 // Encounter difficulty
 export * from './engine/difficulty.js';

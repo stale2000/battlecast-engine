@@ -49,7 +49,10 @@ describe('Kaggle arena bridge', () => {
     target.activeBuffs.push({ name: 'Hidden', key: `hidden-from:${caster.id}`, casterId: target.id, appliedRound: 1, endRound: 601 });
     expect(canSee(encounter.state!, caster, target)).toBe(false);
     const action = mindSpike('int', 20, 3);
+    expect(action.spellLevel).toBe(2);
+    const slotBefore = caster.resources['slot-2'];
     expect(executeSpell(encounter.state!, caster, action, target)).toBe(true);
+    expect(caster.resources['slot-2']).toBe(slotBefore - 1);
     expect(target.currentHp).toBeLessThan(target.maxHp);
     expect(target.activeBuffs.some(buff => buff.suppressInvisibilityForCasterId === caster.id)).toBe(true);
     expect(canSee(encounter.state!, caster, target)).toBe(true);
@@ -1148,6 +1151,14 @@ describe('Kaggle arena bridge', () => {
     const party = { characters: Array.from({ length: 4 }, () => fighter) };
     expect(kaggleStep({ ...init(), redParty: party, blueParty: party }).state.battleState!.creatures.some(creature => creature.monsterData.actions.some(action => action.name === 'Greatsword'))).toBe(true);
     expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => ({ ...fighter, heroClass: 'Wizard' })) }, blueParty: party })).toThrow(/not proficient/);
+  });
+
+  it('enforces the fixed 1,600 gp arena equipment budget', () => {
+    const base = { heroClass: 'Fighter', abilities: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 } };
+    const party = { characters: Array.from({ length: 4 }, () => ({ ...base, armor: 'Plate', shield: true, weapons: ['HandCrossbow', 'HandCrossbow'] })) };
+    expect(() => kaggleStep({ ...init(), redParty: party, blueParty: { characters: Array.from({ length: 4 }, () => base) } })).toThrow(/1600 gp arena budget/);
+    const legal = { ...base, armor: 'Plate', shield: true, weapons: ['Longsword'] };
+    expect(() => kaggleStep({ ...init(), redParty: { characters: Array.from({ length: 4 }, () => legal) }, blueParty: { characters: Array.from({ length: 4 }, () => base) } })).not.toThrow();
   });
 
   it('enforces category-based equipment training and finesse ability selection', () => {

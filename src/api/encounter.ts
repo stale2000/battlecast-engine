@@ -27,6 +27,7 @@ import { executeRound } from '../engine/ai.js';
 import { SeededRng, withRng, type RandomSeed } from '../engine/rng.js';
 import type { AnimationEvent } from '../types/animation.js';
 import type { Condition, ConditionDuration, Creature, MonsterData } from '../types/monster.js';
+import type { TerrainCell } from '../types/terrain.js';
 import { getMonsterByName, searchMonsters } from '../data/monsters.js';
 import {
   buildHero,
@@ -45,6 +46,7 @@ export interface EncounterOptions {
   gridSize?: number;
   /** Same seed + same call sequence = identical battle. Omit for Math.random. */
   seed?: RandomSeed;
+  terrain?: TerrainCell[];
 }
 
 export interface AddCreatureOptions {
@@ -89,9 +91,11 @@ export interface SerializedEncounter {
   setupCreatures: Creature[];
   setupIndexByName: [string, number][];
   battleState:
-    | (Omit<BattleState, 'terrainBlocked' | 'terrainSightBlocked'> & {
+    | (Omit<BattleState, 'terrainBlocked' | 'terrainSightBlocked' | 'terrainDifficult'> & {
         terrainBlocked?: string[];
         terrainSightBlocked?: string[];
+        terrainDifficult?: string[];
+        terrainCover?: Record<string, 2 | 5>;
       })
     | null;
   arenaRoundCap?: number;
@@ -105,6 +109,7 @@ export class Encounter {
   private battleState: BattleState | null = null;
   private setupIndexByName = new Map<string, number>();
   private arenaRoundCap?: number;
+  private readonly terrain?: TerrainCell[];
 
   constructor(options: EncounterOptions = {}) {
     this.gridSize = options.gridSize ?? 20;
@@ -112,6 +117,7 @@ export class Encounter {
       throw new EncounterError(`gridSize must be an integer between 4 and 100, got ${options.gridSize}`);
     }
     this.seed = options.seed ?? null;
+    this.terrain = options.terrain;
     this.rng = this.seed === null ? null : new SeededRng(this.seed);
   }
 
@@ -284,7 +290,7 @@ export class Encounter {
         this.setupCreatures.filter(c => c.team === 'blue').length === 0) {
       throw new EncounterError('Both teams need at least one creature before starting.');
     }
-    this.battleState = this.run(() => initBattle(this.setupCreatures, this.gridSize));
+    this.battleState = this.run(() => initBattle(this.setupCreatures, this.gridSize, this.terrain));
     const state = this.battleState;
     return {
       initiativeOrder: [...new Set(state.initiativeOrder)].map(id => {
@@ -408,6 +414,8 @@ export class Encounter {
             ...state,
             terrainBlocked: state.terrainBlocked ? [...state.terrainBlocked] : undefined,
             terrainSightBlocked: state.terrainSightBlocked ? [...state.terrainSightBlocked] : undefined,
+            terrainDifficult: state.terrainDifficult ? [...state.terrainDifficult] : undefined,
+            terrainCover: state.terrainCover,
           }
         : null,
       arenaRoundCap: this.arenaRoundCap,
@@ -435,6 +443,10 @@ export class Encounter {
         terrainSightBlocked: copy.battleState.terrainSightBlocked
           ? new Set(copy.battleState.terrainSightBlocked)
           : undefined,
+        terrainDifficult: copy.battleState.terrainDifficult
+          ? new Set(copy.battleState.terrainDifficult)
+          : undefined,
+        terrainCover: copy.battleState.terrainCover,
       };
     }
     return encounter;

@@ -20,6 +20,27 @@ export interface ArenaWeapon {
   twoHanded?: boolean;
 }
 
+/** Server-owned mundane equipment prices, in gp, for the arena budget. */
+export const ARENA_WEAPON_COST_GP: Record<string, number> = {
+  Club: 0.1, Sickle: 1, LightHammer: 2, Dagger: 2, Greatclub: 0.2, Handaxe: 5,
+  Javelin: 0.5, Mace: 5, Morningstar: 15, Quarterstaff: 0.2, Spear: 1,
+  LightCrossbow: 25, Dart: 0.05, Sling: 0.1, Shortbow: 25, Flail: 10, Glaive: 20,
+  Greataxe: 30, Halberd: 20, Longsword: 15, Longbow: 50, Lance: 10, Maul: 10,
+  Pike: 5, Rapier: 25, Scimitar: 25, Shortsword: 10, Trident: 5, Greatsword: 50,
+  Battleaxe: 10, Warhammer: 15, Whip: 2, Blowgun: 10, HandCrossbow: 75,
+  HeavyCrossbow: 50, Pistol: 50, Musket: 500,
+};
+
+export const ARENA_ARMOR_COST_GP: Record<string, number> = {
+  Padded: 5, Leather: 10, 'Studded Leather': 45, Hide: 10, 'Chain Shirt': 50,
+  'Scale Mail': 50, Breastplate: 400, 'Half Plate': 750, 'Ring Mail': 30,
+  'Chain Mail': 75, Splint: 200, Plate: 1500,
+};
+
+export const ARENA_SHIELD_COST_GP = 10;
+/** A fixed tier-2 arena allowance; enough for plate, shield, and a martial weapon. */
+export const ARENA_EQUIPMENT_BUDGET_GP = 1600;
+
 export interface ArenaArmor {
   category: 'light' | 'medium' | 'heavy';
   armorBase: number;

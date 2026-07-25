@@ -34,7 +34,7 @@ import {
 import {
   applyDamage, applyCondition, resolveConditionOnHit,
   pushLog, getAliveCreatures, getEnemies,
-  getEffectiveSaveModifier, hasActiveTrait, getActiveSize,
+  getEffectiveSaveModifier, hasActiveTrait, getActiveSize, getFootprintSize,
   applyActionRuntimeEffects, emptyDamageSummary, addDamageToSummary,
   conditionTargetMatchesActionSize, hasTotalCoverFromContainer, logTotalCoverFromContainer, passesSanctuary,
   isImmuneToDamageType,
@@ -42,6 +42,7 @@ import {
   type BattleState,
 } from './combat.js';
 import { runOpportunityAttacks } from './ai-turn.js';
+import { coverLevelBetween } from '../types/terrain.js';
 
 // ─────────────────────────────────────────────────────────────────────
 // Single-target visual categorization
@@ -330,7 +331,8 @@ export function resolveSingleTargetSave(
     attacker.stats.actionUsage[action.name] = (attacker.stats.actionUsage[action.name] || 0) + 1;
   }
 
-  const saveMod = getEffectiveSaveModifier(target, ability, state);
+  const saveMod = getEffectiveSaveModifier(target, ability, state)
+    + (ability === 'dex' ? coverLevelBetween(attacker.position, target.position, getFootprintSize(getActiveSize(attacker)), getFootprintSize(getActiveSize(target)), state.terrainCover) : 0);
   const hasMR = hasActiveTrait(target, 'Magic Resistance');
   const save = rollSaveWithBuffs(target, saveMod, hasMR, dc, ability, conditionOnFail);
   let passed = save.total >= dc;
@@ -614,7 +616,8 @@ export function resolveAoE(
       continue;
     }
 
-    const saveMod = getEffectiveSaveModifier(target, ability, state);
+    const saveMod = getEffectiveSaveModifier(target, ability, state)
+      + (ability === 'dex' ? coverLevelBetween(attacker.position, target.position, getFootprintSize(getActiveSize(attacker)), getFootprintSize(getActiveSize(target)), state.terrainCover) : 0);
 
     const hasMR = hasActiveTrait(target, 'Magic Resistance');
     const save = automaticDamage ? { total: Number.NEGATIVE_INFINITY } : rollSaveWithBuffs(target, saveMod, hasMR, dc, ability, conditionOnFail);

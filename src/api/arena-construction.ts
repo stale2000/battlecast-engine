@@ -3,8 +3,12 @@ import { buildHero, getAvailableSpells, HERO_CLASS_NAMES, type HeroSubclassName,
 import {
   ARENA_BACKGROUNDS,
   ARENA_ARMOR,
+  ARENA_ARMOR_COST_GP,
+  ARENA_EQUIPMENT_BUDGET_GP,
+  ARENA_SHIELD_COST_GP,
   ARENA_SPECIES,
   ARENA_WEAPONS,
+  ARENA_WEAPON_COST_GP,
   BACKGROUNDS,
   SPECIES,
   applyBackgroundIncreases,
@@ -392,9 +396,15 @@ export function parseArenaParty(value: unknown, team: Team): AddCreatureOptions[
     if (character.shield === true && !SHIELD_TRAINING.has(heroClass)) throw new EncounterError(`${label}.shield requires shield proficiency.`);
     if (armor && !ARMOR_TRAINING[heroClass].includes(ARENA_ARMOR[armor].category)) throw new EncounterError(`${label}.armor includes armor your class is not proficient with.`);
     if (character.weapons !== undefined && (!Array.isArray(character.weapons) || character.weapons.length < 1 || character.weapons.length > 2 || character.weapons.some(name => typeof name !== 'string' || !ARENA_WEAPONS[name]))) throw new EncounterError(`${label}.weapons must select one or two catalog weapons.`);
-    const weapons = (character.weapons as string[] | undefined)?.map(name => ARENA_WEAPONS[name]!);
+    const weaponNames = character.weapons as string[] | undefined;
+    const weapons = weaponNames?.map(name => ARENA_WEAPONS[name]!);
+    if (weaponNames?.some(name => ARENA_WEAPON_COST_GP[name] === undefined)) throw new EncounterError(`${label}.weapons must use the arena equipment catalogue.`);
     if (weapons?.some(weapon => !isWeaponProficient(heroClass, weapon))) throw new EncounterError(`${label}.weapons includes a weapon your class is not proficient with.`);
     if (character.shield === true && weapons?.some(weapon => weapon.twoHanded)) throw new EncounterError(`${label}.shield cannot be used with a selected two-handed weapon.`);
+    const equipmentCost = (armor ? ARENA_ARMOR_COST_GP[armor] : 0)
+      + (character.shield === true ? ARENA_SHIELD_COST_GP : 0)
+      + (weaponNames?.reduce((sum, name) => sum + ARENA_WEAPON_COST_GP[name], 0) ?? 0);
+    if (equipmentCost > ARENA_EQUIPMENT_BUDGET_GP) throw new EncounterError(`${label} equipment exceeds the ${ARENA_EQUIPMENT_BUDGET_GP} gp arena budget.`);
     if (character.subclass !== undefined && (typeof character.subclass !== 'string' || !SRD_SUBCLASSES[heroClass].includes(character.subclass))) {
       throw new EncounterError(`${label}.subclass is not an SRD subclass for ${heroClass}.`);
     }
