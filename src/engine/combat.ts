@@ -1,5 +1,5 @@
 import { engineRandom } from './rng.js';
-import { ActiveBuff, Creature, Condition, ConditionDuration, DarknessZone, MonsterAction, MonsterData, PersistentZone, RuntimeTraitEffect } from '../types/monster.js';
+import { ActiveBuff, Creature, Condition, ConditionDuration, DarknessZone, DaylightZone, MonsterAction, MonsterData, PersistentZone, RuntimeTraitEffect } from '../types/monster.js';
 import { AnimationEvent, BASE_DURATIONS, OA_ATTACK_DURATIONS } from '../types/animation.js';
 import { rollAttack, rollDamage, rollExplodingDamage, rollDice, rollInitiative, abilityModifier, rollSave, rollD20, maxDiceTotal } from './dice.js';
 import { lineOfSightBlocked } from '../types/terrain.js';
@@ -105,6 +105,8 @@ export interface BattleState {
   terrainSightBlocked?: Set<string>;
   /** Temporary magical-darkness areas, serialized with the encounter. */
   darknessZones?: DarknessZone[];
+  /** Magical daylight areas, serialized with the encounter. */
+  daylightZones?: DaylightZone[];
   /** Static control terrain such as Grease. */
   persistentZones?: PersistentZone[];
   /**
@@ -500,6 +502,7 @@ export function initBattle(creatures: Creature[], gridSize?: number): BattleStat
     gridSize,
     teamTactics: DEFAULT_TACTICS,
     darknessZones: [],
+    daylightZones: [],
     persistentZones: [],
   };
 }
@@ -3757,7 +3760,7 @@ function validateAttackRange(
     // check is cheap (Bresenham over a ~20-cell line + Set lookups)
     // and skipped entirely when no sight-blocking terrain exists.
     const sightBlocked = state.terrainSightBlocked;
-    if (magicalDarknessBlocksSight(state.darknessZones, state.round, attacker, target)
+    if (magicalDarknessBlocksSight(state.darknessZones, state.round, attacker, target, state.daylightZones)
       || (sightBlocked && sightBlocked.size > 0 &&
         lineOfSightBlocked(attacker.position, target.position, getFootprintSize(getActiveSize(attacker)), getFootprintSize(getActiveSize(target)), sightBlocked))) {
       pushLog(state, {

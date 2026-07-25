@@ -1,4 +1,4 @@
-import type { Creature, DarknessZone, PersistentZone } from '../types/monster.js';
+import type { Creature, DarknessZone, DaylightZone, PersistentZone } from '../types/monster.js';
 import { bresenhamLine, footprintCenter, lineOfSightBlocked } from '../types/terrain.js';
 import { getFootprintSize } from './combat-geometry.js';
 import type { BattleState } from './combat.js';
@@ -17,13 +17,16 @@ export function magicalDarknessBlocksSight(
   round: number,
   observer: Creature,
   target: Creature | { position: { x: number; y: number }; monsterData?: { size?: string } },
+  daylightZones?: DaylightZone[],
 ): boolean {
   if (!zones?.length || canSeeThroughMagicalDarkness(observer)) return false;
   const observerCenter = footprintCenter(observer.position, getFootprintSize(observer.wildShape?.size ?? observer.temporarySize ?? observer.monsterData.size));
   const targetCenter = footprintCenter(target.position, getFootprintSize(target.monsterData?.size ?? 'Medium'));
   const cells = bresenhamLine(observerCenter.x, observerCenter.y, targetCenter.x, targetCenter.y);
+  const daylight = daylightZones?.filter(zone => zone.endRound > round) ?? [];
   return zones.some(zone => zone.endRound > round && cells.some(([x, y]) =>
     Math.max(Math.abs(x - zone.x), Math.abs(y - zone.y)) * 5 <= zone.radius
+      && !daylight.some(light => Math.max(Math.abs(x - light.x), Math.abs(y - light.y)) * 5 <= light.radius)
   ));
 }
 
@@ -40,7 +43,7 @@ export function canSeeCreatureIgnoringHide(state: BattleState, observer: Creatur
   if (target.conditions.includes('invisible')
     && !(target.activeBuffs ?? []).some(buff => buff.suppressesInvisibility)
     && !(observer.activeBuffs ?? []).some(buff => buff.canSeeInvisible)) return false;
-  if (magicalDarknessBlocksSight(state.darknessZones, state.round, observer, target)) return false;
+  if (magicalDarknessBlocksSight(state.darknessZones, state.round, observer, target, state.daylightZones)) return false;
   if (obscuringZoneBlocksSight(state.persistentZones, state.round, observer, target)) return false;
   const sightBlocked = state.terrainSightBlocked;
   if (!sightBlocked?.size) return true;
@@ -80,7 +83,7 @@ export function canSeePoint(
   observer: Creature,
   point: { x: number; y: number },
 ): boolean {
-  if (magicalDarknessBlocksSight(state.darknessZones, state.round, observer, { position: point })) return false;
+  if (magicalDarknessBlocksSight(state.darknessZones, state.round, observer, { position: point }, state.daylightZones)) return false;
   if (obscuringZoneBlocksSight(state.persistentZones, state.round, observer, { position: point })) return false;
   const sightBlocked = state.terrainSightBlocked;
   if (!sightBlocked?.size) return true;

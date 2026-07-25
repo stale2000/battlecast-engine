@@ -388,6 +388,8 @@ export interface MonsterAction {
    * caller can only choose one of the server-generated legal centers.
    */
   darkness?: { radius: number; durationRounds: number; requiresConcentration?: boolean };
+  /** Persistent bright light that dispels lower-level magical darkness. */
+  daylight?: { radius: number; durationRounds: number };
   /** Server-validated teleport destination, used by spells such as Misty Step. */
   teleport?: { distanceFt: number };
   /** Creates one controlled creature at a visible, unoccupied destination. */
@@ -1134,6 +1136,15 @@ export interface DarknessZone {
   radius: number;
   endRound: number;
   requiresConcentration: boolean;
+}
+
+/** A serialized area of magical daylight. */
+export interface DaylightZone {
+  sourceId: string;
+  x: number;
+  y: number;
+  radius: number;
+  endRound: number;
 }
 
 /** A serialized battlefield zone that can impose a saving throw on entry or turn end. */

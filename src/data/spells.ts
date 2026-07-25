@@ -580,6 +580,14 @@ export function darkness(ability: SpellcastingAbility, _mod: number, _pb: number
   };
 }
 
+export function daylight(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
+  return {
+    name: 'Daylight', type: 'special', spellLevel: 3, spellSchool: 'evocation', castingAbility: ability,
+    range: { normal: 60, long: 60 }, targetScope: 'self', daylight: { radius: 60, durationRounds: 600 },
+    description: 'Bright light shines in a 60-foot Sphere for 1 hour. The light dispels magical Darkness in its area.',
+  };
+}
+
 export function passWithoutTrace(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
   return {
     name: 'Pass without Trace', type: 'special', spellLevel: 2, spellSchool: 'abjuration', castingAbility: ability, concentration: true, durationRounds: 600,
@@ -2208,7 +2216,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Arms of Hadar', armsOfHadar], ['Color Spray', colorSpray], ['Divine Favor', divineFavor],
   ['Armor of Agathys', armorOfAgathys], ['Faerie Fire', faerieFire], ['False Life', falseLife], ['Fog Cloud', fogCloud], ['Grease', grease], ['Longstrider', longstrider],
   ['Expeditious Retreat', expeditiousRetreat],
-  ['Darkness', darkness],
+  ['Darkness', darkness], ['Daylight', daylight],
   ['Pass without Trace', passWithoutTrace],
   ['Enlarge/Reduce', enlargeReduce],
   ['Mage Armor', mageArmor],

@@ -909,6 +909,12 @@ export function executeSpell(
       || creatureDistance(caster, { ...caster, position: aoeCenter, monsterData: { ...caster.monsterData, size: 'Medium' } }) > range
       || !canSeePoint(state, caster, aoeCenter)) return false;
   }
+  if (action.daylight) {
+    const range = action.range?.normal ?? action.range?.long ?? 0;
+    if (!aoeCenter || !Number.isInteger(aoeCenter.x) || !Number.isInteger(aoeCenter.y)
+      || creatureDistance(caster, { ...caster, position: aoeCenter, monsterData: { ...caster.monsterData, size: 'Medium' } }) > range
+      || !canSeePoint(state, caster, aoeCenter)) return false;
+  }
   if (action.teleport) {
     const size = caster.wildShape?.size ?? caster.temporarySize ?? caster.monsterData.size;
     const footprint = getFootprintSize(size);
@@ -1025,6 +1031,13 @@ export function executeSpell(
   }
 
   if (castAction.darkness && aoeCenter) {
+    const daylightBlocks = (state.daylightZones ?? []).some(zone =>
+      Math.max(Math.abs(zone.x - aoeCenter.x), Math.abs(zone.y - aoeCenter.y)) * 5 <= zone.radius + castAction.darkness!.radius
+    );
+    if (daylightBlocks) {
+      pushLog(state, { round: state.round, turn: state.turnIndex, actor: caster.displayName, action: castAction.name, details: `${castAction.name} is dispelled by daylight.`, type: 'special' });
+      return true;
+    }
     if (castAction.darkness.requiresConcentration) {
       dropConcentratedBuffsFrom(state, caster.id);
       caster.concentratingOn = `darkness:${castAction.name}`;
@@ -1044,6 +1057,20 @@ export function executeSpell(
       round: state.round, turn: state.turnIndex, actor: caster.displayName,
       action: castAction.name,
       details: `${caster.displayName} creates ${castAction.name}.`, type: 'special',
+    });
+    return true;
+  }
+
+  if (castAction.daylight && aoeCenter) {
+    const radius = castAction.daylight.radius;
+    const overlaps = (zone: { x: number; y: number; radius: number }) =>
+      Math.max(Math.abs(zone.x - aoeCenter.x), Math.abs(zone.y - aoeCenter.y)) * 5 <= zone.radius + radius;
+    state.daylightZones = (state.daylightZones ?? []).filter(zone => !overlaps(zone));
+    state.darknessZones = (state.darknessZones ?? []).filter(zone => !overlaps(zone));
+    state.daylightZones.push({ sourceId: caster.id, x: aoeCenter.x, y: aoeCenter.y, radius, endRound: state.round + castAction.daylight.durationRounds });
+    pushLog(state, {
+      round: state.round, turn: state.turnIndex, actor: caster.displayName,
+      action: castAction.name, details: `${caster.displayName} creates daylight.`, type: 'special',
     });
     return true;
   }

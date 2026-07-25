@@ -14,12 +14,40 @@ import { withRng } from '../src/engine/rng.js';
 import { ARENA_ROUND_CAP, kaggleStep } from '../src/arena.js';
 import { buildCustomHero, buildHero, getAvailableSpells, HERO_CLASS_NAMES } from '../src/data/heroes.js';
 import { ARENA_WEAPONS } from '../src/data/arena-origins.js';
-import { acidArrow, armorOfAgathys, bane, barkskin, beaconOfHope, bestowCurse, bladeWard, bless, blindingSmite, brandingSmite, buildSpellAction, callLightning, chromaticOrb, cloudOfDaggers, command, conjureAnimals, counterspell, cureWounds, dissonantWhispers, dispelMagic, enlargeReduce, entangle, ensnaringStrike, expeditiousRetreat, findSteed, fireball, flamingSphere, fly, grease, gustOfWind, haste, hellishRebuke, heroism, holdPerson, hungerOfHadar, inflictWounds, invisibility, lesserRestoration, mageArmor, magicWeapon, massHealingWord, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, searingSmite, seeInvisibility, shield, shiningSmite, slow, spikeGrowth, spiritualWeapon, summonBeast, tashasHideousLaughter, thunderousSmite, web, witchBolt, wrathfulSmite } from '../src/data/spells.js';
+import { acidArrow, armorOfAgathys, bane, barkskin, beaconOfHope, bestowCurse, bladeWard, bless, blindingSmite, brandingSmite, buildSpellAction, callLightning, chromaticOrb, cloudOfDaggers, command, conjureAnimals, counterspell, cureWounds, darkness, daylight, dissonantWhispers, dispelMagic, enlargeReduce, entangle, ensnaringStrike, expeditiousRetreat, findSteed, fireball, flamingSphere, fly, grease, gustOfWind, haste, hellishRebuke, heroism, holdPerson, hungerOfHadar, inflictWounds, invisibility, lesserRestoration, mageArmor, magicWeapon, massHealingWord, mirrorImage, mistyStep, moonbeam, protectionFromEnergy, protectionFromEvilAndGood, protectionFromPoison, resistance, revivify, sanctuary, scorchingRay, searingSmite, seeInvisibility, shield, shiningSmite, slow, spikeGrowth, spiritualWeapon, summonBeast, tashasHideousLaughter, thunderousSmite, web, witchBolt, wrathfulSmite } from '../src/data/spells.js';
 
 const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }] };
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
 
 describe('Kaggle arena bridge', () => {
+  it('resolves Daylight zones and dispels overlapping magical Darkness', () => {
+    const encounter = new Encounter({ seed: 19 });
+    const [addedCaster] = encounter.addCreature({
+      heroClass: 'Sorcerer', heroLevel: 5, team: 'red', position: { x: 0, y: 0 },
+      heroOverrides: {
+        additionalActions: [daylight('cha', 3, 3), darkness('cha', 3, 3)],
+        additionalResources: { 'slot-2': 1, 'slot-3': 1 },
+      },
+    });
+    encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 8, y: 0 } });
+    encounter.start();
+    const caster = encounter.state!.creatures.find(creature => creature.id === addedCaster.id)!;
+    encounter.state!.initiativeOrder = [caster.id];
+    startArena(encounter);
+
+    const daylightAction = getLegalActions(encounter, caster.id).find(action => action.actionName === 'Daylight')!;
+    applyLegalAction(encounter, daylightAction);
+    expect(encounter.state!.daylightZones).toHaveLength(1);
+    expect(encounter.state!.darknessZones).toHaveLength(0);
+
+    caster.hasActed = false;
+    caster.turnFlags = {};
+    const darknessAction = getLegalActions(encounter, caster.id).find(action => action.actionName === 'Darkness' && action.center?.x === daylightAction.center?.x && action.center?.y === daylightAction.center?.y);
+    expect(darknessAction).toBeDefined();
+    applyLegalAction(encounter, darknessAction!);
+    expect(encounter.state!.darknessZones).toHaveLength(0);
+  });
+
   it('is deterministic and validates the fixed four-member party', () => {
     expect(JSON.stringify(kaggleStep(init()))).toBe(JSON.stringify(kaggleStep(init())));
     expect(() => kaggleStep({ ...init(), roundCap: ARENA_ROUND_CAP - 1 })).toThrow(/roundCap/);

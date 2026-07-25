@@ -179,7 +179,7 @@ function darknessSpellActions(state: NonNullable<Encounter['state']>, active: Cr
       const center = { x, y };
       if (Math.max(Math.abs(active.position.x - x), Math.abs(active.position.y - y)) * 5 > range || !canSeePoint(state, active, center)) continue;
       actions.push({
-        id: `spell:${actionIndex}:${slug(action.name)}:darkness:${x},${y}`,
+        id: `spell:${actionIndex}:${slug(action.name)}:point:${x},${y}`,
         type: 'spell', actionName: action.name, actionIndex, targetId: active.id, center,
       });
     }
@@ -379,7 +379,7 @@ export function getLegalActions(encounter: Encounter, creatureId: string): Arena
           actions.push(...summonSpellActions(state, active, action, actionIndex));
           continue;
         }
-        if (action.darkness) {
+        if (action.darkness || action.daylight) {
           actions.push(...darknessSpellActions(state, active, action, actionIndex));
           continue;
         }
