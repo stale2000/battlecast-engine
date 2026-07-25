@@ -62,4 +62,26 @@ describe('level-three summon spells', () => {
     expect(steed.position).toEqual({ x: 4, y: 4 });
     expect(steed.resources['fey-step']).toBe(0);
   });
+
+  it('exposes and resolves Summon Fey teleport for every form', () => {
+    for (const form of ['fuming', 'mirthful', 'tricksy'] as const) {
+      const encounter = new Encounter({ seed: 20, gridSize: 12 });
+      const [caster] = encounter.addCreature({ heroClass: 'Wizard', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [summonFey('int', 3, 3)], additionalResources: { 'slot-3': 1 } } });
+      encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 10, y: 10 } });
+      encounter.start();
+      encounter.state!.initiativeOrder = [caster.id];
+      startArena(encounter);
+      const choice = getLegalActions(encounter, caster.id).find(action => action.type === 'spell_summon' && action.variantKey === form && action.destination?.x === 2 && action.destination?.y === 2)!;
+      applyLegalAction(encounter, choice);
+      const spirit = encounter.state!.creatures.find(creature => creature.summonedById === caster.id)!;
+      encounter.state!.initiativeOrder = [spirit.id];
+      encounter.state!.turnIndex = 0;
+      spirit.hasActed = false;
+      const step = getLegalActions(encounter, spirit.id).find(action => action.type === 'spell_teleport' && action.actionName === 'Fey Step');
+      expect(step).toBeTruthy();
+      applyLegalAction(encounter, { ...step!, destination: { x: 4, y: 2 } });
+      expect(spirit.position).toEqual({ x: 4, y: 2 });
+      expect(spirit.resources['fey-step']).toBe(0);
+    }
+  });
 });

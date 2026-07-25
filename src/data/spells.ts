@@ -770,13 +770,19 @@ export function conjureAnimals(ability: SpellcastingAbility, mod: number, pb: nu
 /** Build the level-3 Summon Fey spirit. Form-specific charm/fear riders are
  * intentionally not exposed until the action resolver can stage them safely. */
 function feySpirit(form: 'fuming' | 'mirthful' | 'tricksy', mod: number, pb: number): MonsterData {
+  const feyStep = {
+    name: 'Fey Step', type: 'special' as const, isBonusAction: true, targetScope: 'self' as const,
+    resourceCost: { key: 'fey-step', amount: 1 }, teleport: { distanceFt: 30 },
+    description: 'Teleport to an unoccupied space within 30 feet. (1/Long Rest)',
+  };
   return {
     name: `Fey Spirit (${form})`, size: 'Small', type: 'Fey', alignment: 'Neutral',
     ac: 12, hp: 30, hpFormula: '30', speed: { walk: 30 },
     abilities: { str: 13, dex: 16, con: 15, int: 14, wis: 11, cha: 16 },
     senses: 'Darkvision 60 ft., Passive Perception 10', languages: 'Sylvan', cr: '0', xp: 0, proficiencyBonus: pb,
     actions: [{ name: 'Fey Blade', type: 'melee', attackBonus: spellAttackBonus(mod, pb), damage: '1d6+3', damageType: 'psychic', reach: 5, magical: true,
-      description: 'Melee Spell Attack: your spell attack modifier, reach 5 ft. Hit: 1d6 + 3 psychic damage.' }],
+      description: 'Melee Spell Attack: your spell attack modifier, reach 5 ft. Hit: 1d6 + 3 psychic damage.' }, feyStep],
+    initialResources: { 'fey-step': 1 },
   };
 }
 
