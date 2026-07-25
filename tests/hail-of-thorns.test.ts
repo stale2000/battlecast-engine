@@ -11,7 +11,7 @@ describe('Hail of Thorns', () => {
       heroOverrides: { additionalActions: [hailOfThorns('wis', 3, 3)], additionalResources: { 'slot-1': 1 } },
     });
     encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 2, y: 0 } });
-    const [splashSetup] = encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 2, y: 1 } });
+    const [splashSetup] = encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 2, y: 2 } });
     encounter.start();
     encounter.state!.initiativeOrder = [ranger.id];
     startArena(encounter);

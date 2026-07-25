@@ -72,7 +72,7 @@ export function isPositionBlocked(
 
   // Creature collision (AABB)
   for (const c of creatures) {
-    if (!c.isAlive || c.id === excludeId || c.mountedOnId === excludeId) continue;
+    if (!c.isAlive || c.id === excludeId || (excludeId !== undefined && c.mountedOnId === excludeId)) continue;
     const cfp = getFootprintSize(c.wildShape?.size ?? c.temporarySize ?? c.monsterData.size);
     if (pos.x < c.position.x + cfp && pos.x + fp > c.position.x &&
         pos.y < c.position.y + cfp && pos.y + fp > c.position.y) {

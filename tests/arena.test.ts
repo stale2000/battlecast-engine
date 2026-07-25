@@ -93,7 +93,9 @@ describe('Kaggle arena bridge', () => {
   });
 
   it('is deterministic and validates the fixed four-member party', () => {
-    expect(JSON.stringify(kaggleStep(init()))).toBe(JSON.stringify(kaggleStep(init())));
+    const initial = kaggleStep(init());
+    expect(JSON.stringify(initial)).toBe(JSON.stringify(kaggleStep(init())));
+    expect(new Set(initial.state.battleState!.creatures.map(creature => `${creature.position.x},${creature.position.y}`)).size).toBe(8);
     expect(() => kaggleStep({ ...init(), roundCap: ARENA_ROUND_CAP - 1 })).toThrow(/roundCap/);
     expect(() => kaggleStep({ ...init(), redParty: { characters: [{ slot: 1 }] } })).toThrow(/exactly four/);
     expect(() => kaggleStep({ ...init(), blueParty: { characters: [{ slot: 1 }, { slot: 1 }, { slot: 3 }, { slot: 4 }] } })).toThrow(/once/);

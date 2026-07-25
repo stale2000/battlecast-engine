@@ -8,7 +8,7 @@ describe('Lightning Arrow', () => {
     const encounter = new Encounter({ seed: 9, gridSize: 12 });
     const [ranger] = encounter.addCreature({ heroClass: 'Ranger', heroLevel: 10, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [lightningArrow('wis', 3, 4)], additionalResources: { 'slot-3': 1 } } });
     encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 2, y: 0 } });
-    const [nearby] = encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 2, y: 1 } });
+    const [nearby] = encounter.addCreature({ monster: 'Ogre', team: 'blue', position: { x: 2, y: 2 } });
     encounter.start(); encounter.state!.initiativeOrder = [ranger.id]; startArena(encounter);
     const target = encounter.state!.creatures.find(c => c.team === 'blue' && c.id !== nearby.id)!;
     target.monsterData.ac = 1;

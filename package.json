@@ -1,6 +1,6 @@
 {
   "name": "battlecast-engine",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "D&D 5e (2024 SRD) rules engine and combat state engine with a built-in MCP server. Extracted from battlecast.gg.",
   "type": "module",
   "license": "MIT",
