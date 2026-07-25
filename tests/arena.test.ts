@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { Encounter } from '../src/api/encounter.js';
-import { getActiveCreature, getLegalActions, applyLegalAction, startArena } from '../src/api/arena.js';
+import { getActiveCreature, getLegalActions, applyLegalAction, sameArenaAction, startArena } from '../src/api/arena.js';
 import { isFrightenedMoveLegal, moveToDestination, moveToward, reachableMovementDestinations } from '../src/engine/ai-movement.js';
 import { processTurnStart } from '../src/engine/ai-turn.js';
 import { trySpellcast } from '../src/engine/ai-spellcasting.js';
@@ -20,6 +20,12 @@ const party = { characters: [{ slot: 1 }, { slot: 2 }, { slot: 3 }, { slot: 4 }]
 const init = () => ({ version: 1 as const, mode: 'init' as const, seed: 7, mapId: 'open-arena', roundCap: ARENA_ROUND_CAP, redParty: party, blueParty: party });
 
 describe('Kaggle arena bridge', () => {
+  it('compares action objects independently of JSON key order', () => {
+    const legal = { id: 'attack:0:test:target', type: 'attack' as const, actionName: 'Test', actionIndex: 0, targetId: 'target' };
+    const reordered = { targetId: 'target', actionIndex: 0, actionName: 'Test', type: 'attack' as const, id: 'attack:0:test:target' };
+    expect(sameArenaAction(legal, reordered)).toBe(true);
+  });
+
   it('stabilizes a dying ally with Spare the Dying', () => {
     const encounter = new Encounter({ seed: 23 });
     const [addedCaster] = encounter.addCreature({ heroClass: 'Cleric', heroLevel: 5, team: 'red', position: { x: 0, y: 0 }, heroOverrides: { additionalActions: [spareTheDying('wis', 3, 3)] } });

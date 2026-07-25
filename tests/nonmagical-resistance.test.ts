@@ -3,6 +3,7 @@ import { runBattle } from '../src/engine/ai';
 import { createCreatureWithFixedHp } from '../src/engine/combat';
 import { monsters } from '../src/data/monsters';
 import { MonsterData } from '../src/types/monster';
+import { SeededRng, withRng } from '../src/engine/rng';
 
 /**
  * Damage typing - magical vs non-magical resistance.
@@ -28,7 +29,7 @@ function avgRoundsToDeath(victim: MonsterData, attacker: MonsterData, victimTeam
   for (let t = 0; t < trials; t++) {
     const v = createCreatureWithFixedHp(victim, victimTeam, { x: 5, y: 10 }, 0);
     const a = createCreatureWithFixedHp(attacker, victimTeam === 'red' ? 'blue' : 'red', { x: 6, y: 10 }, 1);
-    const state = runBattle([v, a], 16);
+    const state = withRng(new SeededRng(t + 1), () => runBattle([v, a], 16));
     if (!v.isAlive) {
       deaths++;
       totalRounds += state.round;

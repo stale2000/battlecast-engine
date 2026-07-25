@@ -1,5 +1,5 @@
 import { Encounter, EncounterError, type SerializedEncounter, type Team } from './api/encounter.js';
-import { applyLegalAction, getActiveCreature, getLegalActions, sameArenaAction, startArena, type ArenaAction } from './api/arena.js';
+import { applyLegalAction, getActiveCreature, getLegalActions, requiresArenaParameters, sameArenaAction, startArena, type ArenaAction } from './api/arena.js';
 import { assertArenaObject, parseArenaParty } from './api/arena-construction.js';
 import { buildArenaObservation } from './api/arena-observation.js';
 export {
@@ -102,8 +102,8 @@ export function kaggleStep(value: unknown) {
     if (!active || active.team !== request.team) throw new EncounterError('The submitted team does not own the active creature.');
     const requested = parseAction(request.action);
     const legal = getLegalActions(encounter, active.id).find(action => action.id === requested.id);
-    if (!legal || (legal.type !== 'move_to' && legal.type !== 'move_aura' && legal.type !== 'species_teleport' && legal.type !== 'spell_teleport' && typeof request.action === 'object' && !sameArenaAction(legal, requested))) throw new EncounterError(`Illegal or stale arena action "${requested.id}".`);
-    applyLegalAction(encounter, legal.type === 'move_to' || legal.type === 'move_aura' || legal.type === 'species_teleport' || legal.type === 'spell_teleport' ? requested : legal);
+    if (!legal || (!requiresArenaParameters(legal) && typeof request.action === 'object' && !sameArenaAction(legal, requested))) throw new EncounterError(`Illegal or stale arena action "${requested.id}".`);
+    applyLegalAction(encounter, requiresArenaParameters(legal) ? requested : legal);
     return response(encounter);
   }
   throw new EncounterError('mode must be init or step.');

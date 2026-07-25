@@ -36,7 +36,23 @@ export type ArenaAction =
   | { id: 'move_to'; type: 'move_to'; destination?: { x: number; y: number } }
   | { id: 'end_turn'; type: 'end_turn' };
 
+/** Actions whose destination/target parameters are supplied after catalogue lookup. */
+export function requiresArenaParameters(action: ArenaAction): boolean {
+  return action.type === 'move_to'
+    || action.type === 'move_aura'
+    || action.type === 'species_teleport'
+    || action.type === 'spell_teleport';
+}
+
+function canonicalActionValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalActionValue);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.keys(value as Record<string, unknown>).sort().map(key => [key, canonicalActionValue((value as Record<string, unknown>)[key])]));
+  }
+  return value;
+}
+
 /** Exact structural equality prevents clients from smuggling target or cost changes. */
 export function sameArenaAction(left: ArenaAction, right: ArenaAction): boolean {
-  return JSON.stringify(left) === JSON.stringify(right);
+  return JSON.stringify(canonicalActionValue(left)) === JSON.stringify(canonicalActionValue(right));
 }

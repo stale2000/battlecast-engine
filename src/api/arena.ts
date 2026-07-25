@@ -37,8 +37,8 @@ import { lineOfSightBlocked } from '../types/terrain.js';
 import type { Creature, MonsterAction } from '../types/monster.js';
 import { applyGoliathAttackFeature, applyOriginLegalAction, getGoliathAttackFeatures, getOriginLegalActions } from './arena-origin-actions.js';
 import { applyClassFeatureLegalAction, getClassFeatureLegalActions } from './arena-class-actions.js';
-import { sameArenaAction, type ArenaAction } from './arena-actions.js';
-export { sameArenaAction, type ArenaAction } from './arena-actions.js';
+import { requiresArenaParameters, sameArenaAction, type ArenaAction } from './arena-actions.js';
+export { requiresArenaParameters, sameArenaAction, type ArenaAction } from './arena-actions.js';
 
 const slug = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const SIZE_STEPS = ['Tiny', 'Small', 'Medium', 'Large', 'Huge', 'Gargantuan'] as const;
@@ -761,7 +761,7 @@ export function applyLegalAction(encounter: Encounter, action: ArenaAction): voi
   if (!state || !active) throw new EncounterError('No active creature.');
   const activeActions = getActiveActions(active);
   const legal = getLegalActions(encounter, active.id).find(candidate => candidate.id === action.id);
-  if (!legal || (legal.type !== 'move_to' && legal.type !== 'move_aura' && legal.type !== 'species_teleport' && legal.type !== 'spell_teleport' && !sameArenaAction(legal, action))) {
+  if (!legal || (!requiresArenaParameters(legal) && !sameArenaAction(legal, action))) {
     throw new EncounterError(`Illegal or stale arena action "${action.id}".`);
   }
   encounter.runWithRng(() => {
