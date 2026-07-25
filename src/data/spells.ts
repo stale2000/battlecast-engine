@@ -1999,6 +1999,15 @@ export function charmPerson(ability: SpellcastingAbility, mod: number, pb: numbe
   };
 }
 
+export function causeFear(ability: SpellcastingAbility, mod: number, pb: number): MonsterAction {
+  return {
+    name: 'Cause Fear', type: 'special', spellLevel: 1, spellSchool: 'necromancy', castingAbility: ability,
+    description: `One creature within 60 feet makes a WIS save (DC ${saveDC(mod, pb)}). On a failure, it is Frightened of you until the end of your next turn.`,
+    range: { normal: 60, long: 60 }, targetScope: 'one_enemy',
+    savingThrow: { ability: 'wis', dc: saveDC(mod, pb), conditionOnFail: 'frightened', conditionDuration: 'end_of_next_turn' },
+  };
+}
+
 export function invisibility(ability: SpellcastingAbility, _mod: number, _pb: number): MonsterAction {
   return {
     name: 'Invisibility', type: 'special', spellLevel: 2, spellSchool: 'illusion', castingAbility: ability,
@@ -2175,7 +2184,7 @@ const SPELL_FACTORIES: [string, SpellFactory][] = [
   ['Guiding Bolt', guidingBolt], ['Dissonant Whispers', dissonantWhispers],
   ['Entangle', entangle], ['Command', command], ['Chromatic Orb', chromaticOrb],
   ['Inflict Wounds', inflictWounds], ['Witch Bolt', witchBolt],
-  ['Ice Knife', iceKnife], ['Charm Person', charmPerson],
+  ['Ice Knife', iceKnife], ['Charm Person', charmPerson], ['Cause Fear', causeFear],
   ['Arms of Hadar', armsOfHadar], ['Color Spray', colorSpray], ['Divine Favor', divineFavor],
   ['Armor of Agathys', armorOfAgathys], ['Faerie Fire', faerieFire], ['False Life', falseLife], ['Fog Cloud', fogCloud], ['Grease', grease], ['Longstrider', longstrider],
   ['Expeditious Retreat', expeditiousRetreat],
