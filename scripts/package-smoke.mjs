@@ -27,6 +27,7 @@ try {
   for (const file of ['LICENSE', 'README.md', 'dist/arena.js', 'dist/mcp/cli.js']) {
     if (!existsSync(join(installed, file))) throw new Error(`Packed artifact is missing ${file}.`);
   }
+  run(process.execPath, ['--input-type=module', '--eval', "import { buildCustomHero } from 'battlecast-engine'; const hero = buildCustomHero('Wizard', 1, { hpOverride: 9 }); if (hero.hp !== 9) throw new Error('Custom hero export is unusable.');"], { cwd: installDir });
 
   const request = JSON.stringify({
     version: 1, mode: 'init', seed: 7, mapId: 'open-arena', roundCap: 20,

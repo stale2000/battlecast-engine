@@ -50,11 +50,12 @@ export { executeRound, executeTurn, runBattle, runMonteCarlo, moveToward } from 
 export { monsters, getMonsterByName, searchMonsters, getMonstersByCR, crToNumber } from './data/monsters.js';
 export {
   buildHero,
+  buildCustomHero,
   HERO_CLASS_NAMES,
   getMaxHeroLevelForClass,
   isSupportedHeroLevel,
 } from './data/heroes.js';
-export type { HeroClassName } from './data/heroes.js';
+export type { HeroClassName, HeroOverrides } from './data/heroes.js';
 
 // Types
 export type { Creature, MonsterData, Condition, ConditionDuration, Abilities, Speed } from './types/monster.js';
